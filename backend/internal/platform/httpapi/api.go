@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/aisha-platform/aisha/backend/internal/auth"
 	"github.com/aisha-platform/aisha/backend/internal/platform/config"
 	"github.com/aisha-platform/aisha/backend/internal/platform/health"
 	"github.com/aisha-platform/aisha/backend/internal/platform/httpapi/dto"
@@ -13,7 +14,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 )
 
-func New(cfg config.Config, healthService *health.Service) *fiber.App {
+func New(cfg config.Config, healthService *health.Service, authServices ...*auth.Service) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName:      cfg.AppName + " API",
 		BodyLimit:    2 * 1024 * 1024,
@@ -47,5 +48,16 @@ func New(cfg config.Config, healthService *health.Service) *fiber.App {
 		}
 		return c.JSON(dto.HealthResponseFrom(result))
 	})
+	if len(authServices) > 0 && authServices[0] != nil {
+		handler := NewAuthHandler(authServices[0])
+		api := app.Group("/api/v1")
+		api.Post("/auth/register", handler.Register)
+		api.Post("/auth/login", handler.Login)
+		api.Post("/auth/refresh", handler.Refresh)
+		api.Post("/auth/logout", handler.Logout)
+		api.Post("/auth/forgot-password", handler.ForgotPassword)
+		api.Post("/auth/reset-password", handler.ResetPassword)
+		api.Get("/me", handler.RequirePrincipal, handler.Me)
+	}
 	return app
 }

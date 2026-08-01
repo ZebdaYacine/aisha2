@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/aisha-platform/aisha/backend/internal/auth"
 	"github.com/aisha-platform/aisha/backend/internal/platform/cache"
 	"github.com/aisha-platform/aisha/backend/internal/platform/config"
 	"github.com/aisha-platform/aisha/backend/internal/platform/database"
@@ -41,8 +42,11 @@ func NewRuntime(ctx context.Context, cfg config.Config) (*Runtime, error) {
 		health.RedisChecker{Client: redisClient},
 		health.MinIOChecker{Client: minioClient},
 	)
+	authRepository := auth.NewPostgresRepository(pool)
+	resetNotifier := auth.NewOutboxResetNotifier(pool)
+	authService := auth.NewService(authRepository, resetNotifier, cfg.AuthSigningKey)
 	return &Runtime{
-		App: New(cfg, healthService),
+		App: New(cfg, healthService, authService),
 		cleanup: func() {
 			if err := redisClient.Close(); err != nil {
 				slog.Error("close redis client", "error", err)

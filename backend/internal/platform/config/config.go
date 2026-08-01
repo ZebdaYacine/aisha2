@@ -25,6 +25,7 @@ type Config struct {
 	MinIOPrivateBucket string
 	MinIOArtisanBucket string
 	AllowedOrigins     []string
+	AuthSigningKey     string
 }
 
 func Load() (Config, error) {
@@ -57,9 +58,13 @@ func Load() (Config, error) {
 		MinIOPrivateBucket: env("MINIO_PRIVATE_BUCKET", "product-private"),
 		MinIOArtisanBucket: env("MINIO_ARTISAN_BUCKET", "artisan-private"),
 		AllowedOrigins:     splitCSV(env("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
+		AuthSigningKey:     env("AUTH_SIGNING_KEY", "aisha-development-signing-key-change-me"),
+	}
+	if len(cfg.AuthSigningKey) < 32 {
+		return Config{}, fmt.Errorf("AUTH_SIGNING_KEY must contain at least 32 characters")
 	}
 	if cfg.Environment == "production" {
-		if strings.Contains(cfg.DatabaseURL, "aisha_dev") || cfg.MinIOSecretKey == "aisha_minio_dev" {
+		if strings.Contains(cfg.DatabaseURL, "aisha_dev") || cfg.MinIOSecretKey == "aisha_minio_dev" || cfg.AuthSigningKey == "aisha-development-signing-key-change-me" {
 			return Config{}, fmt.Errorf("development credentials are forbidden in production")
 		}
 	}

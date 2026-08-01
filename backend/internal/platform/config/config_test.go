@@ -25,3 +25,10 @@ func TestLoadRejectsInvalidConnectionLimit(t *testing.T) {
 		t.Fatal("expected invalid connection limit to fail")
 	}
 }
+
+func TestLoadRejectsShortAuthSigningKey(t *testing.T) {
+	t.Setenv("AUTH_SIGNING_KEY", "short")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected short authentication signing key to fail")
+	}
+}
