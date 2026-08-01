@@ -162,67 +162,37 @@ Wire assembles all dependencies in the composition root.
 
 ## 6. Backend Folder Layout
 
+`STRUCTURE.md` is the canonical detailed backend layout. Implemented packages are
+organised by responsibility without creating empty placeholders for future MVP work.
+
 ```text
 backend/
 ├── cmd/
-│   ├── api/
-│   │   └── main.go
-│   └── worker/
-│       └── main.go
-├── internal/
-│   ├── platform/
-│   │   ├── config/
-│   │   ├── database/
-│   │   ├── cache/
-│   │   ├── storage/
-│   │   ├── auth/
-│   │   ├── httpx/
-│   │   ├── logging/
-│   │   ├── observability/
-│   │   └── outbox/
-│   ├── identity/
+│   └── main.go
+├── features/
+│   ├── auth/
 │   ├── artisans/
-│   ├── catalogue/
-│   ├── moderation/
-│   ├── warehouse/
-│   ├── inventory/
-│   ├── checkout/
-│   ├── payments/
-│   ├── orders/
-│   ├── shipments/
-│   ├── customorders/
-│   ├── notifications/
-│   └── audit/
-├── migrations/
+│   ├── users/
+│   └── catalogue/
+├── server/
+├── core/
+│   ├── cache/
+│   ├── config/
+│   ├── database/
+│   ├── health/
+│   ├── security/
+│   └── storage/
 ├── db/
+│   ├── migrations/
+│   ├── seeds/
 │   ├── schema/
-│   └── sqlboiler.toml
+│   └── sqlboiler/models/
 ├── openapi/
-├── tests/
+├── test/integration/
+├── tools/
+├── sqlboiler.toml
 ├── go.mod
 └── Dockerfile
-```
-
-Recommended module layout:
-
-```text
-internal/catalogue/
-├── domain/
-│   ├── product.go
-│   ├── errors.go
-│   └── repository.go
-├── application/
-│   ├── create_product.go
-│   ├── submit_product.go
-│   └── ports.go
-├── infrastructure/
-│   ├── postgres_repository.go
-│   └── mapper.go
-└── delivery/http/
-    ├── handler.go
-    ├── request.go
-    ├── response.go
-    └── routes.go
 ```
 
 ## 7. Frontend Architecture

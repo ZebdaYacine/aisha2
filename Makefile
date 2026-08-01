@@ -29,7 +29,7 @@ test:
 test-migrations:
 	docker compose up -d postgres
 	docker compose exec -T postgres sh -ec 'dropdb --if-exists -U aisha aisha_migration_test && createdb -U aisha aisha_migration_test'
-	docker compose --profile tools run --rm migration-tools go test ./tests -run TestMigrationsRoundTrip -count=1
+	docker compose --profile tools run --rm migration-tools go test ./test/integration -run TestMigrationsRoundTrip -count=1
 
 build:
 	cd frontend && npm run build
@@ -56,7 +56,7 @@ smoke:
 	curl --fail --silent http://localhost:3000/api/health
 
 wire:
-	cd backend && go run github.com/google/wire/cmd/wire ./cmd/api
+	cd backend && go run github.com/google/wire/cmd/wire ./cmd
 
 tools:
 	mkdir -p "$(BACKEND_BIN)"
@@ -65,10 +65,10 @@ tools:
 	cd backend/tools && go build -o "$(BACKEND_BIN)/sqlboiler-psql" github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql
 
 migrate-up:
-	docker compose --profile tools run --rm migration-tools sh -ec 'cd tools && go run ./cmd/migrate -path ../migrations -database "$$DATABASE_URL" up'
+	docker compose --profile tools run --rm migration-tools sh -ec 'cd tools && go run ./cmd/migrate -path ../db/migrations -database "$$DATABASE_URL" up'
 
 migrate-down:
-	docker compose --profile tools run --rm migration-tools sh -ec 'cd tools && go run ./cmd/migrate -path ../migrations -database "$$DATABASE_URL" down'
+	docker compose --profile tools run --rm migration-tools sh -ec 'cd tools && go run ./cmd/migrate -path ../db/migrations -database "$$DATABASE_URL" down'
 
 migrate-reset: migrate-down migrate-up
 
@@ -76,4 +76,4 @@ seed: migrate-up
 	docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U aisha -d aisha < backend/db/seeds/development.sql
 
 sqlboiler:
-	docker compose --profile tools run --rm migration-tools sh -ec 'mkdir -p bin && cd tools && go build -o ../bin/sqlboiler github.com/volatiletech/sqlboiler/v4 && go build -o ../bin/sqlboiler-psql github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql && cd /workspace && PATH="/workspace/bin:$$PATH" bin/sqlboiler psql --config db/sqlboiler.toml'
+	docker compose --profile tools run --rm migration-tools sh -ec 'mkdir -p bin && cd tools && go build -o ../bin/sqlboiler github.com/volatiletech/sqlboiler/v4 && go build -o ../bin/sqlboiler-psql github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql && cd /workspace && PATH="/workspace/bin:$$PATH" bin/sqlboiler psql --config sqlboiler.toml'

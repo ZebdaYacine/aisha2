@@ -97,11 +97,14 @@ When documents conflict, Codex must stop and report the conflict. It must not si
 ├── .env.example
 ├── docs/
 ├── backend/
-│   ├── cmd/api/
-│   ├── internal/
-│   ├── migrations/
+│   ├── cmd/
+│   ├── features/
+│   ├── server/
+│   ├── core/
+│   ├── db/
 │   ├── openapi/
-│   └── tests/
+│   ├── test/
+│   └── tools/
 ├── frontend/
 │   ├── app/
 │   ├── components/

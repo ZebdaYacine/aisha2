@@ -31,7 +31,7 @@ pipeline {
         sh 'make test-migrations'
         sh 'make migrate-up'
         sh 'make sqlboiler'
-        sh 'git diff --exit-code -- backend/internal/platform/database/models'
+        sh 'git diff --exit-code -- backend/db/sqlboiler/models'
       }
     }
     stage('Frontend') {
