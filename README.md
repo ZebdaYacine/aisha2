@@ -44,3 +44,4 @@ MinIO data must be preserved.
 Milestone 1 deliberately creates no business tables. Future milestones add
 versioned migrations before generating SQLBoiler models. Database migrations
 must remain a dedicated deployment step and must not run during API startup.
+# aisha2
