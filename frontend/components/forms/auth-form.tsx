@@ -8,6 +8,7 @@ import { z } from "zod";
 import { LocalizedLink } from "@/components/shared/localized-link";
 import { Button } from "@/components/ui/button";
 import type { FormSubmitter } from "@/features/forms/types";
+import { submitJSON } from "@/features/forms/api";
 import { formCopy } from "@/lib/form-copy";
 import type { Locale } from "@/lib/i18n";
 import type { StoreCopy } from "@/lib/store-copy";
@@ -95,16 +96,21 @@ export function AuthForm({
   const onInvalid = () => focusSummary(messages.formInvalid);
   const onValid = async (values: Values) => {
     setSummary(undefined);
-    if (!submit) return;
     try {
-      const result = await submit(values);
-      if (result.ok) return;
+      const result = await (submit ?? ((input) => submitJSON(`/api/auth/${mode === "forgot" ? "forgot-password" : mode}`, input)))(values);
+      if (result.ok) {
+        toast.success(mode === "forgot" ? copy.forgot : copy.account);
+        if (mode !== "forgot") window.location.assign(`/${locale}/account`);
+        return;
+      }
       Object.entries(result.fieldErrors ?? {}).forEach(([name, message]) =>
         setError(name as keyof Values, { type: "server", message }),
       );
       const message =
         result.code === "SERVICE_UNAVAILABLE"
           ? messages.unavailable
+          : result.code === "RATE_LIMITED"
+            ? messages.rateLimited
           : messages.backendError;
       focusSummary(message);
       toast.error(message);

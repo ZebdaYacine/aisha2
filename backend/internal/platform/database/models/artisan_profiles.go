@@ -40,6 +40,8 @@ type ArtisanProfile struct {
 	UpdatedAt             time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
 	ApprovedAt            null.Time   `boil:"approved_at" json:"approved_at,omitempty" toml:"approved_at" yaml:"approved_at,omitempty"`
 	SuspendedAt           null.Time   `boil:"suspended_at" json:"suspended_at,omitempty" toml:"suspended_at" yaml:"suspended_at,omitempty"`
+	ReviewReason          null.String `boil:"review_reason" json:"review_reason,omitempty" toml:"review_reason" yaml:"review_reason,omitempty"`
+	SubmittedAt           null.Time   `boil:"submitted_at" json:"submitted_at,omitempty" toml:"submitted_at" yaml:"submitted_at,omitempty"`
 
 	R *artisanProfileR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L artisanProfileL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -62,6 +64,8 @@ var ArtisanProfileColumns = struct {
 	UpdatedAt             string
 	ApprovedAt            string
 	SuspendedAt           string
+	ReviewReason          string
+	SubmittedAt           string
 }{
 	ID:                    "id",
 	UserID:                "user_id",
@@ -79,6 +83,8 @@ var ArtisanProfileColumns = struct {
 	UpdatedAt:             "updated_at",
 	ApprovedAt:            "approved_at",
 	SuspendedAt:           "suspended_at",
+	ReviewReason:          "review_reason",
+	SubmittedAt:           "submitted_at",
 }
 
 var ArtisanProfileTableColumns = struct {
@@ -98,6 +104,8 @@ var ArtisanProfileTableColumns = struct {
 	UpdatedAt             string
 	ApprovedAt            string
 	SuspendedAt           string
+	ReviewReason          string
+	SubmittedAt           string
 }{
 	ID:                    "artisan_profiles.id",
 	UserID:                "artisan_profiles.user_id",
@@ -115,6 +123,8 @@ var ArtisanProfileTableColumns = struct {
 	UpdatedAt:             "artisan_profiles.updated_at",
 	ApprovedAt:            "artisan_profiles.approved_at",
 	SuspendedAt:           "artisan_profiles.suspended_at",
+	ReviewReason:          "artisan_profiles.review_reason",
+	SubmittedAt:           "artisan_profiles.submitted_at",
 }
 
 // Generated where
@@ -160,6 +170,8 @@ var ArtisanProfileWhere = struct {
 	UpdatedAt             whereHelpertime_Time
 	ApprovedAt            whereHelpernull_Time
 	SuspendedAt           whereHelpernull_Time
+	ReviewReason          whereHelpernull_String
+	SubmittedAt           whereHelpernull_Time
 }{
 	ID:                    whereHelperstring{field: "\"artisan_profiles\".\"id\""},
 	UserID:                whereHelperstring{field: "\"artisan_profiles\".\"user_id\""},
@@ -177,6 +189,8 @@ var ArtisanProfileWhere = struct {
 	UpdatedAt:             whereHelpertime_Time{field: "\"artisan_profiles\".\"updated_at\""},
 	ApprovedAt:            whereHelpernull_Time{field: "\"artisan_profiles\".\"approved_at\""},
 	SuspendedAt:           whereHelpernull_Time{field: "\"artisan_profiles\".\"suspended_at\""},
+	ReviewReason:          whereHelpernull_String{field: "\"artisan_profiles\".\"review_reason\""},
+	SubmittedAt:           whereHelpernull_Time{field: "\"artisan_profiles\".\"submitted_at\""},
 }
 
 // ArtisanProfileRels is where relationship names are stored.
@@ -311,9 +325,9 @@ func (r *artisanProfileR) GetProducts() ProductSlice {
 type artisanProfileL struct{}
 
 var (
-	artisanProfileAllColumns            = []string{"id", "user_id", "public_display_name", "internal_name", "workshop_name", "wilaya", "location_text", "contact_email", "contact_phone", "contact_visibility", "status", "profile_image_object_key", "created_at", "updated_at", "approved_at", "suspended_at"}
+	artisanProfileAllColumns            = []string{"id", "user_id", "public_display_name", "internal_name", "workshop_name", "wilaya", "location_text", "contact_email", "contact_phone", "contact_visibility", "status", "profile_image_object_key", "created_at", "updated_at", "approved_at", "suspended_at", "review_reason", "submitted_at"}
 	artisanProfileColumnsWithoutDefault = []string{"user_id", "public_display_name"}
-	artisanProfileColumnsWithDefault    = []string{"id", "internal_name", "workshop_name", "wilaya", "location_text", "contact_email", "contact_phone", "contact_visibility", "status", "profile_image_object_key", "created_at", "updated_at", "approved_at", "suspended_at"}
+	artisanProfileColumnsWithDefault    = []string{"id", "internal_name", "workshop_name", "wilaya", "location_text", "contact_email", "contact_phone", "contact_visibility", "status", "profile_image_object_key", "created_at", "updated_at", "approved_at", "suspended_at", "review_reason", "submitted_at"}
 	artisanProfilePrimaryKeyColumns     = []string{"id"}
 	artisanProfileGeneratedColumns      = []string{}
 )

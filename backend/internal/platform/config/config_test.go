@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestLoadUsesFoundationDefaults(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
@@ -16,6 +19,16 @@ func TestLoadUsesFoundationDefaults(t *testing.T) {
 	}
 	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:3000" {
 		t.Fatalf("unexpected origins: %#v", cfg.AllowedOrigins)
+	}
+	if cfg.AuthRateLimitMax != 10 || cfg.AuthRateLimitWindow != 60*time.Second {
+		t.Fatalf("unexpected authentication rate limit: max=%d window=%s", cfg.AuthRateLimitMax, cfg.AuthRateLimitWindow)
+	}
+}
+
+func TestLoadRejectsInvalidAuthenticationRateLimit(t *testing.T) {
+	t.Setenv("AUTH_RATE_LIMIT_MAX", "0")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected invalid authentication rate limit to fail")
 	}
 }
 

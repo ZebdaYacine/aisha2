@@ -6,26 +6,26 @@ import (
 )
 
 type RegisterRequest struct {
-	Email       string `json:"email"`
-	Password    string `json:"password"`
-	DisplayName string `json:"displayName"`
+	Email       string `json:"email" validate:"required,email,max=254"`
+	Password    string `json:"password" validate:"required,min=12,max=128"`
+	DisplayName string `json:"displayName" validate:"required,min=2,max=100"`
 }
 type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" validate:"required,email,max=254"`
+	Password string `json:"password" validate:"required,max=128"`
 }
 type RefreshRequest struct {
-	RefreshToken string `json:"refreshToken"`
+	RefreshToken string `json:"refreshToken" validate:"required"`
 }
 type LogoutRequest struct {
-	RefreshToken string `json:"refreshToken"`
+	RefreshToken string `json:"refreshToken" validate:"required"`
 }
 type ForgotPasswordRequest struct {
-	Email string `json:"email"`
+	Email string `json:"email" validate:"required,email,max=254"`
 }
 type ResetPasswordRequest struct {
-	Token    string `json:"token"`
-	Password string `json:"password"`
+	Token    string `json:"token" validate:"required"`
+	Password string `json:"password" validate:"required,min=12,max=128"`
 }
 type UserResponse struct {
 	ID          string    `json:"id"`

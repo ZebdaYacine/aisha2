@@ -9,6 +9,7 @@ import { locales } from "@/lib/i18n";
 import { storeCopy } from "@/lib/store-copy";
 import { useCart } from "@/features/cart/cart-context";
 import { GlobalSearch } from "./global-search";
+import type { Artisan, Category, Product } from "@/features/storefront/types";
 
 const navItems = [
   ["new", "/products?sort=newest"],
@@ -21,9 +22,11 @@ const navItems = [
 export function StorefrontHeader({
   locale,
   messages,
+  catalogue,
 }: {
   locale: Locale;
   messages: Messages;
+  catalogue?: { products: Product[]; artisans: Artisan[]; categories: Category[] };
 }) {
   const { count, setOpen: setCartOpen } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -83,7 +86,7 @@ export function StorefrontHeader({
           </Link>
 
           <div className="flex items-center justify-end gap-1 sm:gap-2">
-            <GlobalSearch locale={locale} copy={copy}/>
+            <GlobalSearch locale={locale} copy={copy} {...catalogue}/>
             <Link
               className="hidden min-h-11 min-w-11 items-center justify-center sm:flex"
               href={`/${locale}/login`}

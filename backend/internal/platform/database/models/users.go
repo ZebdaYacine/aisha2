@@ -32,6 +32,7 @@ type User struct {
 	EmailVerifiedAt null.Time   `boil:"email_verified_at" json:"email_verified_at,omitempty" toml:"email_verified_at" yaml:"email_verified_at,omitempty"`
 	CreatedAt       time.Time   `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt       time.Time   `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	Phone           null.String `boil:"phone" json:"phone,omitempty" toml:"phone" yaml:"phone,omitempty"`
 
 	R *userR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L userL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -46,6 +47,7 @@ var UserColumns = struct {
 	EmailVerifiedAt string
 	CreatedAt       string
 	UpdatedAt       string
+	Phone           string
 }{
 	ID:              "id",
 	Email:           "email",
@@ -55,6 +57,7 @@ var UserColumns = struct {
 	EmailVerifiedAt: "email_verified_at",
 	CreatedAt:       "created_at",
 	UpdatedAt:       "updated_at",
+	Phone:           "phone",
 }
 
 var UserTableColumns = struct {
@@ -66,6 +69,7 @@ var UserTableColumns = struct {
 	EmailVerifiedAt string
 	CreatedAt       string
 	UpdatedAt       string
+	Phone           string
 }{
 	ID:              "users.id",
 	Email:           "users.email",
@@ -75,6 +79,7 @@ var UserTableColumns = struct {
 	EmailVerifiedAt: "users.email_verified_at",
 	CreatedAt:       "users.created_at",
 	UpdatedAt:       "users.updated_at",
+	Phone:           "users.phone",
 }
 
 // Generated where
@@ -88,6 +93,7 @@ var UserWhere = struct {
 	EmailVerifiedAt whereHelpernull_Time
 	CreatedAt       whereHelpertime_Time
 	UpdatedAt       whereHelpertime_Time
+	Phone           whereHelpernull_String
 }{
 	ID:              whereHelperstring{field: "\"users\".\"id\""},
 	Email:           whereHelpernull_String{field: "\"users\".\"email\""},
@@ -97,10 +103,12 @@ var UserWhere = struct {
 	EmailVerifiedAt: whereHelpernull_Time{field: "\"users\".\"email_verified_at\""},
 	CreatedAt:       whereHelpertime_Time{field: "\"users\".\"created_at\""},
 	UpdatedAt:       whereHelpertime_Time{field: "\"users\".\"updated_at\""},
+	Phone:           whereHelpernull_String{field: "\"users\".\"phone\""},
 }
 
 // UserRels is where relationship names are stored.
 var UserRels = struct {
+	Address                  string
 	ArtisanProfile           string
 	ActorUserAuditEvents     string
 	ActorUserIdempotencyKeys string
@@ -108,6 +116,7 @@ var UserRels = struct {
 	AssignedByUserUserRoles  string
 	UserRoles                string
 }{
+	Address:                  "Address",
 	ArtisanProfile:           "ArtisanProfile",
 	ActorUserAuditEvents:     "ActorUserAuditEvents",
 	ActorUserIdempotencyKeys: "ActorUserIdempotencyKeys",
@@ -118,6 +127,7 @@ var UserRels = struct {
 
 // userR is where relationships are stored.
 type userR struct {
+	Address                  *Address            `boil:"Address" json:"Address" toml:"Address" yaml:"Address"`
 	ArtisanProfile           *ArtisanProfile     `boil:"ArtisanProfile" json:"ArtisanProfile" toml:"ArtisanProfile" yaml:"ArtisanProfile"`
 	ActorUserAuditEvents     AuditEventSlice     `boil:"ActorUserAuditEvents" json:"ActorUserAuditEvents" toml:"ActorUserAuditEvents" yaml:"ActorUserAuditEvents"`
 	ActorUserIdempotencyKeys IdempotencyKeySlice `boil:"ActorUserIdempotencyKeys" json:"ActorUserIdempotencyKeys" toml:"ActorUserIdempotencyKeys" yaml:"ActorUserIdempotencyKeys"`
@@ -129,6 +139,22 @@ type userR struct {
 // NewStruct creates a new relationship struct
 func (*userR) NewStruct() *userR {
 	return &userR{}
+}
+
+func (o *User) GetAddress() *Address {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetAddress()
+}
+
+func (r *userR) GetAddress() *Address {
+	if r == nil {
+		return nil
+	}
+
+	return r.Address
 }
 
 func (o *User) GetArtisanProfile() *ArtisanProfile {
@@ -231,9 +257,9 @@ func (r *userR) GetUserRoles() UserRoleSlice {
 type userL struct{}
 
 var (
-	userAllColumns            = []string{"id", "email", "password_hash", "status", "display_name", "email_verified_at", "created_at", "updated_at"}
+	userAllColumns            = []string{"id", "email", "password_hash", "status", "display_name", "email_verified_at", "created_at", "updated_at", "phone"}
 	userColumnsWithoutDefault = []string{}
-	userColumnsWithDefault    = []string{"id", "email", "password_hash", "status", "display_name", "email_verified_at", "created_at", "updated_at"}
+	userColumnsWithDefault    = []string{"id", "email", "password_hash", "status", "display_name", "email_verified_at", "created_at", "updated_at", "phone"}
 	userPrimaryKeyColumns     = []string{"id"}
 	userGeneratedColumns      = []string{}
 )
@@ -543,6 +569,17 @@ func (q userQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool,
 	return count > 0, nil
 }
 
+// Address pointed to by the foreign key.
+func (o *User) Address(mods ...qm.QueryMod) addressQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"user_id\" = ?", o.ID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return Addresses(queryMods...)
+}
+
 // ArtisanProfile pointed to by the foreign key.
 func (o *User) ArtisanProfile(mods ...qm.QueryMod) artisanProfileQuery {
 	queryMods := []qm.QueryMod{
@@ -622,6 +659,123 @@ func (o *User) UserRoles(mods ...qm.QueryMod) userRoleQuery {
 	)
 
 	return UserRoles(queryMods...)
+}
+
+// LoadAddress allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-1 relationship.
+func (userL) LoadAddress(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		var ok bool
+		object, ok = maybeUser.(*User)
+		if !ok {
+			object = new(User)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
+			}
+		}
+	} else {
+		s, ok := maybeUser.(*[]*User)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`addresses`),
+		qm.WhereIn(`addresses.user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load Address")
+	}
+
+	var resultSlice []*Address
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice Address")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for addresses")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for addresses")
+	}
+
+	if len(addressAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.Address = foreign
+		if foreign.R == nil {
+			foreign.R = &addressR{}
+		}
+		foreign.R.User = object
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.ID == foreign.UserID {
+				local.R.Address = foreign
+				if foreign.R == nil {
+					foreign.R = &addressR{}
+				}
+				foreign.R.User = local
+				break
+			}
+		}
+	}
+
+	return nil
 }
 
 // LoadArtisanProfile allows an eager lookup of values, cached into the
@@ -1303,6 +1457,56 @@ func (userL) LoadUserRoles(ctx context.Context, e boil.ContextExecutor, singular
 		}
 	}
 
+	return nil
+}
+
+// SetAddress of the user to the related item.
+// Sets o.R.Address to related.
+// Adds o to related.R.User.
+func (o *User) SetAddress(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Address) error {
+	var err error
+
+	if insert {
+		related.UserID = o.ID
+
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	} else {
+		updateQuery := fmt.Sprintf(
+			"UPDATE \"addresses\" SET %s WHERE %s",
+			strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+			strmangle.WhereClause("\"", "\"", 2, addressPrimaryKeyColumns),
+		)
+		values := []interface{}{o.ID, related.ID}
+
+		if boil.IsDebug(ctx) {
+			writer := boil.DebugWriterFrom(ctx)
+			fmt.Fprintln(writer, updateQuery)
+			fmt.Fprintln(writer, values)
+		}
+		if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+			return errors.Wrap(err, "failed to update foreign table")
+		}
+
+		related.UserID = o.ID
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			Address: related,
+		}
+	} else {
+		o.R.Address = related
+	}
+
+	if related.R == nil {
+		related.R = &addressR{
+			User: o,
+		}
+	} else {
+		related.R.User = o
+	}
 	return nil
 }
 

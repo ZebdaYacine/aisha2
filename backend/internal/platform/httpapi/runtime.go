@@ -4,7 +4,11 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/aisha-platform/aisha/backend/internal/artisan"
 	"github.com/aisha-platform/aisha/backend/internal/auth"
+	"github.com/aisha-platform/aisha/backend/internal/authorization"
+	"github.com/aisha-platform/aisha/backend/internal/catalogue"
+	"github.com/aisha-platform/aisha/backend/internal/customer"
 	"github.com/aisha-platform/aisha/backend/internal/platform/cache"
 	"github.com/aisha-platform/aisha/backend/internal/platform/config"
 	"github.com/aisha-platform/aisha/backend/internal/platform/database"
@@ -45,8 +49,18 @@ func NewRuntime(ctx context.Context, cfg config.Config) (*Runtime, error) {
 	authRepository := auth.NewPostgresRepository(pool)
 	resetNotifier := auth.NewOutboxResetNotifier(pool)
 	authService := auth.NewService(authRepository, resetNotifier, cfg.AuthSigningKey)
+	authorizationService, err := authorization.New()
+	if err != nil {
+		_ = redisClient.Close()
+		pool.Close()
+		return nil, err
+	}
+	rateLimiter := cache.NewRateLimiter(redisClient)
+	catalogueService := catalogue.NewService(catalogue.NewPostgresRepository(pool))
+	customerService := customer.NewService(customer.NewPostgresRepository(pool), authorizationService)
+	artisanService := artisan.NewService(artisan.NewPostgresRepository(pool), authorizationService)
 	return &Runtime{
-		App: New(cfg, healthService, authService),
+		App: New(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, catalogueService),
 		cleanup: func() {
 			if err := redisClient.Close(); err != nil {
 				slog.Error("close redis client", "error", err)

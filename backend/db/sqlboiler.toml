@@ -31,4 +31,5 @@ whitelist = [
   "audit_events",
   "outbox_events",
   "idempotency_keys",
+  "addresses",
 ]

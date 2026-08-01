@@ -27,7 +27,7 @@ export default async function LoginPage({
       </section>
       <div className="relative hidden lg:block">
         <Image
-          src="/images/aisha-hero-editorial.png"
+          src="/images/aisha/Algeria art.jpg"
           alt=""
           fill
           sizes="50vw"

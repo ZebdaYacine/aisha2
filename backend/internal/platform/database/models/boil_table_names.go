@@ -4,6 +4,7 @@
 package models
 
 var TableNames = struct {
+	Addresses                  string
 	ArtisanDocuments           string
 	ArtisanMedia               string
 	ArtisanProfileCategories   string
@@ -21,6 +22,7 @@ var TableNames = struct {
 	UserRoles                  string
 	Users                      string
 }{
+	Addresses:                  "addresses",
 	ArtisanDocuments:           "artisan_documents",
 	ArtisanMedia:               "artisan_media",
 	ArtisanProfileCategories:   "artisan_profile_categories",

@@ -26,7 +26,7 @@ export function HomeHero({ locale, messages }: { locale: Locale; messages: Messa
       </div>
       <div className="relative order-1 min-h-[52svh] overflow-hidden bg-muted lg:order-2 lg:min-h-full">
         <Image
-          src="/images/aisha-hero-editorial.png"
+          src="/images/aisha/Algeria art.jpg"
           alt={messages.home.imageAlt}
           fill
           priority

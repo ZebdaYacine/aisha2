@@ -10,13 +10,18 @@ import (
 
 const principalLocal = "authenticated_principal"
 
-type AuthHandler struct{ service *auth.Service }
+type AuthHandler struct {
+	service   *auth.Service
+	validator *RequestValidator
+}
 
-func NewAuthHandler(service *auth.Service) *AuthHandler { return &AuthHandler{service: service} }
+func NewAuthHandler(service *auth.Service, requestValidator *RequestValidator) *AuthHandler {
+	return &AuthHandler{service: service, validator: requestValidator}
+}
 func (h *AuthHandler) Register(c fiber.Ctx) error {
 	var req RegisterRequest
-	if err := c.Bind().Body(&req); err != nil {
-		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	if err := h.bindAndValidate(c, &req); err != nil {
+		return err
 	}
 	user, tokens, err := h.service.Register(c.Context(), req.Email, req.Password, req.DisplayName)
 	if err != nil {
@@ -26,8 +31,8 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 }
 func (h *AuthHandler) Login(c fiber.Ctx) error {
 	var req LoginRequest
-	if err := c.Bind().Body(&req); err != nil {
-		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	if err := h.bindAndValidate(c, &req); err != nil {
+		return err
 	}
 	user, tokens, err := h.service.Login(c.Context(), req.Email, req.Password)
 	if err != nil {
@@ -37,8 +42,8 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 }
 func (h *AuthHandler) Refresh(c fiber.Ctx) error {
 	var req RefreshRequest
-	if err := c.Bind().Body(&req); err != nil || req.RefreshToken == "" {
-		return NewAPIError(CodeValidationError, "The request is invalid.", FieldErrors{"refreshToken": "REQUIRED"})
+	if err := h.bindAndValidate(c, &req); err != nil {
+		return err
 	}
 	tokens, err := h.service.Refresh(c.Context(), req.RefreshToken)
 	if err != nil {
@@ -48,8 +53,8 @@ func (h *AuthHandler) Refresh(c fiber.Ctx) error {
 }
 func (h *AuthHandler) Logout(c fiber.Ctx) error {
 	var req LogoutRequest
-	if err := c.Bind().Body(&req); err != nil || req.RefreshToken == "" {
-		return NewAPIError(CodeValidationError, "The request is invalid.", FieldErrors{"refreshToken": "REQUIRED"})
+	if err := h.bindAndValidate(c, &req); err != nil {
+		return err
 	}
 	if err := h.service.Logout(c.Context(), req.RefreshToken); err != nil {
 		return authAPIError(err)
@@ -58,8 +63,8 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 }
 func (h *AuthHandler) ForgotPassword(c fiber.Ctx) error {
 	var req ForgotPasswordRequest
-	if err := c.Bind().Body(&req); err != nil || strings.TrimSpace(req.Email) == "" {
-		return NewAPIError(CodeValidationError, "The request is invalid.", FieldErrors{"email": "REQUIRED"})
+	if err := h.bindAndValidate(c, &req); err != nil {
+		return err
 	}
 	if err := h.service.ForgotPassword(c.Context(), req.Email); err != nil {
 		return authAPIError(err)
@@ -68,13 +73,20 @@ func (h *AuthHandler) ForgotPassword(c fiber.Ctx) error {
 }
 func (h *AuthHandler) ResetPassword(c fiber.Ctx) error {
 	var req ResetPasswordRequest
-	if err := c.Bind().Body(&req); err != nil || req.Token == "" || len(req.Password) < 12 {
-		return NewAPIError(CodeValidationError, "The request is invalid.", FieldErrors{"password": "MIN_LENGTH_12"})
+	if err := h.bindAndValidate(c, &req); err != nil {
+		return err
 	}
 	if err := h.service.ResetPassword(c.Context(), req.Token, req.Password); err != nil {
 		return authAPIError(err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *AuthHandler) bindAndValidate(c fiber.Ctx, request any) error {
+	if err := c.Bind().Body(request); err != nil {
+		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	}
+	return h.validator.Validate(request)
 }
 func (h *AuthHandler) Me(c fiber.Ctx) error {
 	principal, ok := c.Locals(principalLocal).(auth.Principal)

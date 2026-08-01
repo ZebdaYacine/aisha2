@@ -1,4 +1,4 @@
-.PHONY: bootstrap install fmt lint type-check test test-migrations build check up down logs compose-config smoke wire tools migrate-up migrate-down migrate-reset sqlboiler
+.PHONY: bootstrap install fmt lint type-check test test-migrations build check up down logs compose-config smoke wire tools migrate-up migrate-down migrate-reset seed sqlboiler
 
 BACKEND_BIN := $(CURDIR)/backend/bin
 MIGRATE := $(BACKEND_BIN)/migrate
@@ -71,6 +71,9 @@ migrate-down:
 	docker compose --profile tools run --rm migration-tools sh -ec 'cd tools && go run ./cmd/migrate -path ../migrations -database "$$DATABASE_URL" down'
 
 migrate-reset: migrate-down migrate-up
+
+seed: migrate-up
+	docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U aisha -d aisha < backend/db/seeds/development.sql
 
 sqlboiler:
 	docker compose --profile tools run --rm migration-tools sh -ec 'mkdir -p bin && cd tools && go build -o ../bin/sqlboiler github.com/volatiletech/sqlboiler/v4 && go build -o ../bin/sqlboiler-psql github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql && cd /workspace && PATH="/workspace/bin:$$PATH" bin/sqlboiler psql --config db/sqlboiler.toml'

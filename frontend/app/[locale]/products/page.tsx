@@ -2,9 +2,17 @@ import { notFound } from "next/navigation";
 import { ProductExplorer } from "@/components/commerce/product-explorer";
 import { Container } from "@/components/layout/container";
 import { Breadcrumbs } from "@/components/shared/breadcrumbs";
-import { products } from "@/features/storefront/data";
+import { catalogue } from "@/features/storefront/api";
 import { isLocale } from "@/lib/i18n";
 import { storeCopy } from "@/lib/store-copy";
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  if (!isLocale(locale)) return {};
+  const copy = storeCopy(locale);
+  return { title: `${copy.products} — AISHA`, description: copy.featuredBody, alternates: { canonical: `/${locale}/products` } };
+}
 
 export default async function ProductsPage({
   params,
@@ -14,6 +22,7 @@ export default async function ProductsPage({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const copy = storeCopy(locale);
+  const { products, categories } = await catalogue(locale);
   return (
     <Container className="py-10 lg:py-16">
       <Breadcrumbs locale={locale} items={[{ label: copy.products }]} />
@@ -33,6 +42,7 @@ export default async function ProductsPage({
           initialProducts={products}
           locale={locale}
           copy={copy}
+          categories={categories}
         />
       </div>
     </Container>

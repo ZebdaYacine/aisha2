@@ -15,6 +15,6 @@ export default async function ForgotPasswordPage({ params }: { params: Promise<{
       <p className="mt-4 text-muted-foreground">{copy.email}</p>
       <div className="mt-9"><AuthForm mode="forgot" locale={locale} copy={copy} /></div>
     </div></section>
-    <div className="relative hidden lg:block"><Image src="/images/aisha-hero-editorial.png" alt="" fill sizes="50vw" className="object-cover" /></div>
+    <div className="relative hidden lg:block"><Image src="/images/aisha/Algeria art.jpg" alt="" fill sizes="50vw" className="object-cover" /></div>
   </div>;
 }

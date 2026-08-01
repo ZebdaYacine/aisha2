@@ -6,9 +6,9 @@ export type Availability = "in_stock" | "low_stock" | "made_to_order" | "out_of_
 export interface Category { slug: string; name: LocalizedText; description: LocalizedText; image: string }
 export interface Artisan { slug: string; name: string; workshop: string; region: LocalizedText; craft: LocalizedText; biography: LocalizedText; image: string; verified: boolean; productCount: number }
 export interface Product {
-  slug: string; name: LocalizedText; summary: LocalizedText; story: LocalizedText; artisanSlug: string;
+  slug: string; name: LocalizedText; summary: LocalizedText; story: LocalizedText; artisanSlug: string; artisanName?: string;
   categorySlug: string; region: LocalizedText; materials: LocalizedText; method: LocalizedText;
-  priceMinor: number; previousPriceMinor?: number; currency: "EUR"; availability: Availability;
+  priceMinor: number; previousPriceMinor?: number; currency: string; availability: Availability;
   images: string[]; featured?: boolean; new?: boolean; rating: number; reviewCount: number;
 }
 export interface CartItem { productSlug: string; quantity: number }
