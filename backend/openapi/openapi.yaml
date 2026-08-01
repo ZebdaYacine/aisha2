@@ -1,0 +1,83 @@
+openapi: 3.0.3
+info:
+  title: AISHA API
+  version: 0.1.0
+  description: Milestone 1 platform health API
+servers:
+  - url: /
+security: []
+paths:
+  /health/live:
+    get:
+      summary: Check API liveness
+      operationId: live
+      security: []
+      responses:
+        '200':
+          description: Process is alive
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+        default:
+          description: Standard API error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+  /health/ready:
+    get:
+      summary: Check required dependency readiness
+      operationId: ready
+      security: []
+      responses:
+        '200':
+          description: Required dependencies are available
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+        '503':
+          description: One or more required dependencies are unavailable
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+        default:
+          description: Standard API error
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ErrorResponse'}
+components:
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
+        services:
+          type: object
+          additionalProperties:
+            type: string
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+    Error:
+      type: object
+      required: [code, message, requestId]
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable code from the backend error catalogue.
+        message:
+          type: string
+          description: Safe public message.
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+          description: Optional field names mapped to stable validation codes.
+        requestId:
+          type: string
+          description: Correlation identifier for support and structured logs.

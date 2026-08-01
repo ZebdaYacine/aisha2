@@ -1,0 +1,2 @@
+import type { Locale } from "@/lib/i18n";import { formatMoney } from "@/features/storefront/format";
+export function ProductPrice({priceMinor,previousPriceMinor,currency,locale,className=""}:{priceMinor:number;previousPriceMinor?:number;currency:string;locale:Locale;className?:string}){return <p className={`flex items-baseline gap-2 font-sans text-sm tabular-nums ${className}`}><span>{formatMoney(priceMinor,currency,locale)}</span>{previousPriceMinor&&<del className="text-muted-foreground">{formatMoney(previousPriceMinor,currency,locale)}</del>}</p>}

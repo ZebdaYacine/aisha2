@@ -1,0 +1,34 @@
+wipe = true
+no-tests = true
+add-global-variants = false
+add-panic-variants = false
+no-context = false
+output = "internal/platform/database/models"
+pkgname = "models"
+
+[psql]
+dbname = "aisha"
+host = "postgres"
+port = 5432
+user = "aisha"
+pass = "aisha_dev"
+sslmode = "disable"
+schema = "public"
+whitelist = [
+  "roles",
+  "users",
+  "user_roles",
+  "sessions",
+  "artisan_profiles",
+  "artisan_profile_translations",
+  "artisan_documents",
+  "artisan_media",
+  "categories",
+  "artisan_profile_categories",
+  "products",
+  "product_translations",
+  "product_media",
+  "audit_events",
+  "outbox_events",
+  "idempotency_keys",
+]
