@@ -1,6 +1,0 @@
-import { createServer } from "node:http";
-const category={id:"category-1",slug:"jewellery",name:"Traditional jewellery"};
-const artisan={id:"atelier-tala",name:"Lila Aït Mansour",workshop:"Atelier Tala",wilaya:"Tizi Ouzou",location:"Kabylia",biography:"A family language of silver and enamel.",media:[],productCount:1};
-const product={id:"kabyle-silver-brooch",artisanId:artisan.id,artisanName:artisan.name,categoryId:category.id,categorySlug:category.slug,name:"Kabyle silver brooch",description:"A hand-enamelled silver brooch.",story:"Engraved and enamelled by hand.",materials:"Silver and enamel",productionMethod:"Hand engraving",region:"Kabylia",currency:"EUR",status:"ACTIVE",priceMinor:12500,media:[]};
-const page=(items)=>({items,page:1,pageSize:100,total:items.length});
-createServer((request,response)=>{const path=new URL(request.url,"http://localhost").pathname;let body;if(path==="/api/v1/categories")body=page([category]);else if(path==="/api/v1/products")body=page([product]);else if(path===`/api/v1/products/${product.id}`)body=product;else if(path==="/api/v1/artisans")body=page([artisan]);else if(path===`/api/v1/artisans/${artisan.id}`)body=artisan;else{response.writeHead(404);response.end();return}response.writeHead(200,{"content-type":"application/json"});response.end(JSON.stringify(body))}).listen(4080,"127.0.0.1");

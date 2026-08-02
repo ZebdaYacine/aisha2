@@ -1,2 +1,0 @@
-import { SearchX } from "lucide-react";import type { ReactNode } from "react";
-export function EmptyState({title,body,action}:{title:string;body:string;action?:ReactNode}){return <section className="mx-auto flex max-w-xl flex-col items-center py-24 text-center"><SearchX aria-hidden size={36} strokeWidth={1.2}/><h2 className="mt-6 font-serif text-3xl">{title}</h2><p className="mt-3 text-muted-foreground">{body}</p>{action&&<div className="mt-7">{action}</div>}</section>}

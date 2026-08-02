@@ -1,3 +1,0 @@
-DROP TABLE IF EXISTS addresses;
-ALTER TABLE users DROP CONSTRAINT IF EXISTS users_phone_not_blank;
-ALTER TABLE users DROP COLUMN IF EXISTS phone;
