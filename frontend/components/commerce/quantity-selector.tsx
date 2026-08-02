@@ -1,0 +1,3 @@
+"use client";
+import {Minus,Plus} from "lucide-react";
+export function QuantitySelector({value,onChange,label}:{value:number;onChange:(value:number)=>void;label:string}){return <div className="inline-flex min-h-12 items-center border border-border" aria-label={label}><button type="button" className="grid size-11 place-items-center" onClick={()=>onChange(Math.max(1,value-1))} aria-label={`${label}: -`}><Minus size={15}/></button><output className="min-w-9 text-center text-sm tabular-nums" aria-live="polite">{value}</output><button type="button" className="grid size-11 place-items-center" onClick={()=>onChange(value+1)} aria-label={`${label}: +`}><Plus size={15}/></button></div>}
