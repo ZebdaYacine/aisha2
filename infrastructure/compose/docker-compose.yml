@@ -13,45 +13,61 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://127.0.0.1:8080/health
       interval: 10s
       timeout: 3s
       retries: 5
+      start_period: 10s
     restart: unless-stopped
-    networks: [edge]
+    networks:
+      - edge
 
   frontend:
     image: aisha-frontend:${IMAGE_TAG:-local}
-    build: ../../apps/web
+    build:
+      context: ../../apps/web
     environment:
       API_BASE_URL: http://api:8080/api/v1
     ports:
       - "3000:3000"
     healthcheck:
       test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
-        ]
+        - CMD
+        - node
+        - -e
+        - >
+          fetch('http://127.0.0.1:3000/api/health')
+          .then(response => {
+            if (!response.ok) process.exit(1);
+          })
+          .catch(() => process.exit(1));
       interval: 10s
       timeout: 3s
       retries: 5
+      start_period: 20s
     restart: unless-stopped
-    networks: [edge]
+    networks:
+      - edge
 
   api:
     image: aisha-api:${IMAGE_TAG:-local}
-    build: ../../apps/api
+    build:
+      context: ../../apps/api
     environment:
       APP_ENV: ${APP_ENV:-development}
       APP_NAME: ${APP_NAME:-AISHA}
-      API_PORT: 8080
+      API_PORT: "8080"
+
       DATABASE_URL: postgres://aisha:${POSTGRES_PASSWORD:-aisha_dev}@postgres:5432/aisha?sslmode=disable
       DATABASE_MAX_OPEN_CONNS: ${DATABASE_MAX_OPEN_CONNS:-20}
       DATABASE_MAX_IDLE_CONNS: ${DATABASE_MAX_IDLE_CONNS:-5}
+
       REDIS_URL: redis://redis:6379/0
+
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-aisha}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-aisha_minio_dev}
@@ -59,7 +75,12 @@ services:
       MINIO_PUBLIC_BUCKET: product-public
       MINIO_PRIVATE_BUCKET: product-private
       MINIO_ARTISAN_BUCKET: artisan-private
+
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+
+      AUTH_SIGNING_KEY: ${AUTH_SIGNING_KEY:-aisha-development-signing-key-change-me}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-10}
+      AUTH_RATE_LIMIT_WINDOW_SECONDS: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:-60}
     ports:
       - "8080:8080"
     depends_on:
@@ -72,12 +93,20 @@ services:
       minio-init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health/ready"]
+      test:
+        - CMD
+        - /bin/busybox
+        - wget
+        - -qO-
+        - http://127.0.0.1:8080/health/ready
       interval: 10s
       timeout: 3s
-      retries: 5
+      retries: 10
+      start_period: 20s
     restart: unless-stopped
-    networks: [edge, data]
+    networks:
+      - edge
+      - data
 
   postgres:
     image: postgres:17-alpine
@@ -85,19 +114,27 @@ services:
       POSTGRES_DB: aisha
       POSTGRES_USER: aisha
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aisha_dev}
+    ports:
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aisha -d aisha"]
+      test:
+        - CMD-SHELL
+        - pg_isready -U aisha -d aisha
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 10s
     restart: unless-stopped
-    networks: [data]
+    networks:
+      - data
+      - edge
 
   migration-tools:
     image: golang:1.25-alpine
-    profiles: [tools]
+    profiles:
+      - tools
     working_dir: /workspace
     volumes:
       - ../../apps/api:/workspace
@@ -109,39 +146,60 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    networks: [data, edge]
+    networks:
+      - data
+      - edge
 
   redis:
     image: redis:8-alpine
-    command: ["redis-server", "--appendonly", "yes"]
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        - CMD
+        - redis-cli
+        - ping
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 5s
     restart: unless-stopped
-    networks: [data]
+    networks:
+      - data
 
   minio:
     image: minio/minio:RELEASE.2025-04-22T22-12-26Z
-    command: server /data --console-address :9001
+    command:
+      - server
+      - /data
+      - --console-address
+      - ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-aisha}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-aisha_minio_dev}
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test:
+        - CMD
+        - mc
+        - ready
+        - local
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 10s
     restart: unless-stopped
-    networks: [data]
+    networks:
+      - data
+      - edge
 
   minio-init:
     image: minio/mc:RELEASE.2025-04-16T18-13-26Z
@@ -155,12 +213,19 @@ services:
       - /bin/sh
       - -ec
       - |
-        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        mc alias set local \
+          http://minio:9000 \
+          "$${MINIO_ROOT_USER}" \
+          "$${MINIO_ROOT_PASSWORD}"
+
         mc mb --ignore-existing local/product-public
         mc mb --ignore-existing local/product-private
         mc mb --ignore-existing local/artisan-private
+
+        mc anonymous set download local/product-public
     restart: "no"
-    networks: [data]
+    networks:
+      - data
 
 volumes:
   postgres_data:

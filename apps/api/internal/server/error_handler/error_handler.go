@@ -36,9 +36,13 @@ func Handler(c fiber.Ctx, err error) error {
 	apiErr := normalize(err)
 	status := StatusForCode(apiErr.Code)
 	if status >= fiber.StatusInternalServerError {
-		slog.Error("request failed", "request_id", requestID, "error", err)
+		logErr := errors.Unwrap(apiErr)
+		if logErr == nil {
+			logErr = err
+		}
+		slog.Error("request failed", "request_id", requestID, "method", c.Method(), "path", c.Path(), "status", status, "error", logErr)
 	} else {
-		slog.Warn("request rejected", "request_id", requestID, "code", apiErr.Code, "error", err)
+		slog.Warn("request rejected", "request_id", requestID, "method", c.Method(), "path", c.Path(), "status", status, "code", apiErr.Code, "error", err)
 	}
 	return c.Status(status).JSON(ErrorResponse{Error: ErrorDTO{
 		Code: apiErr.Code, Message: apiErr.Message, Fields: apiErr.Fields, RequestID: requestID,

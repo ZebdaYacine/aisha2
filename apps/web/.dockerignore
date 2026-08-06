@@ -1,5 +1,10 @@
+.git
 node_modules
 .next
 coverage
 *.log
 *.tsbuildinfo
+tests
+docs
+*.md
+.env*

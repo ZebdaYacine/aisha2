@@ -27,6 +27,18 @@ make check
 make up
 ```
 
+To rebuild and redeploy the latest API and frontend code while preserving the
+PostgreSQL and MinIO containers and volumes:
+
+```bash
+./script.sh
+```
+
+Use `./script.sh --prod` to apply the production Compose overrides. The script
+does not remove volumes and applies pending migrations through a dedicated
+one-shot migration container before loading the idempotent development seed
+file and starting the API.
+
 The Compose files live under `infrastructure/compose`; `make up` is the
 equivalent command when running from the repository root.
 
