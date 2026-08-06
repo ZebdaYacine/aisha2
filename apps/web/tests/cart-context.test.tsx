@@ -1,0 +1,2 @@
+import{fireEvent,render,screen}from"@testing-library/react";import{CartProvider,useCart}from"@/features/cart/viewmodel/cart-context";
+function Harness(){const{add,count}=useCart();return <><output>{count}</output><button onClick={()=>add("item")}>Add</button></>};describe("CartProvider",()=>{beforeEach(()=>localStorage.clear());it("adds and counts items",()=>{render(<CartProvider><Harness/></CartProvider>);fireEvent.click(screen.getByRole("button",{name:"Add"}));expect(screen.getByText("1")).toBeInTheDocument()})});

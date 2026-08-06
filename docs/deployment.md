@@ -245,8 +245,8 @@ npm run build
 ### Docker
 
 ```bash
-docker compose config
-docker compose build
+make compose-config
+make build
 ```
 
 ## 9. Deployment Strategy
@@ -266,7 +266,7 @@ For MVP, use a safe recreate strategy with persistent volumes:
 Do not execute:
 
 ```bash
-docker compose down -v
+docker compose -f infrastructure/compose/docker-compose.yml down -v
 ```
 
 in production.

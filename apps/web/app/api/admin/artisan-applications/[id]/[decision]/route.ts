@@ -1,0 +1,2 @@
+import{NextRequest}from"next/server";import{authenticatedBackend,proxyResponse}from"@/core/lib/server/backend";
+export async function POST(r:NextRequest,c:{params:Promise<{id:string;decision:string}>}){const{id,decision}=await c.params;return proxyResponse(await authenticatedBackend(`/admin/artisan-applications/${encodeURIComponent(id)}/${encodeURIComponent(decision)}`,{method:"POST",body:JSON.stringify(await r.json())}));}

@@ -1,0 +1,1 @@
+import {EmptyState} from "@/core/components/feedback/empty-state";import {ButtonLink} from "@/core/components/ui/button";export default function NotFound(){return <EmptyState title="Page not found" body="The page may have moved or is no longer available." action={<ButtonLink href="/en">Return home</ButtonLink>}/>}

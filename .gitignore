@@ -4,18 +4,18 @@
 !.env.example
 
 # Frontend
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-frontend/coverage/
-frontend/playwright-report/
-frontend/test-results/
-frontend/*.tsbuildinfo
+apps/web/node_modules/
+apps/web/.next/
+apps/web/out/
+apps/web/coverage/
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/*.tsbuildinfo
 
 # Backend
-backend/bin/
-backend/tmp/
-backend/coverage.out
+apps/api/bin/
+apps/api/tmp/
+apps/api/coverage.out
 
 # IDE
 .vscode/
@@ -32,4 +32,4 @@ Thumbs.db
 docker-data/
 
 # Local backend tools
-backend/bin/
+apps/api/bin/

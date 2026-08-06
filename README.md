@@ -24,8 +24,11 @@ Requirements: Node 22+, Go 1.25+, Docker with Compose.
 cp .env.example .env
 make install
 make check
-docker compose up --build
+make up
 ```
+
+The Compose files live under `infrastructure/compose`; `make up` is the
+equivalent command when running from the repository root.
 
 Endpoints:
 
@@ -36,7 +39,7 @@ Endpoints:
 - API readiness: `http://localhost:8080/health/ready`
 - MinIO console: `http://localhost:9001`
 
-Routine shutdown uses `docker compose down`. Do not add `-v`; PostgreSQL and
+Routine shutdown uses `make down`. Do not add `-v`; PostgreSQL and
 MinIO data must be preserved.
 
 ## Database

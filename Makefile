@@ -1,6 +1,9 @@
 .PHONY: bootstrap install fmt lint type-check test test-migrations build check up down logs compose-config smoke wire tools migrate-up migrate-down migrate-reset seed sqlboiler
 
-BACKEND_BIN := $(CURDIR)/backend/bin
+COMPOSE_FILE := infrastructure/compose/docker-compose.yml
+COMPOSE_PROD_FILE := infrastructure/compose/docker-compose.prod.yml
+COMPOSE := docker compose -f $(COMPOSE_FILE)
+BACKEND_BIN := $(CURDIR)/apps/api/bin
 MIGRATE := $(BACKEND_BIN)/migrate
 SQLBOILER := $(BACKEND_BIN)/sqlboiler
 
@@ -8,47 +11,47 @@ bootstrap: install
 	@test -f .env || cp .env.example .env
 
 install:
-	cd frontend && npm ci
-	cd backend && go mod download
+	cd apps/web && npm ci
+	cd apps/api && go mod download
 
 fmt:
-	cd backend && gofmt -w .
+	cd apps/api && gofmt -w .
 
 lint:
-	cd frontend && npm run lint
-	cd backend && test -z "$$(gofmt -l .)"
-	cd backend && go vet ./...
+	cd apps/web && npm run lint
+	cd apps/api && test -z "$$(gofmt -l .)"
+	cd apps/api && go vet ./...
 
 type-check:
-	cd frontend && npm run type-check
+	cd apps/web && npm run type-check
 
 test:
-	cd frontend && npm test
-	cd backend && go test -race ./...
+	cd apps/web && npm test
+	cd apps/api && go test -race ./...
 
 test-migrations:
-	docker compose up -d postgres
-	docker compose exec -T postgres sh -ec 'dropdb --if-exists -U aisha aisha_migration_test && createdb -U aisha aisha_migration_test'
-	docker compose --profile tools run --rm migration-tools go test ./test/integration -run TestMigrationsRoundTrip -count=1
+	$(COMPOSE) up -d postgres
+	$(COMPOSE) exec -T postgres sh -ec 'dropdb --if-exists -U aisha aisha_migration_test && createdb -U aisha aisha_migration_test'
+	$(COMPOSE) --profile tools run --rm migration-tools go test ./tests/integration -run TestMigrationsRoundTrip -count=1
 
 build:
-	cd frontend && npm run build
-	cd backend && go build ./...
+	cd apps/web && npm run build
+	cd apps/api && go build ./...
 
 compose-config:
-	docker compose config --quiet
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+	$(COMPOSE) config --quiet
+	docker compose -f $(COMPOSE_FILE) -f $(COMPOSE_PROD_FILE) config --quiet
 
 check: lint type-check test build compose-config
 
 up:
-	docker compose up --build
+	$(COMPOSE) up --build
 
 down:
-	docker compose down
+	$(COMPOSE) down
 
 logs:
-	docker compose logs -f
+	$(COMPOSE) logs -f
 
 smoke:
 	curl --fail --silent http://localhost:8080/health/live
@@ -56,24 +59,24 @@ smoke:
 	curl --fail --silent http://localhost:3000/api/health
 
 wire:
-	cd backend && go run github.com/google/wire/cmd/wire ./cmd
+	cd apps/api && go run github.com/google/wire/cmd/wire ./cmd
 
 tools:
 	mkdir -p "$(BACKEND_BIN)"
-	cd backend/tools && go build -o "$(MIGRATE)" ./cmd/migrate
-	cd backend/tools && go build -o "$(SQLBOILER)" github.com/volatiletech/sqlboiler/v4
-	cd backend/tools && go build -o "$(BACKEND_BIN)/sqlboiler-psql" github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql
+	cd infrastructure/scripts && go build -o "$(MIGRATE)" ./cmd/migrate
+	cd infrastructure/scripts && go build -o "$(SQLBOILER)" github.com/volatiletech/sqlboiler/v4
+	cd infrastructure/scripts && go build -o "$(BACKEND_BIN)/sqlboiler-psql" github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql
 
 migrate-up:
-	docker compose --profile tools run --rm migration-tools sh -ec 'cd tools && go run ./cmd/migrate -path ../db/migrations -database "$$DATABASE_URL" up'
+	$(COMPOSE) --profile tools run --rm migration-tools sh -ec 'cd /workspace/infrastructure/scripts && go run ./cmd/migrate -path /workspace/db/migrations -database "$$DATABASE_URL" up'
 
 migrate-down:
-	docker compose --profile tools run --rm migration-tools sh -ec 'cd tools && go run ./cmd/migrate -path ../db/migrations -database "$$DATABASE_URL" down'
+	$(COMPOSE) --profile tools run --rm migration-tools sh -ec 'cd /workspace/infrastructure/scripts && go run ./cmd/migrate -path /workspace/db/migrations -database "$$DATABASE_URL" down'
 
 migrate-reset: migrate-down migrate-up
 
 seed: migrate-up
-	docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U aisha -d aisha < backend/db/seeds/development.sql
+	$(COMPOSE) exec -T postgres psql -v ON_ERROR_STOP=1 -U aisha -d aisha < apps/api/db/seeds/development.sql
 
 sqlboiler:
-	docker compose --profile tools run --rm migration-tools sh -ec 'mkdir -p bin && cd tools && go build -o ../bin/sqlboiler github.com/volatiletech/sqlboiler/v4 && go build -o ../bin/sqlboiler-psql github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql && cd /workspace && PATH="/workspace/bin:$$PATH" bin/sqlboiler psql --config sqlboiler.toml'
+	$(COMPOSE) --profile tools run --rm migration-tools sh -ec 'mkdir -p /workspace/bin && cd /workspace/infrastructure/scripts && go build -o /workspace/bin/sqlboiler github.com/volatiletech/sqlboiler/v4 && go build -o /workspace/bin/sqlboiler-psql github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql && cd /workspace && PATH="/workspace/bin:$$PATH" bin/sqlboiler psql --config db/sqlboiler.toml'

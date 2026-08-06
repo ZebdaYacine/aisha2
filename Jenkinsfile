@@ -9,13 +9,13 @@ pipeline {
       steps {
         sh 'test -s .env.example'
         sh 'test ! -f .env'
-        sh 'docker compose config --quiet'
-        sh 'docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet'
+        sh 'docker compose -f infrastructure/compose/docker-compose.yml config --quiet'
+        sh 'docker compose -f infrastructure/compose/docker-compose.yml -f infrastructure/compose/docker-compose.prod.yml config --quiet'
       }
     }
     stage('Backend') {
       steps {
-        dir('backend') {
+        dir('apps/api') {
           sh 'go mod download'
           sh 'test -z "$(gofmt -l .)"'
           sh 'go vet ./...'
@@ -26,17 +26,17 @@ pipeline {
     }
     stage('Database migrations') {
       steps {
-        sh 'docker compose up -d postgres'
-        sh "docker compose exec -T postgres sh -ec 'dropdb --if-exists -U aisha aisha_migration_test && createdb -U aisha aisha_migration_test'"
+        sh 'docker compose -f infrastructure/compose/docker-compose.yml up -d postgres'
+        sh "docker compose -f infrastructure/compose/docker-compose.yml exec -T postgres sh -ec 'dropdb --if-exists -U aisha aisha_migration_test && createdb -U aisha aisha_migration_test'"
         sh 'make test-migrations'
         sh 'make migrate-up'
         sh 'make sqlboiler'
-        sh 'git diff --exit-code -- backend/db/sqlboiler/models'
+        sh 'git diff --exit-code -- apps/api/db/sqlboiler/models'
       }
     }
     stage('Frontend') {
       steps {
-        dir('frontend') {
+        dir('apps/web') {
           sh 'npm ci'
           sh 'npm run lint'
           sh 'npm run type-check'
@@ -47,8 +47,8 @@ pipeline {
     }
     stage('Contracts and images') {
       steps {
-        sh 'npx --yes @redocly/cli lint backend/openapi/openapi.yaml'
-        sh 'docker compose build'
+        sh 'npx --yes @redocly/cli lint apps/api/openapi/openapi.yaml'
+        sh 'docker compose -f infrastructure/compose/docker-compose.yml build'
       }
     }
   }
