@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import { ProductExplorer } from "@/core/components/commerce/product-explorer";
+import { ProductExplorer } from "@/features/catalogue/components/product-explorer";
 import { storeCopy } from "@/core/lib/store-copy";
 
 const replace = jest.fn();

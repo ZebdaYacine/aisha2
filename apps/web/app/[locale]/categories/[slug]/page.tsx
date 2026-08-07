@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ProductExplorer } from "@/core/components/commerce/product-explorer";
+import { ProductExplorer } from "@/features/catalogue";
 import { Container } from "@/core/components/layout/container";
 import { Breadcrumbs } from "@/core/components/shared/breadcrumbs";
 import { catalogue } from "@/features/catalogue/api";

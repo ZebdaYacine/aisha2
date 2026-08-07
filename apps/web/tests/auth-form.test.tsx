@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { AuthForm } from "@/core/components/forms/auth-form";
+import { AuthForm } from "@/features/auth/components/forms/auth-form";
 import { storeCopy } from "@/core/lib/store-copy";
 
 describe("AuthForm validation", () => {

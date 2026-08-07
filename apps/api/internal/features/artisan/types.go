@@ -6,8 +6,12 @@ type Translation = domain.Translation
 type ApplicationInput = domain.ApplicationInput
 type Application = domain.Application
 type Document = domain.Document
+type Media = domain.Media
+type DocumentUploadInput = domain.DocumentUploadInput
+type MediaUploadInput = domain.MediaUploadInput
 type Repository = domain.Repository
 type Authorizer = domain.Authorizer
+type MediaRepository = domain.MediaRepository
 
 var (
 	ErrNotFound          = domain.ErrNotFound

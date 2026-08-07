@@ -209,6 +209,107 @@ paths:
       parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}, {name: decision, in: path, required: true, schema: {type: string, enum: [approve, request-changes, reject]}}]
       requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ArtisanDecisionRequest'}}}}
       responses: {'200': {description: Decision recorded}, '400': {$ref: '#/components/responses/ValidationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '409': {$ref: '#/components/responses/ConflictError'}}
+  /api/v1/admin/artisan-applications/{id}/documents:
+    get:
+      summary: Read authorized artisan application documents
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/artisan-applications/*/documents:read
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'200': {description: Authorized document metadata and short-lived URLs, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/ArtisanDocument'}}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/v1/artisan-applications/me/documents:
+    get:
+      summary: List the authenticated artisan applicant's private documents
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan-applications/me/documents:read
+      responses: {'200': {description: Private document metadata and short-lived URLs}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}}
+    post:
+      summary: Upload a private artisan application document
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan-applications/me/documents:write
+      requestBody: {required: true, content: {multipart/form-data: {schema: {$ref: '#/components/schemas/PrivateUpload'}}}}
+      responses: {'201': {description: Document uploaded, content: {application/json: {schema: {$ref: '#/components/schemas/ArtisanDocument'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '413': {$ref: '#/components/responses/Error'}}
+  /api/v1/artisan/profile/media:
+    get:
+      summary: List the authenticated artisan profile media
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan/profile/media:read
+      responses: {'200': {description: Private profile media metadata and short-lived URLs}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}}
+    post:
+      summary: Upload private artisan profile media
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan/profile/media:write
+      requestBody: {required: true, content: {multipart/form-data: {schema: {$ref: '#/components/schemas/MediaUpload'}}}}
+      responses: {'201': {description: Media uploaded, content: {application/json: {schema: {$ref: '#/components/schemas/ArtisanMedia'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}}
+  /api/v1/artisan/products:
+    get:
+      summary: List products owned by the authenticated artisan
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan/products:read
+      parameters: [{name: status, in: query, schema: {type: string}}, {name: page, in: query, schema: {type: integer, minimum: 1}}, {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100}}]
+      responses: {'200': {description: Paginated owned products}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}}
+    post:
+      summary: Create an artisan-owned product draft
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan/products:write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProductRequest'}}}}
+      responses: {'201': {description: Product draft created, content: {application/json: {schema: {$ref: '#/components/schemas/OwnedProduct'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '409': {$ref: '#/components/responses/ConflictError'}}
+  /api/v1/artisan/products/{id}:
+    parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      summary: Read an owned product draft or submission
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan/products:read
+      responses: {'200': {description: Owned product, content: {application/json: {schema: {$ref: '#/components/schemas/OwnedProduct'}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '404': {$ref: '#/components/responses/Error'}}
+    patch:
+      summary: Update an owned editable product draft
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan/products:write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProductRequest'}}}}
+      responses: {'200': {description: Product updated}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '409': {$ref: '#/components/responses/ConflictError'}}
+  /api/v1/artisan/products/{id}/submit:
+    post:
+      summary: Submit a complete product draft for moderation
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan/products:write
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'200': {description: Product submitted as PENDING_REVIEW}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '409': {$ref: '#/components/responses/Error'}}
+  /api/v1/artisan/products/{id}/media:
+    post:
+      summary: Upload private product media for an editable draft
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan/products:write
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {multipart/form-data: {schema: {$ref: '#/components/schemas/MediaUpload'}}}}
+      responses: {'201': {description: Product media uploaded}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '409': {$ref: '#/components/responses/ConflictError'}}
+  /api/v1/artisan/products/{id}/media/{mediaId}:
+    delete:
+      summary: Delete private media from an editable product draft
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/artisan/products:write
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}, {name: mediaId, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'204': {description: Media deleted}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/v1/admin/users:
+    get:
+      summary: List users and roles for administration
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/users:read
+      parameters: [{name: role, in: query, schema: {type: string}}, {name: status, in: query, schema: {type: string}}, {name: page, in: query, schema: {type: integer, minimum: 1}}, {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100}}]
+      responses: {'200': {description: Paginated users}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}}
+  /api/v1/admin/users/{id}/roles:
+    patch:
+      summary: Replace a user's roles
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/users:write
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/RolesRequest'}}}}
+      responses: {'200': {description: Roles updated}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/v1/admin/audit-events:
+    get:
+      summary: Search append-only audit events
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/audit-events:read
+      parameters: [{name: actorUserId, in: query, schema: {type: string, format: uuid}}, {name: targetType, in: query, schema: {type: string}}, {name: targetId, in: query, schema: {type: string, format: uuid}}, {name: eventType, in: query, schema: {type: string}}, {name: correlationId, in: query, schema: {type: string}}, {name: from, in: query, schema: {type: string, format: date-time}}, {name: to, in: query, schema: {type: string, format: date-time}}, {name: page, in: query, schema: {type: integer, minimum: 1}}, {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100}}]
+      responses: {'200': {description: Paginated audit events}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}}
   /health/live:
     get:
       summary: Check API liveness
@@ -363,6 +464,96 @@ components:
       type: object
       properties:
         reason: {type: string, maxLength: 1000, description: Required for rejection and requested changes.}
+    ArtisanDocument:
+      type: object
+      required: [id, documentType, originalFilename, mediaType, sizeBytes]
+      properties:
+        id: {type: string, format: uuid}
+        documentType: {type: string}
+        originalFilename: {type: string}
+        mediaType: {type: string}
+        sizeBytes: {type: integer, format: int64}
+        url: {type: string, format: uri, description: Short-lived authorized download URL}
+    ArtisanMedia:
+      type: object
+      required: [id, mediaKind, originalFilename, mediaType, sizeBytes, visibility]
+      properties:
+        id: {type: string, format: uuid}
+        mediaKind: {type: string, enum: [IMAGE, VIDEO]}
+        originalFilename: {type: string}
+        mediaType: {type: string}
+        sizeBytes: {type: integer, format: int64}
+        sortOrder: {type: integer}
+        visibility: {type: string, enum: [PRIVATE]}
+        url: {type: string, format: uri}
+    PrivateUpload:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary}
+        documentType: {type: string}
+    MediaUpload:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary}
+        altText: {type: string, maxLength: 500}
+    ProductTranslation:
+      type: object
+      required: [locale]
+      properties:
+        locale: {type: string, enum: [ar, fr, en, es]}
+        name: {type: string, maxLength: 200}
+        description: {type: string, maxLength: 5000}
+        story: {type: string, maxLength: 5000}
+        culturalContext: {type: string, maxLength: 5000}
+    ProductRequest:
+      type: object
+      required: [categoryId, productType, priceMinor, currency]
+      properties:
+        categoryId: {type: string, format: uuid}
+        productType: {type: string, enum: [ARTISAN_SPECIFIC, STANDARD_TRADITIONAL]}
+        priceMinor: {type: integer, format: int64, minimum: 1}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        materials: {type: string, maxLength: 2000}
+        productionMethod: {type: string, maxLength: 2000}
+        intendedUse: {type: string, maxLength: 1000}
+        dimensions: {type: string, maxLength: 500}
+        weightGrams: {type: integer, minimum: 1}
+        countryOfOrigin: {type: string, maxLength: 120}
+        regionOfOrigin: {type: string, maxLength: 120}
+        ecoFriendlyVerified: {type: boolean}
+        fairTradeVerified: {type: boolean}
+        madeToOrderEligible: {type: boolean}
+        translations: {type: array, maxItems: 4, items: {$ref: '#/components/schemas/ProductTranslation'}}
+    ProductMedia:
+      type: object
+      required: [id, mediaKind, originalFilename, mediaType, sizeBytes, visibility]
+      properties:
+        id: {type: string, format: uuid}
+        mediaKind: {type: string, enum: [IMAGE, VIDEO]}
+        originalFilename: {type: string}
+        mediaType: {type: string}
+        sizeBytes: {type: integer, format: int64}
+        altText: {type: string}
+        sortOrder: {type: integer}
+        visibility: {type: string, enum: [PRIVATE]}
+        url: {type: string, format: uri}
+    OwnedProduct:
+      allOf:
+        - $ref: '#/components/schemas/ProductRequest'
+        - type: object
+          required: [id, artisanId, status, media]
+          properties:
+            id: {type: string, format: uuid}
+            artisanId: {type: string, format: uuid}
+            status: {type: string, enum: [DRAFT, PENDING_REVIEW, CHANGES_REQUESTED, APPROVED, ACTIVE, SUSPENDED, ARCHIVED]}
+            media: {type: array, items: {$ref: '#/components/schemas/ProductMedia'}}
+    RolesRequest:
+      type: object
+      required: [roles]
+      properties:
+        roles: {type: array, minItems: 1, maxItems: 10, items: {type: string}}
     User:
       type: object
       required: [id, email, displayName, status, roles, createdAt]

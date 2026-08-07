@@ -22,10 +22,19 @@ var defaultPolicies = [][]string{
 	{"customer", "/api/v1/addresses", "write"},
 	{"customer", "/api/v1/artisan-applications", "write"},
 	{"customer", "/api/v1/artisan-applications/me", "read"},
+	{"customer", "/api/v1/artisan-applications/me/documents", "read"},
+	{"customer", "/api/v1/artisan-applications/me/documents", "write"},
 	{"artisan", "/api/v1/artisan/profile", "write"},
+	{"artisan", "/api/v1/artisan/profile/media", "read"},
+	{"artisan", "/api/v1/artisan/profile/media", "write"},
+	{"artisan", "/api/v1/artisan/products", "read"},
+	{"artisan", "/api/v1/artisan/products", "write"},
 	{"administrator", "/api/v1/admin/artisan-applications", "read"},
 	{"administrator", "/api/v1/admin/artisan-applications/*", "write"},
 	{"administrator", "/api/v1/admin/artisan-applications/*/documents", "read"},
+	{"administrator", "/api/v1/admin/users", "read"},
+	{"administrator", "/api/v1/admin/users", "write"},
+	{"administrator", "/api/v1/admin/audit-events", "read"},
 }
 
 func New() (*Service, error) {

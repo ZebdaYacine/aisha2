@@ -13,6 +13,7 @@ import (
 type ArtisanHandler struct {
 	service   *artisan.Service
 	validator *RequestValidator
+	media     *artisan.MediaService
 }
 type artisanTranslationRequest struct {
 	Locale    string `json:"locale" validate:"required,oneof=ar fr en es"`
@@ -49,8 +50,12 @@ type artisanApplicationResponse struct {
 	Translations      []artisan.Translation `json:"translations"`
 }
 
-func NewArtisanHandler(service *artisan.Service, validator *RequestValidator) *ArtisanHandler {
-	return &ArtisanHandler{service: service, validator: validator}
+func NewArtisanHandler(service *artisan.Service, validator *RequestValidator, media ...*artisan.MediaService) *ArtisanHandler {
+	var mediaService *artisan.MediaService
+	if len(media) > 0 {
+		mediaService = media[0]
+	}
+	return &ArtisanHandler{service: service, validator: validator, media: mediaService}
 }
 func (h *ArtisanHandler) input(c fiber.Ctx) (artisan.ApplicationInput, error) {
 	var r artisanApplicationRequest
@@ -149,7 +154,12 @@ func (h *ArtisanHandler) Documents(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	items, err := h.service.Documents(c.Context(), p, c.Params("id"))
+	var items []artisan.Document
+	if h.media != nil {
+		items, err = h.media.AdminDocuments(c.Context(), p, c.Params("id"))
+	} else {
+		items, err = h.service.Documents(c.Context(), p, c.Params("id"))
+	}
 	if err != nil {
 		return artisanAPIError(err)
 	}

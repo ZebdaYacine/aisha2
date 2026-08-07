@@ -4,9 +4,11 @@ import (
 	"context"
 
 	"github.com/aisha-platform/aisha/apps/api/internal/config"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/admin"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/artisan"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/auth"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/catalogue"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/product"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/user"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/authorization"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/cache"
@@ -60,10 +62,14 @@ func NewRuntime(ctx context.Context, cfg config.Config) (*Runtime, error) {
 	rateLimiter := cache.NewRateLimiter(redisClient)
 	catalogueService := catalogue.NewService(catalogue.NewPostgresRepository(pool))
 	customerService := customer.NewService(customer.NewPostgresRepository(pool), authorizationService)
-	artisanService := artisan.NewService(artisan.NewPostgresRepository(pool), authorizationService)
-	features := Features{Auth: authService, Customer: customerService, Artisan: artisanService, Catalogue: catalogueService}
+	artisanRepository := artisan.NewPostgresRepository(pool)
+	artisanService := artisan.NewService(artisanRepository, authorizationService)
+	artisanMediaService := artisan.NewMediaService(artisanRepository, authorizationService, storage.NewObjectStore(minioClient), cfg.MinIOArtisanBucket, cfg.ArtisanDocumentMaxBytes, cfg.ArtisanMediaMaxBytes)
+	productService := product.NewService(product.NewPostgresRepository(pool), authorizationService, storage.NewObjectStore(minioClient), cfg.MinIOPrivateBucket, cfg.ProductMediaMaxBytes)
+	adminService := admin.NewService(admin.NewPostgresRepository(pool), authorizationService)
+	features := Features{Auth: authService, Customer: customerService, Artisan: artisanService, Catalogue: catalogueService, Product: productService, Admin: adminService}
 	return &Runtime{
-		App:            httpapi.New(cfg, healthService, features.Auth, authorizationService, rateLimiter, features.Artisan, features.Customer, features.Catalogue),
+		App:            httpapi.NewWithProduct(cfg, healthService, features.Auth, authorizationService, rateLimiter, features.Artisan, features.Customer, features.Product, artisanMediaService, features.Admin, features.Catalogue),
 		infrastructure: infrastructure,
 		cleanup: func() {
 			closeInfrastructure(infrastructure)

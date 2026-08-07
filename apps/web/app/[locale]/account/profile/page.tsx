@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ProfileForm } from "@/core/components/forms/profile-form";
+import { ProfileForm } from "@/features/account";
 import { isLocale } from "@/core/lib/i18n";
 import { storeCopy } from "@/core/lib/store-copy";
 

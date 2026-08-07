@@ -193,7 +193,7 @@ func (r *PostgresRepository) Decide(ctx context.Context, actor, id, decision, re
 	return scanApplication(r.pool.QueryRow(ctx, applicationSelect+`WHERE a.id=$1`, id))
 }
 func (r *PostgresRepository) Documents(ctx context.Context, id string) ([]Document, error) {
-	rows, err := r.pool.Query(ctx, `SELECT id,document_type,COALESCE(original_filename,''),media_type,size_bytes FROM artisan_documents WHERE artisan_profile_id=$1 ORDER BY created_at`, id)
+	rows, err := r.pool.Query(ctx, `SELECT id,document_type,object_key,COALESCE(original_filename,''),media_type,size_bytes FROM artisan_documents WHERE artisan_profile_id=$1 ORDER BY created_at`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -201,10 +201,71 @@ func (r *PostgresRepository) Documents(ctx context.Context, id string) ([]Docume
 	items := []Document{}
 	for rows.Next() {
 		var d Document
-		if err := rows.Scan(&d.ID, &d.DocumentType, &d.OriginalFilename, &d.MediaType, &d.SizeBytes); err != nil {
+		if err := rows.Scan(&d.ID, &d.DocumentType, &d.ObjectKey, &d.OriginalFilename, &d.MediaType, &d.SizeBytes); err != nil {
 			return nil, err
 		}
 		items = append(items, d)
+	}
+	return items, rows.Err()
+}
+
+func (r *PostgresRepository) Profile(ctx context.Context, userID string) (string, string, error) {
+	var id, status string
+	err := r.pool.QueryRow(ctx, `SELECT id,status FROM artisan_profiles WHERE user_id=$1`, userID).Scan(&id, &status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", domain.ErrNotFound
+	}
+	return id, status, err
+}
+
+func (r *PostgresRepository) AddDocument(ctx context.Context, userID string, input domain.DocumentUploadInput) (Document, error) {
+	var item Document
+	err := r.pool.QueryRow(ctx, `INSERT INTO artisan_documents(artisan_profile_id,document_type,object_key,original_filename,media_type,size_bytes,checksum_sha256) SELECT id,$2,$3,NULLIF($4,''),$5,$6,$7 FROM artisan_profiles WHERE user_id=$1 AND status <> 'SUSPENDED' RETURNING id,document_type,object_key,COALESCE(original_filename,''),media_type,size_bytes`, userID, input.DocumentType, input.ObjectKey, input.OriginalFilename, input.MediaType, input.SizeBytes, input.Checksum).Scan(&item.ID, &item.DocumentType, &item.ObjectKey, &item.OriginalFilename, &item.MediaType, &item.SizeBytes)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Document{}, domain.ErrInvalidTransition
+	}
+	return item, err
+}
+
+func (r *PostgresRepository) OwnDocuments(ctx context.Context, userID string) ([]Document, error) {
+	rows, err := r.pool.Query(ctx, `SELECT d.id,d.document_type,d.object_key,COALESCE(d.original_filename,''),d.media_type,d.size_bytes FROM artisan_documents d JOIN artisan_profiles a ON a.id=d.artisan_profile_id WHERE a.user_id=$1 ORDER BY d.created_at`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Document{}
+	for rows.Next() {
+		var item Document
+		if err = rows.Scan(&item.ID, &item.DocumentType, &item.ObjectKey, &item.OriginalFilename, &item.MediaType, &item.SizeBytes); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (r *PostgresRepository) AddMedia(ctx context.Context, userID string, input domain.MediaUploadInput) (domain.Media, error) {
+	var item domain.Media
+	err := r.pool.QueryRow(ctx, `INSERT INTO artisan_media(artisan_profile_id,media_kind,object_key,original_filename,media_type,size_bytes,checksum_sha256,sort_order,visibility) SELECT id,$2,$3,NULLIF($4,''),$5,$6,$7,$8,'PRIVATE' FROM artisan_profiles WHERE user_id=$1 AND status <> 'SUSPENDED' RETURNING id,media_kind,object_key,COALESCE(original_filename,''),media_type,size_bytes,sort_order,visibility`, userID, input.MediaKind, input.ObjectKey, input.OriginalFilename, input.MediaType, input.SizeBytes, input.Checksum, input.SortOrder).Scan(&item.ID, &item.MediaKind, &item.ObjectKey, &item.OriginalFilename, &item.MediaType, &item.SizeBytes, &item.SortOrder, &item.Visibility)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Media{}, domain.ErrInvalidTransition
+	}
+	return item, err
+}
+
+func (r *PostgresRepository) OwnMedia(ctx context.Context, userID string) ([]domain.Media, error) {
+	rows, err := r.pool.Query(ctx, `SELECT m.id,m.media_kind,m.object_key,COALESCE(m.original_filename,''),m.media_type,m.size_bytes,m.sort_order,m.visibility FROM artisan_media m JOIN artisan_profiles a ON a.id=m.artisan_profile_id WHERE a.user_id=$1 ORDER BY m.sort_order,m.created_at`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []domain.Media{}
+	for rows.Next() {
+		var item domain.Media
+		if err = rows.Scan(&item.ID, &item.MediaKind, &item.ObjectKey, &item.OriginalFilename, &item.MediaType, &item.SizeBytes, &item.SortOrder, &item.Visibility); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
 	}
 	return items, rows.Err()
 }

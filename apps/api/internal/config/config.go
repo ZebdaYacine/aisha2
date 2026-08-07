@@ -9,25 +9,29 @@ import (
 )
 
 type Config struct {
-	AppName             string
-	Environment         string
-	APIPort             string
-	ShutdownTimeout     time.Duration
-	DatabaseURL         string
-	DatabaseMaxOpen     int32
-	DatabaseMaxIdle     int32
-	RedisURL            string
-	MinIOEndpoint       string
-	MinIOAccessKey      string
-	MinIOSecretKey      string
-	MinIOUseSSL         bool
-	MinIOPublicBucket   string
-	MinIOPrivateBucket  string
-	MinIOArtisanBucket  string
-	AllowedOrigins      []string
-	AuthSigningKey      string
-	AuthRateLimitMax    int64
-	AuthRateLimitWindow time.Duration
+	AppName                 string
+	Environment             string
+	APIPort                 string
+	ShutdownTimeout         time.Duration
+	DatabaseURL             string
+	DatabaseMaxOpen         int32
+	DatabaseMaxIdle         int32
+	RedisURL                string
+	MinIOEndpoint           string
+	MinIOAccessKey          string
+	MinIOSecretKey          string
+	MinIOUseSSL             bool
+	MinIOPublicBucket       string
+	MinIOPrivateBucket      string
+	MinIOArtisanBucket      string
+	UploadMaxBytes          int64
+	ProductMediaMaxBytes    int64
+	ArtisanDocumentMaxBytes int64
+	ArtisanMediaMaxBytes    int64
+	AllowedOrigins          []string
+	AuthSigningKey          string
+	AuthRateLimitMax        int64
+	AuthRateLimitWindow     time.Duration
 }
 
 func Load() (Config, error) {
@@ -51,26 +55,46 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("MINIO_USE_SSL must be true or false: %w", err)
 	}
+	uploadMaxBytes, err := positiveInt64("UPLOAD_MAX_BYTES", 50*1024*1024)
+	if err != nil {
+		return Config{}, err
+	}
+	productMediaMaxBytes, err := positiveInt64("PRODUCT_MEDIA_MAX_BYTES", 10*1024*1024)
+	if err != nil {
+		return Config{}, err
+	}
+	artisanDocumentMaxBytes, err := positiveInt64("ARTISAN_DOCUMENT_MAX_BYTES", 10*1024*1024)
+	if err != nil {
+		return Config{}, err
+	}
+	artisanMediaMaxBytes, err := positiveInt64("ARTISAN_MEDIA_MAX_BYTES", 10*1024*1024)
+	if err != nil {
+		return Config{}, err
+	}
 	cfg := Config{
-		AppName:             env("APP_NAME", "AISHA"),
-		Environment:         env("APP_ENV", "development"),
-		APIPort:             env("API_PORT", "8080"),
-		ShutdownTimeout:     10 * time.Second,
-		DatabaseURL:         env("DATABASE_URL", "postgres://aisha:aisha_dev@localhost:5432/aisha?sslmode=disable"),
-		DatabaseMaxOpen:     maxOpen,
-		DatabaseMaxIdle:     maxIdle,
-		RedisURL:            env("REDIS_URL", "redis://localhost:6379/0"),
-		MinIOEndpoint:       env("MINIO_ENDPOINT", "localhost:9000"),
-		MinIOAccessKey:      env("MINIO_ACCESS_KEY", "aisha"),
-		MinIOSecretKey:      env("MINIO_SECRET_KEY", "aisha_minio_dev"),
-		MinIOUseSSL:         useSSL,
-		MinIOPublicBucket:   env("MINIO_PUBLIC_BUCKET", "product-public"),
-		MinIOPrivateBucket:  env("MINIO_PRIVATE_BUCKET", "product-private"),
-		MinIOArtisanBucket:  env("MINIO_ARTISAN_BUCKET", "artisan-private"),
-		AllowedOrigins:      splitCSV(env("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
-		AuthSigningKey:      env("AUTH_SIGNING_KEY", "aisha-development-signing-key-change-me"),
-		AuthRateLimitMax:    authRateLimitMax,
-		AuthRateLimitWindow: time.Duration(authRateLimitWindowSeconds) * time.Second,
+		AppName:                 env("APP_NAME", "AISHA"),
+		Environment:             env("APP_ENV", "development"),
+		APIPort:                 env("API_PORT", "8080"),
+		ShutdownTimeout:         10 * time.Second,
+		DatabaseURL:             env("DATABASE_URL", "postgres://aisha:aisha_dev@localhost:5432/aisha?sslmode=disable"),
+		DatabaseMaxOpen:         maxOpen,
+		DatabaseMaxIdle:         maxIdle,
+		RedisURL:                env("REDIS_URL", "redis://localhost:6379/0"),
+		MinIOEndpoint:           env("MINIO_ENDPOINT", "localhost:9000"),
+		MinIOAccessKey:          env("MINIO_ACCESS_KEY", "aisha"),
+		MinIOSecretKey:          env("MINIO_SECRET_KEY", "aisha_minio_dev"),
+		MinIOUseSSL:             useSSL,
+		MinIOPublicBucket:       env("MINIO_PUBLIC_BUCKET", "product-public"),
+		MinIOPrivateBucket:      env("MINIO_PRIVATE_BUCKET", "product-private"),
+		MinIOArtisanBucket:      env("MINIO_ARTISAN_BUCKET", "artisan-private"),
+		UploadMaxBytes:          uploadMaxBytes,
+		ProductMediaMaxBytes:    productMediaMaxBytes,
+		ArtisanDocumentMaxBytes: artisanDocumentMaxBytes,
+		ArtisanMediaMaxBytes:    artisanMediaMaxBytes,
+		AllowedOrigins:          splitCSV(env("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
+		AuthSigningKey:          env("AUTH_SIGNING_KEY", "aisha-development-signing-key-change-me"),
+		AuthRateLimitMax:        authRateLimitMax,
+		AuthRateLimitWindow:     time.Duration(authRateLimitWindowSeconds) * time.Second,
 	}
 	if len(cfg.AuthSigningKey) < 32 {
 		return Config{}, fmt.Errorf("AUTH_SIGNING_KEY must contain at least 32 characters")

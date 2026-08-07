@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { AccountSidebar } from "@/core/components/account/account-sidebar";
+import { AccountSidebar } from "@/features/account";
 import { Container } from "@/core/components/layout/container";
 import { isLocale } from "@/core/lib/i18n";
 import { storeCopy } from "@/core/lib/store-copy";

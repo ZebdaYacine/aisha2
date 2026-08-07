@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { ProductCard } from "@/core/components/commerce/product-card";
+import { ProductCard } from "@/features/product/components/product-card";
 import { products } from "@/features/catalogue/data";
 import { storeCopy } from "@/core/lib/store-copy";
 describe("ProductCard", () => {

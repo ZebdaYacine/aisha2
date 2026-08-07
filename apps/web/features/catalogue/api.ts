@@ -108,6 +108,7 @@ export async function catalogue(locale: Locale) {
     categories: categoryPage.items.map(
       (item) =>
         ({
+          id: item.id,
           slug: item.slug,
           name: local(item.name),
           description: local(""),

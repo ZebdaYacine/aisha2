@@ -14,7 +14,7 @@ import type { Locale } from "@/core/lib/i18n";
 import type { StoreCopy } from "@/core/lib/store-copy";
 import { FormErrorSummary } from "./form-error-summary";
 import { useOptionalAuth } from "@/features/auth/viewmodel/auth-context";
-import { userFromAuthResponse } from "@/features/auth/types";
+import { landingPathForUser, userFromAuthResponse } from "@/features/auth/types";
 
 type Mode = "login" | "register" | "forgot";
 type Values = {
@@ -103,12 +103,14 @@ export function AuthForm({
       const result = await (submit ?? ((input) => submitJSON(`/api/auth/${mode === "forgot" ? "forgot-password" : mode}`, input)))(values);
       if (result.ok) {
         if (mode !== "forgot") {
-          const user = userFromAuthResponse(result.data);
+          let user = userFromAuthResponse(result.data);
           if (user) auth?.setUser(user);
-          else await auth?.refresh();
+          else user = (await auth?.refresh()) ?? null;
+          toast.success(copy.account);
+          window.location.assign(landingPathForUser(user ?? { id: "", email: "", displayName: "" }, locale));
+          return;
         }
         toast.success(mode === "forgot" ? copy.forgot : copy.account);
-        if (mode !== "forgot") window.location.assign(`/${locale}/account`);
         return;
       }
       Object.entries(result.fieldErrors ?? {}).forEach(([name, message]) =>

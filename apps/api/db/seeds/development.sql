@@ -65,11 +65,12 @@ INSERT INTO category_translations (category_id, locale, name, created_at, update
     ('20000000-0000-0000-0000-000000000012', 'es', 'Bordado', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (category_id, locale) DO UPDATE SET name=EXCLUDED.name, updated_at=EXCLUDED.updated_at;
 
-INSERT INTO users (id, email, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
-    ('90000000-0000-0000-0000-000000000001', 'admin.seed@example.test', 'ACTIVE', 'Seed Administrator', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000002', 'customer.seed@example.test', 'ACTIVE', 'Seed Customer', '2025-01-01T00:00:00Z', '+213000000000', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000003', 'artisan.seed@example.test', 'ACTIVE', 'Atelier Tala', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
-ON CONFLICT DO NOTHING;
+-- Development-only password for every seeded account: VPSforTest2026.
+INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
+    ('90000000-0000-0000-0000-000000000001', 'admin.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Seed Administrator', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000002', 'customer.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Seed Customer', '2025-01-01T00:00:00Z', '+213000000000', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000003', 'artisan.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Atelier Tala', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+ON CONFLICT (id) DO UPDATE SET password_hash=EXCLUDED.password_hash;
 
 INSERT INTO user_roles (user_id, role_id, assigned_by_user_id, assigned_at) VALUES
     ('90000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000006', NULL, '2025-01-01T00:00:00Z'),
@@ -141,12 +142,12 @@ ON CONFLICT DO NOTHING;
 
 -- Additional development catalogue fixtures backed by images in
 -- apps/web/public/images/aisha.
-INSERT INTO users (id, email, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
-    ('90000000-0000-0000-0000-000000000004', 'noura.seed@example.test', 'ACTIVE', 'Atelier Noura', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000005', 'tifawt.seed@example.test', 'ACTIVE', 'Maison Tifawt', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000006', 'zina.seed@example.test', 'ACTIVE', 'Atelier Zina', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000007', 'tissili.seed@example.test', 'ACTIVE', 'Dar Tissili', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
-ON CONFLICT DO NOTHING;
+INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
+    ('90000000-0000-0000-0000-000000000004', 'noura.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Atelier Noura', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000005', 'tifawt.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Maison Tifawt', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000006', 'zina.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Atelier Zina', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000007', 'tissili.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Dar Tissili', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+ON CONFLICT (id) DO UPDATE SET password_hash=EXCLUDED.password_hash;
 
 INSERT INTO user_roles (user_id, role_id, assigned_by_user_id, assigned_at) VALUES
     ('90000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),

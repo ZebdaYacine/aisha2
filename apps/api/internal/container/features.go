@@ -1,9 +1,11 @@
 package container
 
 import (
+	"github.com/aisha-platform/aisha/apps/api/internal/features/admin"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/artisan"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/auth"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/catalogue"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/product"
 	customer "github.com/aisha-platform/aisha/apps/api/internal/features/user"
 )
 
@@ -14,4 +16,6 @@ type Features struct {
 	Customer  *customer.Service
 	Artisan   *artisan.Service
 	Catalogue *catalogue.Service
+	Product   *product.Service
+	Admin     *admin.Service
 }

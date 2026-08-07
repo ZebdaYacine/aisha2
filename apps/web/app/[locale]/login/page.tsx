@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { AuthForm } from "@/core/components/forms/auth-form";
+import { AuthForm } from "@/features/auth";
 import { isLocale } from "@/core/lib/i18n";
 import { storeCopy } from "@/core/lib/store-copy";
 export default async function LoginPage({

@@ -2,7 +2,7 @@ import { BadgeCheck, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ProductGrid } from "@/core/components/commerce/product-grid";
+import { ProductGrid } from "@/features/product";
 import { Container } from "@/core/components/layout/container";
 import { Breadcrumbs } from "@/core/components/shared/breadcrumbs";
 import { SectionHeading } from "@/core/components/shared/section-heading";

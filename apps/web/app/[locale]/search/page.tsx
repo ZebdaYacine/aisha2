@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ProductGrid } from "@/core/components/commerce/product-grid";
+import { ProductGrid } from "@/features/product";
 import { EmptyState } from "@/core/components/feedback/empty-state";
 import { Container } from "@/core/components/layout/container";
 import { Breadcrumbs } from "@/core/components/shared/breadcrumbs";

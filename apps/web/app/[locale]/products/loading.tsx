@@ -1,5 +1,5 @@
 import { Container } from "@/core/components/layout/container";
-import { ProductGridSkeleton } from "@/core/components/commerce/product-grid";
+import { ProductGridSkeleton } from "@/features/product";
 export default function Loading() {
   return (
     <Container className="py-16">

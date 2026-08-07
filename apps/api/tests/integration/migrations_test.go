@@ -16,7 +16,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-const expectedMigrationCount = 10
+const expectedMigrationCount = 11
 
 func migrationsPath(t *testing.T) string {
 	t.Helper()
@@ -111,10 +111,11 @@ func assertFoundation(t *testing.T, databaseURL string) {
 		"password_reset_tokens",
 		"addresses",
 		"category_translations",
+		"product_submissions",
 	}).Scan(&modelTableCount); err != nil {
 		t.Fatal(err)
 	}
-	if roleCount != 6 || categoryCount != 12 || modelTableCount != 17 {
+	if roleCount != 6 || categoryCount != 12 || modelTableCount != 18 {
 		t.Fatalf("unexpected foundation counts: roles=%d categories=%d tables=%d", roleCount, categoryCount, modelTableCount)
 	}
 

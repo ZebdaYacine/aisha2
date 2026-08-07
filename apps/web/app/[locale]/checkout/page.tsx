@@ -1,7 +1,6 @@
 import { LockKeyhole } from "lucide-react";
 import { notFound } from "next/navigation";
-import { OrderSummary } from "@/core/components/commerce/order-summary";
-import { CheckoutForm } from "@/core/components/forms/checkout-form";
+import { OrderSummary, CheckoutForm } from "@/features/checkout";
 import { Container } from "@/core/components/layout/container";
 import { Breadcrumbs } from "@/core/components/shared/breadcrumbs";
 import { isLocale } from "@/core/lib/i18n";

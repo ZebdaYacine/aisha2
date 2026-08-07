@@ -2,9 +2,11 @@ package httpapi
 
 import (
 	"github.com/aisha-platform/aisha/apps/api/internal/config"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/admin"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/artisan"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/auth"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/catalogue"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/product"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/user"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/authorization"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/health"
@@ -14,7 +16,19 @@ import (
 )
 
 func New(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, catalogueServices ...*catalogue.Service) *fiber.App {
-	app := fiber.New(fiber.Config{AppName: cfg.AppName + " API", BodyLimit: 2 * 1024 * 1024, ErrorHandler: errorHandler})
+	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, nil, nil, nil, catalogueServices...)
+}
+
+func NewWithProduct(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, catalogueServices ...*catalogue.Service) *fiber.App {
+	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, productService, artisanMediaService, adminService, catalogueServices...)
+}
+
+func newServer(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, catalogueServices ...*catalogue.Service) *fiber.App {
+	bodyLimit := cfg.UploadMaxBytes + 2*1024*1024
+	if bodyLimit <= 2*1024*1024 {
+		bodyLimit = 52 * 1024 * 1024
+	}
+	app := fiber.New(fiber.Config{AppName: cfg.AppName + " API", BodyLimit: int(bodyLimit), ErrorHandler: errorHandler})
 	app.Use(servermiddleware.Recovery())
 	app.Use(servermiddleware.RequestID())
 	app.Use(servermiddleware.SecurityHeaders())
@@ -55,7 +69,19 @@ func New(cfg config.Config, healthService *health.Service, authService *auth.Ser
 		}
 		var artisanHandler *ArtisanHandler
 		if artisanService != nil {
-			artisanHandler = NewArtisanHandler(artisanService, NewRequestValidator())
+			artisanHandler = NewArtisanHandler(artisanService, NewRequestValidator(), artisanMediaService)
+		}
+		var artisanMediaHandler *ArtisanMediaHandler
+		if artisanMediaService != nil {
+			artisanMediaHandler = NewArtisanMediaHandler(artisanMediaService, cfg.UploadMaxBytes)
+		}
+		var adminHandler *AdminHandler
+		if adminService != nil {
+			adminHandler = NewAdminHandler(adminService, NewRequestValidator())
+		}
+		var productHandler *ProductHandler
+		if productService != nil {
+			productHandler = NewProductHandler(productService, NewRequestValidator(), cfg.ProductMediaMaxBytes)
 		}
 		routes.RegisterAuthenticated(api, routes.AuthenticatedRoutes{
 			Authenticate: authHandler.RequirePrincipal, Authorize: casbin.Require, Me: authHandler.Me,
@@ -64,14 +90,103 @@ func New(cfg config.Config, healthService *health.Service, authService *auth.Ser
 			UpdateAddress: customerUpdateAddress(customerHandler), DeleteAddress: customerDeleteAddress(customerHandler),
 			SubmitArtisan: artisanSubmit(artisanHandler), MineArtisan: artisanMine(artisanHandler),
 			UpdateArtisanProfile: artisanUpdateProfile(artisanHandler),
+			ListProducts:         productList(productHandler), CreateProduct: productCreate(productHandler), GetProduct: productGet(productHandler),
+			UpdateProduct: productUpdate(productHandler), SubmitProduct: productSubmit(productHandler), UploadProductMedia: productUploadMedia(productHandler), DeleteProductMedia: productDeleteMedia(productHandler),
+			ArtisanDocuments: artisanDocumentsMine(artisanMediaHandler), UploadArtisanDocument: artisanDocumentUpload(artisanMediaHandler), ArtisanMedia: artisanMediaList(artisanMediaHandler), UploadArtisanMedia: artisanMediaUpload(artisanMediaHandler),
 		})
 		routes.RegisterAdmin(api, routes.AdminRoutes{
 			Authenticate: authHandler.RequirePrincipal, Authorize: casbin.Require,
 			ListApplications: artisanList(artisanHandler), DecideApplication: artisanDecide(artisanHandler),
 			ApplicationDocuments: artisanDocuments(artisanHandler),
+			ListUsers:            adminUsers(adminHandler), UpdateUserRoles: adminRoles(adminHandler), AuditEvents: adminAudit(adminHandler),
 		})
 	}
 	return app
+}
+
+func productList(h *ProductHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.List
+}
+func productCreate(h *ProductHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Create
+}
+func productGet(h *ProductHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Get
+}
+func productUpdate(h *ProductHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Update
+}
+func productSubmit(h *ProductHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Submit
+}
+func productUploadMedia(h *ProductHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.UploadMedia
+}
+func productDeleteMedia(h *ProductHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.DeleteMedia
+}
+func artisanDocumentsMine(h *ArtisanMediaHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Documents
+}
+func artisanDocumentUpload(h *ArtisanMediaHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.UploadDocument
+}
+func artisanMediaList(h *ArtisanMediaHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Media
+}
+func artisanMediaUpload(h *ArtisanMediaHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.UploadMedia
+}
+func adminUsers(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Users
+}
+func adminRoles(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Roles
+}
+func adminAudit(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Audit
 }
 
 func customerProfile(h *CustomerHandler) fiber.Handler {

@@ -12,7 +12,7 @@ import type { Locale, Messages } from "@/core/lib/i18n";
 import { storeCopy } from "@/core/lib/store-copy";
 import { ArtisanCard } from "./artisan-card";
 import { CategoryCard } from "./category-card";
-import { ProductGrid } from "@/core/components/commerce/product-grid";
+import { ProductGrid } from "@/features/product";
 import { Container } from "@/core/components/layout/container";
 import { LocalizedLink } from "@/core/components/shared/localized-link";
 import { SectionHeading } from "@/core/components/shared/section-heading";

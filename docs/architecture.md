@@ -19,12 +19,10 @@ Monorepo
 
 Business logic must not be placed in Next.js route files, React presentational components, frontend API clients, Fiber handlers, route registration files, SQLBoiler generated models, migrations, or generic utility folders.
 
-This document has two parts and an appendix:
+This is the structural source of truth for the monorepo. `docs/frontend.md` and `docs/backend.md` carry the full prose rationale (visual direction, UX behaviour, domain reasoning); every concrete requirement from both has been bound into a folder, a file, or a rule below, so this document alone is buildable.
 
-- **Part I — Frontend** (§4–§11): Next.js App Router, feature-based, ViewModel-optional.
-- **Part II — Backend** (§12–§40): Go Fiber v3, feature-based Clean Architecture,
-  fully bound to concrete packages, code shapes, domain rules, and CI commands —
-  this is the MVP-ready version of the backend, not just the conceptual layering.
+- **Part I — Frontend** (§4–§31): Next.js App Router, feature-based, ViewModel-optional, fully bound to concrete design tokens, routing, component inventory, forms, and CI commands — this is the MVP-ready version of the frontend, not just the conceptual layering.
+- **Part II — Backend** (§32–§60): Go Fiber v3, feature-based Clean Architecture, fully bound to concrete packages, code shapes, domain rules, and CI commands — the MVP-ready version of the backend.
 
 ## 2. Dependency Rules
 
@@ -97,7 +95,41 @@ aisha/
 
 # Part I — Frontend
 
-## 4. Frontend Base Structure
+## 4. Frontend Goal and Principles
+
+Build a premium, visually distinctive, secure, multilingual e-commerce storefront for Algerian artisanal products. Customers discover products, understand their cultural origin, learn about the artisan, and complete a purchase in a small number of clear steps. AISHA should feel like a modern international fashion and lifestyle store while preserving an authentic Algerian identity — the editorial minimalism of Zara, the bold product presentation of Nike, and Algerian craftsmanship, patterns, and cultural storytelling, without directly copying any of them (§6).
+
+Principles:
+
+```text
+Next.js App Router
+Server Components by default; Client Components only when interactivity requires them
+Strict TypeScript
+shadcn/ui components
+Tailwind CSS
+React Hook Form + Zod for forms
+Translation keys for all visible text
+Full Arabic RTL support
+Responsive and accessible design
+Mobile-first implementation
+No business-critical rules only in the frontend
+Reusable design-system components over page-specific styling
+```
+
+Required frontend packages:
+
+```text
+next                        → App Router, Server/Client Components
+react / react-dom
+typescript                  → strict mode
+tailwindcss                 → utility classes, consumes tokens from styles/tokens.css (§6)
+shadcn/ui (+ Radix primitives) → core/components/ui (§10)
+react-hook-form + zod       → features/<feature>/schemas, components/forms (§17)
+next-intl (recommended)     → satisfies the /[locale]/ routing + messages/*.json convention in §8, §26; substitute an equivalent i18n router only if the routing and message-file shape below are preserved
+lucide-react                → icon set paired with shadcn/ui
+```
+
+## 5. Frontend Base Structure
 
 ```text
 apps/web/
@@ -109,6 +141,7 @@ apps/web/
 ├── tests/
 ├── next.config.ts
 ├── middleware.ts
+├── components.json
 ├── package.json
 ├── tsconfig.json
 └── .env.example
@@ -122,112 +155,316 @@ core/      Shared technical infrastructure and reusable UI
 features/  Business feature modules
 messages/  Translation files
 public/    Static assets and PWA files
-tests/     Unit, integration, and E2E tests
+tests/     Unit, integration, E2E, and visual-regression tests (§27)
 ```
 
-## 5. Frontend Routes
+`components.json` is the shadcn/ui config (component output paths, alias mapping) — required because §10, §25 assume shadcn primitives live at `core/components/ui`. `middleware.ts` owns locale detection and redirect to `/[locale]/...` (§8); it must not implement authentication or authorization decisions — those stay server-side and authoritative (§19, backend §49).
 
-Route files must stay thin. They may read parameters, define metadata, and compose feature views. They must not implement repositories, perform scattered raw fetch calls, duplicate backend authorization, or contain trusted calculations.
+## 6. Design System and Visual Tokens
+
+Create the design system before building complete pages. AISHA should feel premium, authentic, contemporary, cultural, editorial, warm, trustworthy, and handmade-but-professionally-presented. Avoid generic marketplace layouts, excessive gradients, heavy shadows, crowded grids, decorative animations that slow down shopping, dashboard styling on customer-facing pages, and using every shadcn/ui component without a clear purpose.
+
+```text
+core/components/
+├── ui/          shadcn/ui primitives (§25)
+├── layout/      header, footer, nav (§9)
+├── commerce/    Money, AvailabilityLabel, VerificationBadge (§10)
+├── editorial/   reusable storytelling primitives (§10)
+├── feedback/    EmptyState, ErrorState, LoadingSkeleton (§24)
+└── forms/       shared form primitives (§17)
+
+apps/web/app/
+├── globals.css      imports tokens.css + utilities.css, Tailwind base
+└── styles/
+    ├── tokens.css   CSS custom properties below
+    └── utilities.css
+```
+
+Global CSS stays under `app/` (not `core/`) because Next.js requires the root layout to import it directly — `app/[locale]/layout.tsx` is that root layout (§8).
+
+### 6.1 Colour Palette
+
+Restrained palette — most of the storefront stays neutral so product imagery remains dominant. Do not apply accent colours to every element.
+
+```text
+Background:        warm off-white
+Surface:            white
+Primary text:       near black
+Secondary text:     warm grey
+Muted surface:      light stone
+Border:             soft neutral grey
+Primary accent:     deep terracotta
+Secondary accent:   olive green
+Premium accent:     muted gold
+Error:               deep red
+Success:             forest green
+```
+
+```css
+:root {
+  --background: 40 33% 98%;
+  --foreground: 20 10% 10%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 20 10% 10%;
+
+  --muted: 35 18% 93%;
+  --muted-foreground: 25 8% 42%;
+
+  --border: 30 12% 86%;
+  --input: 30 12% 86%;
+
+  --primary: 14 48% 38%;
+  --primary-foreground: 40 33% 98%;
+
+  --secondary: 75 18% 30%;
+  --secondary-foreground: 40 33% 98%;
+
+  --accent: 40 40% 56%;
+  --accent-foreground: 20 10% 10%;
+
+  --destructive: 0 62% 42%;
+  --destructive-foreground: 0 0% 100%;
+
+  --radius: 0.25rem;
+}
+```
+
+### 6.2 Typography
+
+```text
+Latin UI:       Inter or Geist
+Latin Display:  Cormorant Garamond or Playfair Display
+Arabic UI:      IBM Plex Sans Arabic or Noto Sans Arabic
+Arabic Display: Noto Kufi Arabic or Readex Pro
+```
+
+```text
+Display XL:  clamp(3rem, 8vw, 7rem)
+Display LG:  clamp(2.5rem, 6vw, 5rem)
+Heading 1:   clamp(2rem, 4vw, 3.5rem)
+Heading 2:   clamp(1.75rem, 3vw, 2.75rem)
+Heading 3:   1.5rem
+Body large:  1.125rem
+Body:        1rem
+Small:       0.875rem
+Label:       0.75rem
+```
+
+Large headings use compact line height; avoid excessive font-weight variation; prices must be immediately visible; uppercase labels sparingly (never for Arabic unless specifically appropriate, §25); avoid justified text; limit paragraphs to readable line widths.
+
+### 6.3 Spacing
+
+```text
+Mobile:  py-16
+Tablet:  py-20
+Desktop: py-28 or py-32
+```
+
+```tsx
+<div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 xl:px-14">
+  {children}
+</div>
+```
+
+Use whitespace to define hierarchy rather than wrapping every section in a bordered card.
+
+### 6.4 Corners, Borders, Shadows
+
+```text
+Cards:   rounded-sm or rounded-none
+Inputs:  rounded-sm
+Buttons: rounded-sm
+Badges:  rounded-full only when semantically appropriate
+```
+
+Thin neutral borders, very subtle shadows, square or nearly square product imagery, full-width image sections without unnecessary containers. Avoid large rounded cards everywhere, strong drop shadows, glassmorphism, and pill-shaped buttons.
+
+## 7. Interaction and Motion
+
+Motion communicates quality, not decoration.
+
+```text
+Fast interaction:    150ms
+Standard transition: 250ms
+Drawer or modal:     300ms
+Editorial reveal:    400ms maximum
+```
+
+Use: subtle image zoom on hover, fade/translate transitions for menus and dialogs, smooth cart-drawer transitions, underline animations on nav links, crossfade between gallery images, skeleton loaders matching final content dimensions, sticky purchase panels where appropriate.
+
+Avoid: large page-entrance animations, continuous motion, parallax on every section, animations that delay interaction, bouncing buttons, excessive Framer Motion.
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+Shared motion utilities live in `core/lib/motion.ts` (timing constants, shared variants) and `core/hooks/use-prefers-reduced-motion.ts` — features consume these rather than hardcoding durations.
+
+## 8. Frontend Routes
+
+Route strategy is locale-prefixed (§26): `/[locale]/...`. `app/[locale]/layout.tsx` is the root layout — Next.js allows the dynamic segment to own the root `<html>`/`<body>` when it is the only top-level route, so no separate non-dynamic `app/layout.tsx` is needed; `[locale]/layout.tsx` imports `app/globals.css` and sets `lang`/`dir` (§26).
+
+Route files stay thin: they may read params, define metadata, and compose feature views. They must not implement repositories, perform scattered raw fetch calls, duplicate backend authorization, or contain trusted calculations.
 
 ```text
 apps/web/app/
-├── layout.tsx
-├── page.tsx
 ├── globals.css
-├── login/
-├── register/
-├── init-email/
-├── confirmOTP/
-├── init-password/
-├── products/
-│   ├── page.tsx
-│   └── [slug]/
-├── categories/[slug]/
-├── collections/[slug]/
-├── regions/[slug]/
-├── artisans/
-│   ├── page.tsx
-│   └── [slug]/
-├── search/
-├── wishlist/
-├── cart/
-├── checkout/
-│   ├── page.tsx
-│   └── success/
-├── payment/[paymentId]/
-├── account/
-│   ├── layout.tsx
-│   ├── page.tsx
-│   ├── profile/
-│   ├── addresses/
-│   ├── orders/
-│   │   ├── page.tsx
-│   │   └── [id]/
-│   ├── wishlist/
-│   └── reviews/
-├── custom-orders/
-│   ├── page.tsx
-│   ├── new/
-│   └── [id]/
-├── artisan/
-│   ├── layout.tsx
-│   ├── page.tsx
-│   ├── profile/
-│   ├── products/
-│   │   ├── page.tsx
-│   │   ├── new/
-│   │   └── [id]/
-│   ├── orders/
-│   └── custom-orders/
-└── admin/
+├── styles/
+│   ├── tokens.css
+│   └── utilities.css
+└── [locale]/
     ├── layout.tsx
-    ├── page.tsx
-    ├── users/
+    ├── page.tsx                        # home — composes features/home (§15)
+    ├── login/
+    ├── register/
+    ├── init-email/
+    ├── confirmOTP/
+    ├── init-password/
+    ├── products/
+    │   ├── page.tsx
+    │   └── [slug]/
+    ├── categories/[slug]/
+    ├── collections/[slug]/
+    ├── regions/[slug]/
     ├── artisans/
-    ├── catalogue/
-    ├── moderation/
-    ├── warehouse/
-    ├── inventory/
-    ├── orders/
-    ├── payments/
-    ├── shipments/
+    │   ├── page.tsx
+    │   └── [slug]/
+    ├── search/
+    ├── wishlist/
+    ├── cart/
+    ├── checkout/
+    │   ├── page.tsx
+    │   └── success/
+    ├── payment/[paymentId]/
+    ├── account/
+    │   ├── layout.tsx                  # side nav shell, §19
+    │   ├── page.tsx
+    │   ├── profile/
+    │   ├── addresses/
+    │   ├── orders/
+    │   │   ├── page.tsx
+    │   │   └── [id]/
+    │   ├── wishlist/
+    │   └── reviews/
     ├── custom-orders/
-    └── audit/
+    │   ├── page.tsx
+    │   ├── new/
+    │   └── [id]/
+    ├── artisan/
+    │   ├── layout.tsx                  # dashboard shell, §20
+    │   ├── page.tsx
+    │   ├── profile/
+    │   ├── products/
+    │   │   ├── page.tsx
+    │   │   ├── new/
+    │   │   └── [id]/
+    │   ├── orders/
+    │   └── custom-orders/
+    └── admin/
+        ├── layout.tsx                  # dashboard shell, §20
+        ├── page.tsx
+        ├── users/
+        ├── artisans/
+        ├── catalogue/
+        ├── moderation/
+        ├── warehouse/
+        ├── inventory/
+        ├── orders/
+        ├── payments/
+        ├── shipments/
+        ├── custom-orders/
+        └── audit/
 ```
 
-## 6. Frontend Core
+MVP route list, for reference against the tree above (all under `/[locale]`): `/`, `/products`, `/products/[slug]`, `/artisans`, `/artisans/[slug]`, `/categories/[slug]`, `/login`, `/register`, `/cart`, `/checkout`, `/payment/[paymentId]`, `/account`, `/account/orders`, `/account/orders/[id]`, `/custom-orders`, `/artisan`, `/artisan/profile`, `/artisan/products`, `/artisan/products/new`, `/artisan/products/[id]`, `/admin`, `/admin/artisans`, `/admin/moderation`, `/admin/warehouse`, `/admin/orders`, `/admin/audit`.
+
+## 9. Global Storefront Layout
+
+```text
+core/components/layout/
+├── AnnouncementBar.tsx
+├── StorefrontHeader.tsx
+├── StorefrontFooter.tsx
+├── MobileNav.tsx
+├── SearchOverlay.tsx
+├── LocaleSwitcher.tsx
+└── Breadcrumbs.tsx
+```
+
+**Announcement bar** — optional, one short message maximum, dismissible only when necessary, fully translated, must not consume excessive vertical space.
+
+**Header** — minimal and editorial, sticky, compact height; transparent over the home hero when contrast is sufficient, solid after scrolling.
+
+```text
+Desktop layout:
+Left:    navigation (New, Products, Categories, Artisans, Our Story)
+Centre:  AISHA logo
+Right:   search, locale, account, cart
+```
+
+RTL mirrors this naturally (§26). Search opens as a full-width overlay (`SearchOverlay.tsx`); cart opens as a drawer (`features/cart/components/containers/CartDrawer.tsx`, §18); mobile nav uses a full-height sheet (`MobileNav.tsx`); cart item count shows without visual noise.
+
+**Footer** — AISHA story, shop links, artisan information, customer support, terms/privacy, social links, newsletter (only when implemented), language selector, delivery information when required. Spacious multi-column layout on desktop, accordions on mobile.
+
+## 10. Frontend Core
 
 ```text
 apps/web/core/
 ├── api/
 │   ├── client.ts
 │   ├── server-client.ts
-│   ├── endpoints.ts
-│   ├── errors.ts
-│   └── token-manager.ts
+│   ├── request.ts
+│   ├── response.ts
+│   ├── errors.ts            # ApiError model, §21
+│   ├── correlation.ts
+│   ├── token-manager.ts
+│   └── endpoints/
 ├── context/
 │   ├── AuthContext.tsx
 │   ├── CartContext.tsx
 │   └── AppProviders.tsx
 ├── components/
-│   ├── ui/
-│   ├── layout/
+│   ├── ui/                  # shadcn primitives, §25
+│   ├── layout/               # §9
 │   ├── commerce/
+│   │   ├── Money.tsx
+│   │   ├── AvailabilityLabel.tsx
+│   │   └── VerificationBadge.tsx
 │   ├── editorial/
+│   │   ├── EditorialSection.tsx
+│   │   └── EditorialTile.tsx
 │   ├── feedback/
+│   │   ├── EmptyState.tsx
+│   │   ├── ErrorState.tsx
+│   │   └── LoadingSkeleton.tsx
 │   ├── guards/
+│   │   ├── ProtectedRoute.tsx
+│   │   └── RoleGuard.tsx
 │   └── forms/
+│       ├── FormField.tsx
+│       └── FormErrorSummary.tsx
 ├── hooks/
+│   ├── use-media-query.ts
+│   └── use-prefers-reduced-motion.ts
 ├── lib/
+│   ├── motion.ts
+│   └── utils.ts
 ├── providers/
 ├── zod/
 ├── translation.ts
 └── types.ts
 ```
 
-`core` contains generic reusable infrastructure only. Feature-specific rules stay in their feature.
+`core` contains generic reusable infrastructure only. Feature-specific rules stay in their feature. `core/api/endpoints/` holds one file per backend feature group (mirroring backend §48's routing table) rather than a single growing `endpoints.ts`.
 
-## 7. Frontend Feature Structure
+## 11. Frontend Feature Structure
 
 ```text
 apps/web/features/<feature>/
@@ -275,9 +512,9 @@ apps/web/features/<feature>/
     └── view/
 ```
 
-Not every simple feature needs every folder.
+Not every simple feature needs every folder. In particular: `data/api` + `components/` + `schemas/` + `types/` + `utils/` is the MVP-minimum subset — a feature can ship with just those (presentation plus a typed API call) and grow into `domain/`, `application/`, and `viewmodel/` only once it accumulates real business rules or multi-source orchestration. `features/home` (§15) is the clearest example: view and components only, no domain/application/data, because it composes other features' already-fetched data rather than owning any of its own.
 
-## 8. Frontend Layer Responsibilities
+## 12. Frontend Layer Responsibilities
 
 ### Domain
 
@@ -295,7 +532,7 @@ Contains API calls, request/response types, repository implementations, API-to-d
 
 ### ViewModel
 
-Coordinates loading, empty, error, filter, pagination, form, selection, and action state.
+Coordinates loading, empty, error, filter, pagination, form, selection, and action state (§16 defines exactly which states every fetch must handle).
 
 Allowed forms:
 
@@ -307,7 +544,7 @@ TanStack Query wrapper
 State-machine adapter
 ```
 
-The ViewModel must not render JSX, use database concepts, call random endpoints when a repository exists, or duplicate trusted backend rules.
+The ViewModel must not render JSX, use database concepts, call random endpoints when a repository exists, or duplicate trusted backend rules (backend §50 is authoritative; this layer is UX only).
 
 ### View
 
@@ -323,12 +560,13 @@ components/
 └── feedback/
 ```
 
-Presentational components only receive props and emit callbacks.
+Presentational components only receive props and emit callbacks; they must not call APIs directly (§20 of the checklist).
 
-## 9. Frontend Features
+## 13. Frontend Features
 
 ```text
 apps/web/features/
+├── home/          # NEW — landing-page composition only, see §15
 ├── auth/
 ├── account/
 ├── address/
@@ -353,7 +591,9 @@ apps/web/features/
 └── admin/
 ```
 
-## 10. Example Frontend Product Feature
+This is the canonical feature list, matching backend §46's Feature Mapping table one-to-one. `docs/frontend.md` names a shorter, looser-cased subset for its MVP examples (`authentication`, `artisans`, `custom-orders`); those map directly to `auth`, `artisan`, `custom-order` above — use the folder names in this list, not the guide's prose casing.
+
+## 14. Example Frontend Product Feature
 
 ```text
 features/product/
@@ -393,8 +633,15 @@ features/product/
 │   │   ├── ProductCard.tsx
 │   │   ├── ProductGrid.tsx
 │   │   ├── ProductGallery.tsx
-│   │   └── ProductPrice.tsx
+│   │   ├── ProductPrice.tsx
+│   │   ├── ProductHeading.tsx
+│   │   ├── ProductStory.tsx
+│   │   ├── ProductSpecifications.tsx
+│   │   └── RelatedProducts.tsx
 │   ├── containers/
+│   │   ├── ProductPurchasePanel.tsx    # price, availability, quantity, add-to-cart, sticky on mobile
+│   │   ├── ProductOptions.tsx           # variant selection state
+│   │   └── AddToCartButton.tsx
 │   ├── forms/
 │   └── feedback/
 ├── schemas/
@@ -404,7 +651,281 @@ features/product/
 └── tests/
 ```
 
-## 11. Internationalization and RTL
+## 15. Home Feature and Page Component Trees
+
+`features/home/` composes the landing page from other features' data and is view/components-only (§11):
+
+```text
+features/home/
+├── index.ts
+├── view/HomeView.tsx
+├── components/
+│   ├── HomeHero.tsx
+│   ├── FeaturedCollection.tsx
+│   ├── EditorialCategoryGrid.tsx
+│   ├── BrandStory.tsx
+│   ├── FeaturedArtisans.tsx
+│   ├── FeaturedProductGrid.tsx
+│   ├── ProvenanceValues.tsx
+│   ├── RegionalCraftFeature.tsx
+│   └── FinalDiscoveryBanner.tsx
+└── tests/view/
+```
+
+### Home page composition
+
+```tsx
+<StorefrontLayout>
+  <AnnouncementBar />
+  <StorefrontHeader />
+
+  <main>
+    <HomeHero />
+    <FeaturedCollection />
+    <EditorialCategoryGrid />
+    <BrandStory />
+    <FeaturedArtisans />
+    <FeaturedProductGrid />
+    <ProvenanceValues />
+    <RegionalCraftFeature />
+    <FinalDiscoveryBanner />
+  </main>
+
+  <StorefrontFooter />
+  <CartDrawer />
+  <SearchOverlay />
+</StorefrontLayout>
+```
+
+Hero: full/near-full viewport image, strong headline, one supporting sentence, one or two actions, art-directed responsive images with mobile crops, no carousel in MVP. Featured Collection: large editorial tiles (desktop: one two-thirds tile + two stacked one-third tiles; mobile: vertical full-width). Categories: large image-based blocks (jewellery, textiles, ceramics, leather, home décor, traditional garments) — never identical small icons. Featured Products: 4 columns large / 3 medium / 2 small tablet / 1–2 mobile, alternated with larger editorial blocks so the page doesn't read as a generic marketplace. Values section: verified origin, fair partnership, quality inspection, responsible materials — concise copy, simple line icons; never show a verification badge unless the backend has actually verified it.
+
+### Product page composition
+
+```tsx
+<ProductPage>
+  <Breadcrumbs />
+
+  <section className="product-layout">
+    <ProductGallery />
+
+    <ProductPurchasePanel>
+      <ProductHeading />
+      <ArtisanLink />
+      <Money />
+      <Availability />
+      <ProductOptions />
+      <AddToCartButton />
+      <DeliverySummary />
+    </ProductPurchasePanel>
+  </section>
+
+  <ProductStory />
+  <ProductSpecifications />
+  <ArtisanFeature />
+  <RelatedProducts />
+</ProductPage>
+```
+
+Desktop: gallery ~60–65% width, sticky purchase panel ~35–40%. Mobile order: gallery → summary → purchase controls → story/details → artisan info → recommendations, with an optional sticky bottom bar showing price + add-to-cart that never hides content or interferes with browser controls. `ArtisanLink`, `Availability`, and `DeliverySummary` live in `features/product/components/presentational/`; `ArtisanFeature` lives in `features/artisan/components/presentational/ArtisanFeature.tsx`. Recommendations (more from this artisan, similar products, related collection) render nothing when no valid data exists — never an empty section.
+
+## 16. Data Fetching Rules
+
+**Server Components** for: catalogue pages, product detail, artisan public pages, category pages, initial account pages where the auth design supports server access, SEO metadata, initial navigation data.
+
+**Client Components** for: cart interactions, filters with client state, forms, upload progress, product gallery interaction, search overlays, cart drawer, rich interactive moderation/warehouse controls.
+
+Every fetch must handle: loading, empty result, recoverable error, authentication required, forbidden, not found (§24 defines the shared components for these). Use page-specific skeletons (product grid skeleton, product gallery skeleton, artisan profile skeleton, order detail skeleton) rather than a generic spinner — never a full-page spinner for catalogue navigation.
+
+## 17. Forms
+
+React Hook Form + Zod throughout. Zod schemas live in each feature's `schemas/`; reuse them for client-side feedback, but the backend remains authoritative (§50) — client validation is UX only.
+
+| Form | Feature | File |
+|---|---|---|
+| Registration | `auth` | `features/auth/components/forms/RegisterForm.tsx` |
+| Login | `auth` | `features/auth/components/forms/LoginForm.tsx` |
+| Address | `address` | `features/address/components/forms/AddressForm.tsx` |
+| Artisan application | `artisan` | `features/artisan/components/forms/ArtisanApplicationForm.tsx` |
+| Artisan profile | `artisan` | `features/artisan/components/forms/ArtisanProfileForm.tsx` |
+| Product creation / edit | `product` | `features/product/components/forms/ProductForm.tsx` |
+| Product submission | `product` | `features/product/components/forms/ProductSubmitForm.tsx` |
+| Moderation decision | `moderation` | `features/moderation/components/forms/ModerationDecisionForm.tsx` |
+| Warehouse reception | `warehouse` | `features/warehouse/components/forms/ReceptionForm.tsx` |
+| Inspection | `warehouse` | `features/warehouse/components/forms/InspectionForm.tsx` |
+| Inventory adjustment | `inventory` | `features/inventory/components/forms/InventoryAdjustmentForm.tsx` |
+| Checkout (per step) | `checkout` | `features/checkout/components/forms/` |
+| Custom-order request | `custom-order` | `features/custom-order/components/forms/CustomOrderRequestForm.tsx` |
+| Quote response | `custom-order` | `features/custom-order/components/forms/QuoteResponseForm.tsx` |
+
+Rules: display stable API error messages mapped to translated user text (§21); move focus to the error summary after a failed submit (`core/components/forms/FormErrorSummary.tsx`); preserve user input after recoverable errors; disable duplicate submissions while pending; show field-level and form-level errors; never use placeholder text as a label; label fields above the input with comfortable vertical spacing, thin borders, and strong focus states.
+
+## 18. Cart, Checkout, and Payment Return
+
+**Cart** — local for anonymous visitors, server-backed after login, with an explicit merge policy. Current price shown as provisional; revalidate on opening the cart and on checkout; clearly mark unavailable items; never claim cart quantity is reserved.
+
+```text
+features/cart/
+├── components/containers/CartDrawer.tsx   # focus trap, keyboard accessible, restores focus on close, RTL-correct
+└── ...(standard feature structure, §11)
+```
+
+Drawer contents: product image, name, artisan, quantity, price, remove action, provisional subtotal, view-cart, checkout. Full cart page: desktop two-column (items / sticky order summary), mobile stacked (items → summary → checkout action).
+
+**Checkout** — `features/checkout/view/CheckoutView.tsx` drives five steps with a progress indicator, visually quieter than the main storefront:
+
+```text
+features/checkout/components/containers/
+├── ReviewItemsStep.tsx
+├── DeliveryAddressStep.tsx
+├── ShippingMethodStep.tsx
+├── PaymentStep.tsx
+└── ConfirmationStep.tsx
+```
+
+Avoid promotional distractions, large nav menus, product recommendations during payment, hidden fees, and pre-selected optional services. At confirmation: display trusted server totals, currency, delivery address, shipping method; require explicit final confirmation; send an `Idempotency-Key` (backend §52); handle price/stock changes gracefully. Desktop: two-column (current step / persistent summary). Mobile: collapsible summary near the top.
+
+**Payment return** — `features/payment/view/PaymentReturnView.tsx`, one component per state:
+
+```text
+features/payment/components/presentational/
+├── PaymentPending.tsx    # calm loading, no duplicate-payment encouragement, safe navigation
+├── PaymentPaid.tsx       # confirmation heading, order reference, summary, link to order, continue shopping
+├── PaymentFailed.tsx     # safe explanation, retry only via a backend-authorised flow, support guidance
+└── PaymentExpired.tsx    # explains session expiry, safe return to cart/checkout
+```
+
+The page may poll the backend for a limited period; it must never treat a query string like `success=true` as proof of payment — only a backend-confirmed status counts.
+
+## 19. Authentication and Account UI
+
+**Auth** — login, registration, protected route layout (`core/components/guards/ProtectedRoute.tsx`), forbidden page, session-expired handling, logout, role-aware nav (convenience only — backend §49 is authoritative). Style: split-screen editorial image on desktop, focused single-column form on mobile, minimal distractions, clear password requirements, visible error feedback. Never present auth pages as generic admin screens.
+
+**Account area** (`app/[locale]/account/layout.tsx`) — side navigation on desktop, compact tab selector on mobile:
+
+```text
+Overview · Orders · Addresses · Profile · Security · Custom orders · Logout
+```
+
+Order cards show: reference, date, status, total, product preview, detail action.
+
+## 20. Artisan Workspace and Admin/Warehouse UI
+
+Both use a distinct application shell, separate from the public storefront — do not imitate the editorial home page here; prioritise clarity and task completion.
+
+```text
+app/[locale]/artisan/layout.tsx   # sidebar + top header + page title/primary action + status summary + workspace
+app/[locale]/admin/layout.tsx     # same shell pattern
+```
+
+**Artisan dashboard** (MVP): profile completion, application status, product counts by status, create/edit-draft/submit-for-review, moderation reason display, accepted/reserved/shipped stock for owned products, custom-order requests.
+
+**Moderation queue** (`features/moderation/components/containers/`): `ModerationQueueTable.tsx` (product, artisan, submission date, translation completeness, media, status, actions — desktop: filter toolbar + dense table + preview drawer + action panel; mobile: stacked cards + full-screen review sheet) and `ModerationActionPanel.tsx` (actions require confirmation and reason).
+
+**Reception** (`features/warehouse/components/forms/ReceptionForm.tsx`): product, artisan, quantity, batch/parcel reference, notes, date; product search, barcode/reference entry where available, confirmation summary, duplicate-submission prevention.
+
+**Inspection** (`features/warehouse/components/forms/InspectionForm.tsx` + `InspectionTotalsCheck.tsx`): received quantity must equal the sum of outcomes, shown visibly —
+
+```text
+Accepted + Rejected + Damaged + Pending = Received quantity
+```
+
+— submission is blocked when totals don't match.
+
+**Order fulfilment** (`features/order/components/containers/` under `app/[locale]/admin/orders/`): only paid, eligible orders; reference, payment status, fulfilment status, delivery method, required items, picking state, packing state, shipment reference.
+
+Dashboard rules throughout: cards only for meaningful grouped information, data tables on desktop / stacked rows or cards on mobile, keep AISHA's tokens and typography (§6), status never communicated by colour alone.
+
+## 21. API Client
+
+```text
+core/api/
+├── client.ts
+├── server-client.ts
+├── request.ts
+├── response.ts
+├── errors.ts
+├── correlation.ts
+├── token-manager.ts
+└── endpoints/
+```
+
+```ts
+export interface ApiError {
+  code: string;
+  message: string;
+  correlationId?: string;
+  fieldErrors?: Record<string, string[]>;
+}
+```
+
+UI components map stable backend error codes (backend §51) to translation keys — never display raw backend stack traces or internal error messages. The client never silently retries checkout or payment creation without reusing the same idempotency key (backend §52); retries are safe only for idempotent reads unless a flow is specifically designed otherwise.
+
+## 22. Accessibility, Media, and SEO
+
+**Accessibility** — native semantic controls; every input labelled and every error associated with its input; full keyboard navigation with visible focus (including over image backgrounds); dialogs trap and restore focus; meaningful alt text; status never colour-only; sufficient touch targets; skip links; valid heading hierarchy; keyboard-accessible galleries; carousels that don't auto-advance unexpectedly; drawers/overlays announce their purpose; RTL never breaks keyboard or reading order.
+
+**Media** — optimised image components, correct aspect ratios, loading placeholders, basic zoom/gallery for MVP, signed URLs with expiry (never permanent public URLs for private draft media), responsive sizes, no full-resolution images in grids, no layout shift.
+
+```text
+Product card:      4:5
+Product gallery:    4:5 or original constrained ratio
+Artisan portrait:   3:4
+Editorial banner:   16:9 or 3:2
+Category tile:      4:5 or 1:1
+Mobile hero:        4:5
+Desktop hero:        16:9
+```
+
+**SEO** — localised title/description, product and artisan metadata, canonical URLs, Open Graph images matching AISHA's visual identity, sitemap for active public content only, accurate structured product data, localised alternate URLs, meaningful slugs, no indexing of draft/moderation/cart/checkout/account pages, server-rendered critical product info.
+
+## 23. Responsive Behaviour
+
+```text
+Mobile:          320px and above
+Small tablet:    640px and above
+Tablet:          768px and above
+Desktop:         1024px and above
+Large desktop:   1280px and above
+Editorial wide:  1536px and above
+```
+
+Header collapses to compact mobile nav; filters move into a sheet; product-detail columns stack; sticky purchase actions remain usable; tables become mobile-friendly rows; display typography scales via `clamp` (§6.2); checkout summary becomes collapsible; product-card text never overflows; Arabic content is tested at every breakpoint (§26).
+
+## 24. Empty, Loading, and Error States
+
+```text
+core/components/feedback/
+├── EmptyState.tsx     # heading, short explanation, one action, optional restrained illustration
+├── ErrorState.tsx     # human-readable message, retry when safe, nav alternative, correlation ID, distinct forbidden/not-found handling
+└── LoadingSkeleton.tsx # layout-matched — never a large centred spinner for a whole page
+```
+
+Examples requiring an empty state: empty cart, no search results, no products in a category, no artisan products, no customer orders, no moderation submissions, no warehouse receptions. Page-specific skeleton variants (product grid, gallery, artisan profile, order detail) live alongside each feature's own `components/feedback/`.
+
+## 25. Component Styling Standards
+
+```text
+core/components/ui/   (shadcn primitives)
+├── button.tsx    # Primary, Secondary, Outline, Ghost, Destructive, Text link
+├── card.tsx
+├── badge.tsx
+├── dialog.tsx    # focused confirmation, irreversible actions (alert dialog variant)
+├── sheet.tsx     # filters, mobile menus, cart, detail panels
+└── skeleton.tsx
+```
+
+```tsx
+<Button
+  size="lg"
+  className="h-12 w-full rounded-sm px-8 text-sm font-medium uppercase tracking-wide"
+>
+  {t("product.addToCart")}
+</Button>
+```
+
+Primary storefront buttons: strong contrast, medium/large height, minimal radius, clear hover/focus/active/disabled/pending states; never uppercase for Arabic text unless specifically appropriate. Cards only when content needs visual grouping — product cards avoid visible backgrounds, heavy borders, large shadows, excessive padding. Badges only for verified provenance, fair-trade status, eco-friendly certification, new products, made-to-order, and stock state — never for ordinary descriptive information.
+
+## 26. Internationalization and RTL
 
 Supported locales:
 
@@ -423,7 +944,91 @@ apps/web/messages/
 └── es.json
 ```
 
-All visible text uses translation keys. Arabic uses `dir="rtl"`. Use logical CSS properties and test complete pages, forms, tables, filters, drawers, breadcrumbs, and carousels in RTL.
+```tsx
+const direction = locale === "ar" ? "rtl" : "ltr";
+
+return (
+  <html lang={locale} dir={direction}>
+    <body>{children}</body>
+  </html>
+);
+```
+
+All visible text uses translation keys. Arabic uses `dir="rtl"`; icons implying direction mirror where appropriate; form alignment and table layouts work in RTL; dates, numbers, and currencies use locale-aware formatting; never concatenate translated fragments; use logical CSS properties (`start`/`end`, not hardcoded `left`/`right`); test every major page in Arabic, not only navigation. Product grids keep natural visual order in RTL; carousels support RTL navigation; breadcrumb arrows mirror; drawer/sheet opening direction feels natural for the active language.
+
+## 27. Frontend Testing
+
+```text
+apps/web/tests/
+├── unit/          # ProductCard, ProductGallery, Money, LanguageSwitch, RTL layout, forms/validation,
+│                  # OrderStatus, AvailabilityLabel, CartItem, VerificationBadge, filter controls,
+│                  # mobile nav, PaymentStatus — mirrors each feature's own tests/{domain,application,viewmodel}
+├── integration/   # API error mapping, protected layouts, cart state, anonymous-to-authenticated cart merge,
+│                  # checkout steps, locale routing, server-rendered product data, signed media URL handling,
+│                  # role-aware navigation, moderation action validation, warehouse quantity validation
+├── e2e/           # Playwright: browse products, change locale, verify Arabic RTL, search/filter, open a
+│                  # product, add to cart, register/login, complete checkout with the dev payment adapter,
+│                  # handle payment pending→paid, view an order, artisan creates/submits a product, moderator
+│                  # approves a product, warehouse receives/inspects stock, mobile nav, keyboard nav
+└── visual/        # Home hero, product listing, product detail, cart drawer, checkout, Arabic RTL layouts,
+                   # mobile navigation, artisan profile, moderation queue
+```
+
+Each feature's own `tests/{domain,application,data,viewmodel,view}/` (§11) covers that feature in isolation; `apps/web/tests/` above is the cross-cutting suite referenced by backend §56.
+
+## 28. Performance Requirements
+
+```text
+LCP: below 2.5 seconds
+CLS: below 0.1
+INP: below 200 milliseconds
+```
+
+Optimise hero images; preload only essential fonts/media; avoid unnecessary client-side JS; lazy-load below-the-fold content; Server Components for product content; avoid heavy animation libraries unless justified; limit third-party scripts; dynamic imports for rich admin controls; prevent cumulative layout shift; appropriate cache/revalidation strategy; lightweight product-card components; avoid loading full product objects when summary data is sufficient.
+
+## 29. Frontend Implementation Phases
+
+```text
+1. Design Foundation    — colours, typography, spacing scale, CSS variables, button variants,
+                           form controls, header, footer, container, responsive rules, RTL foundation
+2. Public Storefront     — home, product listing, product detail, category page, artisan listing,
+                           artisan profile, search, cart drawer
+3. Authentication & Checkout — login, registration, cart page, address, checkout steps, payment
+                           return, confirmation
+4. Customer Account       — overview, orders, order detail, addresses, custom orders
+5. Artisan Workspace       — dashboard, profile, product management, media upload, submission/
+                           moderation feedback, stock overview
+6. Admin and Warehouse     — moderation queue, reception, inspection, inventory, paid-order
+                           fulfilment, audit views
+7. Quality                — accessibility audit, RTL audit, performance audit, visual regression,
+                           Playwright coverage, cross-browser testing, responsive review
+```
+
+## 30. Per-Page Definition of Done
+
+A page is not complete until it has: desktop, tablet, mobile, and Arabic RTL layouts; loading, empty (where applicable), and error states; keyboard accessibility with visible focus; translated text with correct locale formatting; optimised images; metadata where public; component tests where appropriate; no raw backend error messages; no broken layout under long translated content; and no business-critical rule implemented only in the frontend.
+
+## 31. Required Frontend Commands
+
+```bash
+npm ci
+npm run lint
+npm run type-check
+npm test
+npm run build
+npm run test:e2e
+```
+
+Recommended additional commands:
+
+```bash
+npm run format:check
+npm run test:visual
+npm run test:a11y
+npm run analyse
+```
+
+These map to `apps/web/package.json` scripts and are the frontend half of the CI command set — see backend §58 for the Go equivalent.
 
 # Part II — Backend
 
@@ -433,7 +1038,7 @@ cases/repositories take, and the exact commands CI runs. It supersedes any
 more abstract "framework-independent" phrasing from earlier drafts wherever
 the two disagree — concrete wins.
 
-## 12. Backend Goal and Required Packages
+## 32. Backend Goal and Required Packages
 
 Build a Go Fiber API that implements the business workflow without placing
 business logic in handlers or SQLBoiler models.
@@ -456,7 +1061,7 @@ Do not mix multiple HTTP routers or ORMs, and do not substitute an equivalent
 (no Gin, no GORM, no manual JWT parsing) — these choices are fixed.
 
 Fiber v3 uses value-receiver contexts (`fiber.Ctx`, not `*fiber.Ctx`) —
-handler signatures across every feature follow this consistently (§20).
+handler signatures across every feature follow this consistently (§40).
 
 ### Coding rules
 
@@ -470,7 +1075,7 @@ handler signatures across every feature follow this consistently (§20).
 - Use integer minor units for money.
 - Never expose SQLBoiler models as API responses.
 
-## 13. Backend Base Structure
+## 33. Backend Base Structure
 
 ```text
 apps/api/
@@ -528,7 +1133,7 @@ or `features` may import `bootstrap` — the dependency arrow points one way.
 `bootstrap` is also the only package allowed to call `os.Exit` or panic on
 startup misconfiguration.
 
-## 14. Backend Shared Structure
+## 34. Backend Shared Structure
 
 ```text
 apps/api/internal/
@@ -573,7 +1178,7 @@ apps/api/internal/
 └── features/
 ```
 
-## 15. Backend Feature Structure
+## 35. Backend Feature Structure
 
 ```text
 apps/api/internal/features/<feature>/
@@ -582,7 +1187,7 @@ apps/api/internal/features/<feature>/
 │   ├── entity.go
 │   ├── aggregate.go
 │   ├── value_objects.go
-│   ├── repository.go       # interfaces declared here — see §16, §20
+│   ├── repository.go       # interfaces declared here — see §36, §40
 │   ├── services.go
 │   ├── policy.go
 │   ├── rules.go
@@ -617,12 +1222,12 @@ apps/api/internal/features/<feature>/
 │   ├── request/
 │   ├── response/
 │   └── presenter/
-└── mocks/                    # generated — see §37, never hand-edited
+└── mocks/                    # generated — see §57, never hand-edited
     ├── mock_<feature>_repository.go
     └── mock_<port>.go
 ```
 
-## 16. Backend Layer Responsibilities
+## 36. Backend Layer Responsibilities
 
 ### Domain
 
@@ -678,7 +1283,7 @@ func NewSQLProductRepository(db *sql.DB) domain.ProductRepository {
 }
 ```
 
-`container/features.go` (generated via `wire`, §14) wires the concrete type
+`container/features.go` (generated via `wire`, §34) wires the concrete type
 behind the interface at startup — nothing above `data/` ever imports
 `sqlProductRepository` directly, only `domain.ProductRepository`. Transaction-
 aware ports may receive a `Tx` abstraction, or a repository constructed from
@@ -688,13 +1293,13 @@ a transaction scope — `*sql.Tx`/pgx equivalents must never leak above `data/`.
 
 Owns router, route registration, handlers, feature middleware, request
 structs, response structs, validation, mapping, HTTP status handling, and
-presenters. See §20 for the concrete handler shape.
+presenters. See §40 for the concrete handler shape.
 
 Handlers do not: open SQL queries, decide product state transitions,
 calculate trusted prices, implement Casbin policy manually, or call MinIO
 directly.
 
-## 17. Global Server Structure
+## 37. Global Server Structure
 
 ```text
 apps/api/internal/server/
@@ -721,7 +1326,7 @@ Global middleware belongs here. JWT verification happens exactly once, in
 `middleware/authentication.go` — feature middleware only adds
 authorization/ownership checks on top of an already-verified principal.
 
-## 18. Feature Server Structure
+## 38. Feature Server Structure
 
 ```text
 features/<feature>/server/
@@ -749,7 +1354,7 @@ features/<feature>/server/
 Feature middleware contains only feature-specific concerns. Do not duplicate
 global authentication middleware.
 
-## 19. Router, Request, and Response Rules
+## 39. Router, Request, and Response Rules
 
 ### Router
 
@@ -771,7 +1376,7 @@ Extracts context and principal, parses input, validates transport data, maps
 to a command/query, calls the application layer, maps the result, and
 returns the correct status.
 
-## 20. Handler / Use Case / Repository Pattern (concrete shapes)
+## 40. Handler / Use Case / Repository Pattern (concrete shapes)
 
 ### Handler (`features/<feature>/server/handler.go`)
 
@@ -816,8 +1421,8 @@ type CreateProduct interface {
 
 ### Repository
 
-Method names and shape are fixed by §16 (`GetByID` / `Create` / `Update` /
-`List`). See the `sqlProductRepository` example in §16.
+Method names and shape are fixed by §36 (`GetByID` / `Create` / `Update` /
+`List`). See the `sqlProductRepository` example in §36.
 
 ### Request flow — public endpoint (no auth)
 
@@ -854,7 +1459,7 @@ signing/verification, `features/auth` owns the issue/refresh/revoke use
 cases. Redis is used only for OTP state and rate limiting, never as the
 token source of truth.
 
-## 21. Backend Features
+## 41. Backend Features
 
 ```text
 apps/api/internal/features/
@@ -884,7 +1489,7 @@ apps/api/internal/features/
 └── admin/
 ```
 
-## 22. Example Backend Product Feature
+## 42. Example Backend Product Feature
 
 ```text
 features/product/
@@ -895,7 +1500,7 @@ features/product/
 │   ├── product_status.go
 │   ├── product_repository.go   # GetByID / GetBySlug / Create / Update / List
 │   ├── product_policy.go
-│   ├── product_rules.go        # submission / activation invariants, see §23
+│   ├── product_rules.go        # submission / activation invariants, see §43
 │   ├── product_events.go
 │   └── product_errors.go
 ├── application/
@@ -934,7 +1539,7 @@ features/product/
     └── mock_payment_gateway.go   # if product feature consumes a port
 ```
 
-## 23. Domain Rules by Feature
+## 43. Domain Rules by Feature
 
 Each feature's `domain/rules.go` and `domain/policy.go` carry these
 invariants. This is the pattern every feature follows, illustrated on the
@@ -976,7 +1581,7 @@ status, idempotency key, created/updated timestamps. Provider webhook events
 are stored separately from the payment record itself, keyed by a unique
 external event ID, so a provider retry cannot double-apply.
 
-## 24. Database Migrations
+## 44. Database Migrations
 
 Migration rules:
 
@@ -987,9 +1592,9 @@ Migration rules:
 - Add indexes for frequent lookups.
 - Define deletion behaviour explicitly.
 - Production migrations never run invisibly inside API startup — `bootstrap/`
-  (§13) opens connections and health-checks, it does not migrate.
+  (§33) opens connections and health-checks, it does not migrate.
 - Regenerate SQLBoiler models after schema changes — a stale generated model
-  is treated as a build break, same policy as a stale mock (§37).
+  is treated as a build break, same policy as a stale mock (§57).
 
 Migration sequence:
 
@@ -1014,7 +1619,7 @@ Migration sequence:
 migrate -path db/migrations -database "$DATABASE_URL" up
 ```
 
-## 25. Cross-Feature Communication
+## 45. Cross-Feature Communication
 
 A feature must never import another feature's concrete data implementation.
 
@@ -1030,7 +1635,7 @@ Integration event
 Outbox event
 ```
 
-## 26. Feature Mapping
+## 46. Feature Mapping
 
 | Capability | Frontend | Backend |
 |---|---|---|
@@ -1053,8 +1658,9 @@ Outbox event
 | Reviews | `review` | `review` |
 | Custom orders | `custom-order` | `custom_order` |
 | Administration | `admin` | `admin`, `audit` |
+| Landing composition | `home` | — (composes existing public endpoints only) |
 
-## 27. API Contract
+## 47. API Contract
 
 Every endpoint defines method, path, authentication, permission, request
 schema, response schema, stable error codes, pagination, idempotency, and
@@ -1081,11 +1687,11 @@ examples.
 }
 ```
 
-## 28. API Endpoints and Routing
+## 48. API Endpoints and Routing
 
 Every endpoint group below registers in its feature's
 `features/<feature>/server/routes.go`, then is mounted from the global
-`internal/server/routes/{public,authenticated,admin}.go` (§17).
+`internal/server/routes/{public,authenticated,admin}.go` (§37).
 
 ### Authentication
 
@@ -1190,13 +1796,13 @@ POST   /api/v1/custom-orders/:id/quotes/:quoteId/accept
 | `/warehouse/*` | `warehouse`, `inventory` | `admin.go` (warehouse_agent role) |
 | `/cart*`, `/checkout`, `/orders*` | `cart`, `checkout`, `order` | `authenticated.go` |
 | `/payments/*` (non-webhook) | `payment` | `authenticated.go` |
-| `/webhooks/payments/:provider`, `/webhooks/shipments/:provider` | `payment`, `shipment` | `public.go`, with signature-verification middleware instead of JWT (§32) |
+| `/webhooks/payments/:provider`, `/webhooks/shipments/:provider` | `payment`, `shipment` | `public.go`, with signature-verification middleware instead of JWT (§52) |
 | `/custom-orders*` | `custom_order` | `authenticated.go` |
 
 Handlers for admin-only groups additionally pass through
 `middleware/authorization.go` with the relevant Casbin role.
 
-## 29. Authentication and Authorization
+## 49. Authentication and Authorization
 
 Authentication includes access tokens, refresh tokens, session records,
 rotation, revocation, OTP, and rate limiting.
@@ -1212,9 +1818,9 @@ admin
 ```
 
 Frontend guards improve UX. Backend application policies are authoritative.
-See §20 for the concrete public/authenticated request-flow diagrams.
+See §40 for the concrete public/authenticated request-flow diagrams.
 
-## 30. Validation
+## 50. Validation
 
 Validate at two levels — neither substitutes for the other:
 
@@ -1241,10 +1847,10 @@ This layer never sees a `Principal` or touches the database.
 - Duplicate callback.
 - Idempotency.
 
-Do not rely on frontend validation (§8's ViewModel layer) — it is UX only
+Do not rely on frontend validation (§12's ViewModel layer) — it is UX only
 and is never trusted here.
 
-## 31. Error Catalogue
+## 51. Error Catalogue
 
 ```text
 VALIDATION_ERROR · INVALID_CREDENTIALS · AUTHENTICATION_REQUIRED · FORBIDDEN
@@ -1257,10 +1863,12 @@ FILE_TOO_LARGE · RATE_LIMITED · INTERNAL_ERROR
 
 `internal/pkg/apperror/codes.go` defines these as typed constants;
 `internal/server/error_handler/error_handler.go` is the single place that
-maps a code to an HTTP status and the public error envelope from §27.
-Feature code raises a code, never an HTTP status directly.
+maps a code to an HTTP status and the public error envelope from §47.
+Feature code raises a code, never an HTTP status directly. The frontend API
+client maps every one of these to a translation key (§21) — never a raw
+message.
 
-## 32. Idempotency
+## 52. Idempotency
 
 Checkout, payment creation, refund, shipment creation, and external webhook
 processing all go through `internal/pkg/idempotency`:
@@ -1276,7 +1884,7 @@ Webhook signature verification (`INVALID_WEBHOOK_SIGNATURE`) happens in
 feature middleware *before* idempotency is even checked — an unverified
 webhook is rejected outright, not deduplicated.
 
-## 33. File Upload
+## 53. File Upload
 
 Order of operations, enforced in that order:
 
@@ -1284,7 +1892,7 @@ Order of operations, enforced in that order:
 2. Validate MIME by content signature, not by trusting the extension.
 3. Generate the object key server-side — the original filename is never
    used as or folded into the storage path.
-4. Upload to a private MinIO bucket (§35: buckets private by default).
+4. Upload to a private MinIO bucket (§55: buckets private by default).
 5. Store metadata in Postgres.
 6. Scan if a scanner is configured.
 7. Issue a signed URL only for an authorised read.
@@ -1292,17 +1900,18 @@ Order of operations, enforced in that order:
    after moderation approval, not at upload time.
 
 Applies to `product_media`, artisan verification documents, custom-order
-attachments, and moderation files alike.
+attachments, and moderation files alike. The frontend never renders these as
+permanent public URLs — see §22's signed-URL-with-expiry requirement.
 
-## 34. OpenAPI
+## 54. OpenAPI
 
 Every route documents: authentication requirement, Casbin permission,
-request schema, response schema, possible error codes (§31), pagination,
+request schema, response schema, possible error codes (§51), pagination,
 `Idempotency-Key` usage where applicable, and one example payload. The spec
 is validated in CI — a route merged without a matching OpenAPI entry fails
 the pipeline, not just a code review comment.
 
-## 35. Data Responsibilities
+## 55. Data Responsibilities
 
 PostgreSQL is the source of truth for users, sessions, artisans, catalogue,
 products, moderation, inventory, reservations, carts, orders, payments,
@@ -1315,7 +1924,7 @@ session assistance, and short-lived coordination.
 MinIO stores product media, artisan documents, custom-order attachments, and
 moderation files. Buckets are private by default.
 
-## 36. Testing
+## 56. Testing
 
 ```text
 apps/api/tests/
@@ -1329,13 +1938,14 @@ apps/api/tests/
                    # failure; full shipment flow
 ```
 
-`unit/` mirrors `application/` tests using generated mocks (§37); `integration/`
+`unit/` mirrors `application/` tests using generated mocks (§57); `integration/`
 and `concurrency/` require the real test-container stack and never use mocks.
 
-Frontend tests cover schemas, mappers, ViewModels, formatting, authentication,
-cart, checkout, filters, admin tables, E2E flows, and Arabic RTL navigation.
+Frontend testing — component, integration, Playwright E2E, and visual
+regression — is defined in full in §27; it is the other half of the same CI
+suite.
 
-## 37. Mock Generation Workflow
+## 57. Mock Generation Workflow
 
 Every interface in `domain/repository.go` and every port in
 `application/ports/` must have a generated mock, so application and domain
@@ -1371,7 +1981,7 @@ Test layering rule:
 - Regenerate mocks whenever a repository or port interface signature changes;
   a stale mock is a build break.
 
-## 38. Required Commands
+## 58. Required Commands
 
 ```bash
 go mod download
@@ -1382,10 +1992,10 @@ go build ./...
 migrate -path db/migrations -database "$DATABASE_URL" up
 ```
 
-Combined with the `mocks` and `wire` Makefile targets (§37), this is the full
-local + CI command set for the backend.
+Combined with the `mocks` and `wire` Makefile targets (§57), this is the full
+local + CI command set for the backend — see §31 for the frontend equivalent.
 
-## 39. Architecture Checklist
+## 59. Architecture Checklist
 
 ### Backend
 
@@ -1412,7 +2022,7 @@ local + CI command set for the backend.
 - Every inventory balance is explainable from the movement log, never
   edited independently of it.
 - Every route has a matching OpenAPI entry validated in CI; every error
-  path uses a code from §31, never a raw HTTP status string.
+  path uses a code from §51, never a raw HTTP status string.
 - Idempotency keys are checked before checkout/payment/refund/shipment
   logic runs, and webhook signatures are verified before idempotency is
   checked.
@@ -1423,7 +2033,7 @@ local + CI command set for the backend.
 
 ### Frontend
 
-- Route files remain thin.
+- Route files remain thin; every route lives under `app/[locale]/`.
 - Domain imports no React or HTTP library.
 - Repository contracts live inward.
 - Data implements repository contracts.
@@ -1431,20 +2041,31 @@ local + CI command set for the backend.
 - Presentational components do not call APIs.
 - ViewModels do not render JSX.
 - Backend rules are not duplicated as trusted frontend rules.
-- All visible text is translated.
-- Arabic RTL is tested.
-- Loading, empty, error, forbidden, not-found, and offline states exist.
+- All visible text is translated; no concatenated translation fragments.
+- Arabic RTL is tested on every major page, not only navigation.
+- Loading, empty, error, forbidden, not-found, and offline states exist,
+  using the shared `core/components/feedback/` components (§24).
+- Design tokens from §6 are used rather than one-off colours or spacing.
+- Every fetch handles the six states listed in §16.
+- Checkout and payment creation reuse the same idempotency key on retry —
+  never a silent retry with a new one (§21).
+- Signed URLs, not permanent public URLs, are used for private media (§22).
+- Every page satisfies the per-page Definition of Done in §30.
 
-## 40. Definition of Done
+## 60. Definition of Done
 
 The architecture is correctly applied when frontend features support domain,
 repository contracts, data implementations, optional application use cases,
-ViewModels, views, and components where needed; backend features support
-domain, application, data, server, and generated mocks; the server includes
-router, middleware, request, response, handler, and presenter
-responsibilities; DI wiring is generated via `wire` rather than hand-written;
-framework dependencies stay outside domain; persistence models do not leak;
-features communicate through stable public interfaces; every route has a
-matching OpenAPI entry and stable error code; idempotency and webhook
-signature verification are in place for every external callback; and the
-system can evolve feature by feature without coupling the whole codebase.
+ViewModels, views, and components where needed, styled from the shared
+design tokens in §6 and passing the per-page checklist in §30; backend
+features support domain, application, data, server, and generated mocks; the
+server includes router, middleware, request, response, handler, and
+presenter responsibilities; DI wiring is generated via `wire` rather than
+hand-written; framework dependencies stay outside domain; persistence models
+do not leak; features communicate through stable public interfaces; every
+route has a matching OpenAPI entry and stable error code that the frontend
+maps to a translated message; idempotency and webhook signature verification
+are in place for every external callback; Arabic RTL, accessibility, and the
+Core Web Vitals targets in §28 are met on every public page; and the system
+can evolve feature by feature, on both sides of the API contract, without
+coupling the whole codebase.

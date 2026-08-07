@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { HomeHero } from "@/core/components/editorial/home-hero";
-import { HomeSections } from "@/core/components/editorial/home-sections";
+import { HomeView } from "@/features/home";
 import { dictionary, isLocale } from "@/core/lib/i18n";
-import { catalogue } from "@/features/catalogue/api";
 
 export async function generateMetadata({
   params,
@@ -31,12 +29,5 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
   if (!isLocale(locale)) {
     notFound();
   }
-  const messages = dictionary(locale);
-  const data = await catalogue(locale);
-  return (
-    <>
-      <HomeHero locale={locale} messages={messages} />
-      <HomeSections locale={locale} messages={messages} {...data} />
-    </>
-  );
+  return <HomeView locale={locale} />;
 }

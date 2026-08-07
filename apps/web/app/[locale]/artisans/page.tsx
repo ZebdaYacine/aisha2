@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArtisanCard } from "@/core/components/editorial/artisan-card";
+import { ArtisanCard } from "@/features/artisan";
 import { Container } from "@/core/components/layout/container";
 import { Breadcrumbs } from "@/core/components/shared/breadcrumbs";
 import { catalogue } from "@/features/catalogue/api";
@@ -8,11 +8,19 @@ import { localized } from "@/features/catalogue/format";
 import { isLocale } from "@/core/lib/i18n";
 import { storeCopy } from "@/core/lib/store-copy";
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const copy = storeCopy(locale);
-  return { title: `${copy.artisans} — AISHA`, description: copy.artisanDirectoryBody, alternates: { canonical: `/${locale}/artisans` } };
+  return {
+    title: `${copy.artisans} — AISHA`,
+    description: copy.artisanDirectoryBody,
+    alternates: { canonical: `/${locale}/artisans` },
+  };
 }
 export default async function ArtisansPage({
   params,
@@ -50,14 +58,22 @@ export default async function ArtisansPage({
           <span className="sr-only">{copy.region}</span>
           <select className="h-12 w-full border border-border bg-background px-4">
             <option>{copy.region}</option>
-            {artisans.map((artisan) => <option key={artisan.slug}>{localized(artisan.region, locale)}</option>)}
+            {artisans.map((artisan) => (
+              <option key={artisan.slug}>
+                {localized(artisan.region, locale)}
+              </option>
+            ))}
           </select>
         </label>
         <label>
           <span className="sr-only">{copy.craft}</span>
           <select className="h-12 w-full border border-border bg-background px-4">
             <option>{copy.craft}</option>
-            {artisans.map((artisan) => <option key={artisan.slug}>{localized(artisan.craft, locale)}</option>)}
+            {artisans.map((artisan) => (
+              <option key={artisan.slug}>
+                {localized(artisan.craft, locale)}
+              </option>
+            ))}
           </select>
         </label>
       </form>
