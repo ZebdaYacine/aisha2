@@ -1,2 +1,2 @@
-// Package data is the data layer of the inventory feature.
+// Package data contains the inventory persistence adapters.
 package data

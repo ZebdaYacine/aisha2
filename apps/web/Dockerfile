@@ -26,5 +26,5 @@ COPY --from=build --chown=aisha:aisha /app/.next/standalone ./
 COPY --from=build --chown=aisha:aisha /app/.next/static ./.next/static
 COPY --from=build --chown=aisha:aisha /app/public ./public
 USER aisha
-EXPOSE 3000
+EXPOSE 3033
 CMD ["node","server.js"]

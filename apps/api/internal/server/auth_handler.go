@@ -1,22 +1,33 @@
 package httpapi
 
 import (
+	"context"
 	"errors"
 	"strings"
 
 	"github.com/aisha-platform/aisha/apps/api/internal/features/auth"
+	customer "github.com/aisha-platform/aisha/apps/api/internal/features/user"
 	"github.com/gofiber/fiber/v3"
 )
 
 const principalLocal = "authenticated_principal"
 
 type AuthHandler struct {
-	service   *auth.Service
-	validator *RequestValidator
+	service        *auth.Service
+	validator      *RequestValidator
+	accountSummary accountSummaryReader
 }
 
-func NewAuthHandler(service *auth.Service, requestValidator *RequestValidator) *AuthHandler {
-	return &AuthHandler{service: service, validator: requestValidator}
+type accountSummaryReader interface {
+	AccountSummary(context.Context, auth.Principal) (customer.AccountSummary, error)
+}
+
+func NewAuthHandler(service *auth.Service, requestValidator *RequestValidator, accountSummaries ...accountSummaryReader) *AuthHandler {
+	var summary accountSummaryReader
+	if len(accountSummaries) > 0 {
+		summary = accountSummaries[0]
+	}
+	return &AuthHandler{service: service, validator: requestValidator, accountSummary: summary}
 }
 func (h *AuthHandler) Register(c fiber.Ctx) error {
 	var req RegisterRequest
@@ -27,7 +38,11 @@ func (h *AuthHandler) Register(c fiber.Ctx) error {
 	if err != nil {
 		return authAPIError(err)
 	}
-	return c.Status(fiber.StatusCreated).JSON(AuthenticationResponse{User: userResponseFrom(user), Tokens: tokenResponseFrom(tokens)})
+	response, err := h.userResponse(c.Context(), user)
+	if err != nil {
+		return authAPIError(err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(AuthenticationResponse{User: response, Tokens: tokenResponseFrom(tokens)})
 }
 func (h *AuthHandler) Login(c fiber.Ctx) error {
 	var req LoginRequest
@@ -38,7 +53,11 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	if err != nil {
 		return authAPIError(err)
 	}
-	return c.JSON(AuthenticationResponse{User: userResponseFrom(user), Tokens: tokenResponseFrom(tokens)})
+	response, err := h.userResponse(c.Context(), user)
+	if err != nil {
+		return authAPIError(err)
+	}
+	return c.JSON(AuthenticationResponse{User: response, Tokens: tokenResponseFrom(tokens)})
 }
 func (h *AuthHandler) Refresh(c fiber.Ctx) error {
 	var req RefreshRequest
@@ -61,6 +80,21 @@ func (h *AuthHandler) Logout(c fiber.Ctx) error {
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
+func (h *AuthHandler) ChangePassword(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var req ChangePasswordRequest
+	if err = h.bindAndValidate(c, &req); err != nil {
+		return err
+	}
+	if err = h.service.ChangePassword(c.Context(), p, req.CurrentPassword, req.NewPassword); err != nil {
+		return authAPIError(err)
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 func (h *AuthHandler) ForgotPassword(c fiber.Ctx) error {
 	var req ForgotPasswordRequest
 	if err := h.bindAndValidate(c, &req); err != nil {
@@ -97,7 +131,23 @@ func (h *AuthHandler) Me(c fiber.Ctx) error {
 	if err != nil {
 		return authAPIError(err)
 	}
-	return c.JSON(userResponseFrom(user))
+	response, err := h.userResponse(c.Context(), user)
+	if err != nil {
+		return authAPIError(err)
+	}
+	return c.JSON(response)
+}
+
+func (h *AuthHandler) userResponse(ctx context.Context, user auth.User) (UserResponse, error) {
+	response := userResponseFrom(user)
+	if h.accountSummary == nil {
+		return response, nil
+	}
+	summary, err := h.accountSummary.AccountSummary(ctx, auth.Principal{UserID: user.ID, Roles: user.Roles})
+	if err != nil {
+		return UserResponse{}, err
+	}
+	return applyAccountSummary(response, summary), nil
 }
 func (h *AuthHandler) RequirePrincipal(c fiber.Ctx) error {
 	header := c.Get(fiber.HeaderAuthorization)

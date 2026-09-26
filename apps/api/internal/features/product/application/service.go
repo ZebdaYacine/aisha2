@@ -26,6 +26,13 @@ func NewService(repository domain.Repository, authorizer domain.Authorizer, stor
 	return &Service{repository: repository, authorizer: authorizer, store: store, bucket: bucket, mediaLimit: mediaLimit}
 }
 
+func (s *Service) ListWorkshops(ctx context.Context, p auth.Principal) ([]domain.Workshop, error) {
+	if err := s.authorize(ctx, p, "/api/v1/artisan/workshops", "read"); err != nil {
+		return nil, err
+	}
+	return s.repository.ListOwnedWorkshops(ctx, p.UserID)
+}
+
 func (s *Service) Create(ctx context.Context, p auth.Principal, input domain.Input) (domain.Product, error) {
 	if err := s.authorize(ctx, p, "/api/v1/artisan/products", "write"); err != nil {
 		return domain.Product{}, err
@@ -93,6 +100,17 @@ func (s *Service) Submit(ctx context.Context, p auth.Principal, id string) (doma
 		return domain.Product{}, err
 	}
 	item, err = s.repository.Submit(ctx, p.UserID, id)
+	if err != nil {
+		return domain.Product{}, err
+	}
+	return s.withURL(ctx, item), nil
+}
+
+func (s *Service) Archive(ctx context.Context, p auth.Principal, id string) (domain.Product, error) {
+	if err := s.authorize(ctx, p, "/api/v1/artisan/products", "write"); err != nil {
+		return domain.Product{}, err
+	}
+	item, err := s.repository.Archive(ctx, p.UserID, id)
 	if err != nil {
 		return domain.Product{}, err
 	}
@@ -184,7 +202,7 @@ func (s *Service) mediaURLOrEmpty(ctx context.Context, media domain.Media) domai
 }
 
 func validateDraft(input domain.Input) error {
-	if strings.TrimSpace(input.CategoryID) == "" || (input.ProductType != "ARTISAN_SPECIFIC" && input.ProductType != "STANDARD_TRADITIONAL") || input.PriceMinor <= 0 || len(strings.TrimSpace(input.Currency)) != 3 {
+	if strings.TrimSpace(input.WorkshopID) == "" || strings.TrimSpace(input.CategoryID) == "" || (input.ProductType != "ARTISAN_SPECIFIC" && input.ProductType != "STANDARD_TRADITIONAL") || input.PriceMinor <= 0 || len(strings.TrimSpace(input.Currency)) != 3 {
 		return domain.ErrValidation
 	}
 	for _, translation := range input.Translations {
@@ -218,6 +236,7 @@ func validateSubmission(item domain.Product) error {
 }
 
 func normalize(input domain.Input) domain.Input {
+	input.WorkshopID = strings.TrimSpace(input.WorkshopID)
 	input.CategoryID = strings.TrimSpace(input.CategoryID)
 	input.ProductType = strings.TrimSpace(input.ProductType)
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))

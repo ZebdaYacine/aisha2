@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"io"
+	"time"
 
 	"github.com/aisha-platform/aisha/apps/api/internal/features/artisan"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/authorization"
@@ -56,7 +57,11 @@ func (h *ArtisanMediaHandler) Media(c fiber.Ctx) error {
 	if err != nil {
 		return artisanMediaAPIError(err)
 	}
-	return c.JSON(items)
+	response := make([]artisanMediaResponse, len(items))
+	for i, item := range items {
+		response[i] = artisanMediaDTO(item)
+	}
+	return c.JSON(response)
 }
 
 func (h *ArtisanMediaHandler) UploadMedia(c fiber.Ctx) error {
@@ -68,11 +73,46 @@ func (h *ArtisanMediaHandler) UploadMedia(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	item, err := h.service.UploadProfileMedia(c.Context(), p, file.Filename, file.ContentType, data)
+	filename := c.FormValue("mediaName")
+	if filename == "" {
+		filename = file.Filename
+	}
+	item, err := h.service.UploadProfileMediaWithOptions(c.Context(), p, c.FormValue("mediaKind"), filename, file.ContentType, data)
 	if err != nil {
 		return artisanMediaAPIError(err)
 	}
 	return c.Status(fiber.StatusCreated).JSON(artisanMediaDTO(item))
+}
+
+func (h *ArtisanMediaHandler) ReplaceMedia(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	file, data, err := uploadedBytes(c, "file", h.maxUpload)
+	if err != nil {
+		return err
+	}
+	filename := c.FormValue("mediaName")
+	if filename == "" {
+		filename = file.Filename
+	}
+	item, err := h.service.ReplaceProfileMedia(c.Context(), p, c.Params("id"), c.FormValue("mediaKind"), filename, file.ContentType, data)
+	if err != nil {
+		return artisanMediaAPIError(err)
+	}
+	return c.JSON(artisanMediaDTO(item))
+}
+
+func (h *ArtisanMediaHandler) DeleteMedia(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	if err = h.service.DeleteProfileMedia(c.Context(), p, c.Params("id")); err != nil {
+		return artisanMediaAPIError(err)
+	}
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func uploadedBytes(c fiber.Ctx, field string, maxBytes int64) (*multipartFile, []byte, error) {
@@ -107,18 +147,19 @@ type multipartFile struct {
 }
 
 type artisanMediaResponse struct {
-	ID               string `json:"id"`
-	MediaKind        string `json:"mediaKind"`
-	OriginalFilename string `json:"originalFilename"`
-	MediaType        string `json:"mediaType"`
-	SizeBytes        int64  `json:"sizeBytes"`
-	SortOrder        int    `json:"sortOrder"`
-	Visibility       string `json:"visibility"`
-	URL              string `json:"url,omitempty"`
+	ID               string    `json:"id"`
+	MediaKind        string    `json:"mediaKind"`
+	OriginalFilename string    `json:"originalFilename"`
+	MediaType        string    `json:"mediaType"`
+	SizeBytes        int64     `json:"sizeBytes"`
+	SortOrder        int       `json:"sortOrder"`
+	Visibility       string    `json:"visibility"`
+	CreatedAt        time.Time `json:"createdAt"`
+	URL              string    `json:"url,omitempty"`
 }
 
 func artisanMediaDTO(item artisan.Media) artisanMediaResponse {
-	return artisanMediaResponse{ID: item.ID, MediaKind: item.MediaKind, OriginalFilename: item.OriginalFilename, MediaType: item.MediaType, SizeBytes: item.SizeBytes, SortOrder: item.SortOrder, Visibility: item.Visibility, URL: item.URL}
+	return artisanMediaResponse{ID: item.ID, MediaKind: item.MediaKind, OriginalFilename: item.OriginalFilename, MediaType: item.MediaType, SizeBytes: item.SizeBytes, SortOrder: item.SortOrder, Visibility: item.Visibility, CreatedAt: item.CreatedAt, URL: item.URL}
 }
 
 func artisanMediaAPIError(err error) error {

@@ -128,6 +128,24 @@ func (r *PostgresRepository) StorePasswordReset(ctx context.Context, userID, tok
 	_, err := r.pool.Exec(ctx, `INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) VALUES($1,$2,$3)`, userID, tokenHash, expires)
 	return err
 }
+func (r *PostgresRepository) UpdatePassword(ctx context.Context, userID, passwordHash string, now time.Time) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	result, err := tx.Exec(ctx, `UPDATE users SET password_hash=$2,updated_at=$3 WHERE id=$1`, userID, passwordHash, now)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() != 1 {
+		return ErrInvalidCredentials
+	}
+	if _, err = tx.Exec(ctx, `UPDATE sessions SET revoked_at=COALESCE(revoked_at,$2) WHERE user_id=$1`, userID, now); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
 func (r *PostgresRepository) ResetPassword(ctx context.Context, tokenHash, passwordHash string, now time.Time) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {

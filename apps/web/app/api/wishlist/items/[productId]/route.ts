@@ -1,0 +1,3 @@
+import { authenticatedBackend, proxyResponse } from "@/core/lib/server/backend";
+export async function POST(_: Request, context: { params: Promise<{ productId: string }> }) { const { productId } = await context.params; return proxyResponse(await authenticatedBackend(`/wishlist/items/${encodeURIComponent(productId)}`, { method: "POST" })); }
+export async function DELETE(_: Request, context: { params: Promise<{ productId: string }> }) { const { productId } = await context.params; return proxyResponse(await authenticatedBackend(`/wishlist/items/${encodeURIComponent(productId)}`, { method: "DELETE" })); }

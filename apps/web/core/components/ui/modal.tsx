@@ -7,13 +7,18 @@ import { cn } from "@/core/lib/utils";
 
 export function Modal({ children, closeLabel, label, onClose, panelClassName }: { children: ReactNode; closeLabel: string; label: string; onClose: () => void; panelClassName?: string }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
     const panel = panelRef.current;
     panel?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !event.defaultPrevented) onCloseRef.current();
       if (event.key !== "Tab" || !panel) return;
       const focusable = [...panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
       if (!focusable.length) return;
@@ -34,10 +39,10 @@ export function Modal({ children, closeLabel, label, onClose, panelClassName }: 
       document.removeEventListener("keydown", onKeyDown);
       previousFocus?.focus();
     };
-  }, [onClose]);
+  }, []);
 
-  return <div className="fixed inset-0 z-[100] bg-foreground/60" onMouseDown={onClose}>
-    <div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className={cn("relative h-full bg-background outline-none", panelClassName)} onMouseDown={(event) => event.stopPropagation()}>
+  return <div className="fixed inset-0 z-[100] overflow-x-auto overflow-y-auto bg-foreground/60" onMouseDown={onClose}>
+    <div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className={cn("relative h-full max-w-full overflow-x-auto overflow-y-auto bg-background outline-none", panelClassName)} onMouseDown={(event) => event.stopPropagation()}>
       <button type="button" onClick={onClose} aria-label={closeLabel} className="absolute end-4 top-4 z-20 grid size-11 place-items-center bg-background text-foreground"><X aria-hidden="true" size={20} /></button>
       {children}
     </div>

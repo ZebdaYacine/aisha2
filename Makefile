@@ -54,9 +54,9 @@ logs:
 	$(COMPOSE) logs -f
 
 smoke:
-	curl --fail --silent http://localhost:8080/health/live
-	curl --fail --silent http://localhost:8080/health/ready
-	curl --fail --silent http://localhost:3000/api/health
+	curl --fail --silent http://localhost:8088/health/live
+	curl --fail --silent http://localhost:8088/health/ready
+	curl --fail --silent http://localhost:3033/api/health
 
 wire:
 	cd apps/api && go run github.com/google/wire/cmd/wire ./cmd

@@ -47,6 +47,10 @@ func (r *fakeRepository) StorePasswordReset(_ context.Context, _ string, hash st
 	r.resetTokenHash = hash
 	return nil
 }
+func (r *fakeRepository) UpdatePassword(_ context.Context, _ string, passwordHash string, _ time.Time) error {
+	r.resetPasswordHash = passwordHash
+	return nil
+}
 func (r *fakeRepository) ResetPassword(_ context.Context, tokenHash, passwordHash string, _ time.Time) error {
 	r.resetTokenHash = tokenHash
 	r.resetPasswordHash = passwordHash
@@ -144,5 +148,23 @@ func TestForgotAndResetUseHashedTokens(t *testing.T) {
 	}
 	if repo.resetPasswordHash == "replacement-password" {
 		t.Fatal("replacement password must be hashed")
+	}
+}
+
+func TestChangePasswordVerifiesCurrentPasswordAndHashesReplacement(t *testing.T) {
+	repo := &fakeRepository{}
+	service := NewService(repo, nil, "key")
+	user, _, err := service.Register(context.Background(), "admin@example.com", "current-password", "Admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = service.ChangePassword(context.Background(), Principal{UserID: user.ID}, "current-password", "replacement-password"); err != nil {
+		t.Fatal(err)
+	}
+	if repo.resetPasswordHash == "replacement-password" || repo.resetPasswordHash == "" {
+		t.Fatal("replacement password must be hashed")
+	}
+	if err = service.ChangePassword(context.Background(), Principal{UserID: user.ID}, "wrong-password", "another-password"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("wrong current password error=%v", err)
 	}
 }

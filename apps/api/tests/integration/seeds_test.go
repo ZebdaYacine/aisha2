@@ -16,7 +16,7 @@ import (
 var seededTables = []string{
 	"roles", "users", "user_roles", "sessions", "artisan_profiles",
 	"artisan_profile_translations", "artisan_documents", "artisan_media", "categories",
-	"artisan_profile_categories", "products", "product_translations", "product_media",
+	"artisan_profile_categories", "workshops", "workshop_translations", "products", "product_translations", "product_media", "inventory_movements",
 	"addresses", "password_reset_tokens", "audit_events", "outbox_events", "idempotency_keys",
 }
 

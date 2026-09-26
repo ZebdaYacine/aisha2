@@ -138,6 +138,54 @@ Use CSS variables compatible with shadcn/ui themes.
 }
 ```
 
+### Dark theme
+
+```css
+.dark {
+  --background: 24 22% 9%;
+  --foreground: 42 30% 94%;
+
+  --card: 24 18% 12%;
+  --card-foreground: 42 30% 94%;
+
+  --popover: 24 18% 12%;
+  --popover-foreground: 42 30% 94%;
+
+  --primary: 33 46% 62%;
+  --primary-foreground: 24 24% 12%;
+
+  --secondary: 24 14% 18%;
+  --secondary-foreground: 42 25% 90%;
+
+  --muted: 24 14% 16%;
+  --muted-foreground: 33 12% 65%;
+
+  --accent: 148 18% 46%;
+  --accent-foreground: 24 24% 12%;
+
+  --destructive: 0 62% 52%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 24 14% 20%;
+  --input: 24 14% 20%;
+  --ring: 33 46% 62%;
+
+  --radius: 0.75rem;
+}
+```
+
+Dark mode is not an inverted color scheme; it keeps the same warm, artisanal identity. Deep brown becomes the background rather than white, brass/clay tones lighten slightly so they stay legible at low luminance, and olive is desaturated a touch to avoid vibrating against the dark surface. Product photography stays untouched — never dim, tint, or overlay images to "match" dark mode; only surfaces, text, and chrome change.
+
+### Theme behavior
+
+- Respect the operating system preference by default (`prefers-color-scheme`), applied via the `.dark` class on `<html>` (works alongside the existing `dir` attribute).
+- Provide an explicit **`ThemeToggle`** control (sun/moon icon `Button`, `variant="ghost"`, `size="icon"`) in the header's right zone (desktop) and inside the mobile `Sheet`, with three states: `Light`, `Dark`, `System`.
+- Persist the user's explicit choice (not just the system default) across sessions; `System` re-syncs with OS changes live.
+- Apply the theme before first paint (no flash of the wrong theme) via an inline script or Next.js theme script pattern.
+- Every custom composition (not just shadcn/ui primitives) must be built from the CSS variable tokens above, never hardcoded hex values, so both themes stay correct automatically.
+- Badges, trust-signal colors (Section 26), and order-status colors (Section 17) keep their semantic hue but shift lightness/saturation for dark-mode contrast; status meaning never changes between themes.
+- Maintain WCAG 2.2 AA contrast in both themes for text, icons, borders, and focus indicators.
+
 ### Recommended semantic colors
 
 | Role | Suggested value | Usage |
@@ -186,6 +234,7 @@ Use font families that support Latin and Arabic well.
 - Use serif fonts only for editorial headings and selected product titles.
 - Use sans-serif fonts for navigation, forms, buttons, prices, and operational content.
 - Prices must use tabular numerals.
+- **Dates must always render in full, localized, unabbreviated form** (e.g. `September 26, 2026`, `26 septembre 2026`, `٢٦ سبتمبر ٢٠٢٦`) anywhere a date appears next to a status — order status, review date, stock restock date, promotion end date. Never use relative time ("2 days ago") or numeric-only dates (`09/26/26`) as the primary display; a relative or short form may appear only as a secondary `Small`/`Caption` hint next to the full date.
 - Keep body line length between 55 and 75 characters where possible.
 
 ---
@@ -247,6 +296,8 @@ Required image ratios:
 
 Use video or short looping visual content sparingly on artisan and story pages.
 
+In dark mode, product and editorial images are shown exactly as authored — no dimming, tinting, or overlay filters. Only the surrounding card/page surface, borders, and text adapt to the dark palette; keep a `1px` `border` token around white-background product shots so they don't bleed into the darker page background.
+
 ---
 
 ## 5. Global Layout
@@ -299,10 +350,21 @@ Use:
 - `Button` with `variant="ghost"`;
 - `NavigationMenu`;
 - `Sheet`;
-- `DropdownMenu`;
+- `DropdownMenu` for short, non-searchable menus (e.g. account quick menu);
+- `Combobox` (Command + Popover) for **language selection**, since the list carries language name, native name and flag, and benefits from type-ahead;
 - `Command` for advanced search;
-- `Badge` for cart count;
+- `ThemeToggle` (custom, built on `Button` + `DropdownMenu`) for switching between Light, Dark, and System — see 4.1 "Theme behavior";
+- `Badge` for cart count and any status indicator in the header (e.g. "New" ribbon on a promoted nav item);
 - `Separator`.
+
+### Language switcher
+
+The `LanguageSwitcher` component uses a `Combobox`:
+
+- trigger shows current language flag/code;
+- popover lists Arabic, French, English, Spanish with native name + English name, filterable by typing;
+- selecting an option updates the `[locale]` route segment and persists the choice;
+- fully operable via keyboard and screen reader (`aria-expanded`, `aria-controls`, `role="listbox"`).
 
 ### Sticky behavior
 
@@ -357,7 +419,7 @@ The footer should include:
 - artisan links;
 - customer service;
 - company information;
-- language and currency selectors;
+- language and currency selectors (`Combobox` for language, matching the header switcher; `Select` for currency, since the list is short);
 - payment method icons;
 - social links;
 - legal links.
@@ -429,7 +491,7 @@ Stack image first or text first depending on campaign content.
 
 - `Button`;
 - custom responsive image component;
-- optional `Badge`.
+- optional `Badge` (e.g. "Limited edition" — always paired with the campaign's full end date when time-bound).
 
 Avoid using a carousel as the default hero. A static campaign is clearer and faster.
 
@@ -611,9 +673,10 @@ Use a full-height `Sheet` opened by a `Filters` button.
 - `Checkbox`;
 - `Slider`;
 - `RadioGroup`;
+- `Combobox` for the **Artisan** and **Region** filters specifically, since both lists can grow large and benefit from type-ahead search; keep `Accordion` + `Checkbox` for short, fixed-length filters (Category, Availability, Material, Color);
 - `ScrollArea`;
 - `Sheet`;
-- `Badge` for active filters;
+- `Badge` for active filters — every active filter chip is a `Badge` with a remove (×) affordance;
 - `Button` for clear all.
 
 Filter state should appear in the URL.
@@ -631,7 +694,7 @@ Options:
 - Best selling;
 - Highest rated.
 
-Use `Select`.
+Use `Select` (short, fixed list — a `Combobox` is not needed here).
 
 ---
 
@@ -681,13 +744,15 @@ The Product Card is the most repeated component and must remain simple.
 
 ## 9.2 Required states
 
+Every state below is communicated with a `Badge` (never color alone), and any state carrying a date (sale end, restock, back-order) shows the **full date**, not a relative label:
+
 - Default;
 - Hover;
-- Out of stock;
-- Sale;
-- New;
-- Made to order;
-- Low stock;
+- Out of stock — `Badge variant="secondary"`, optional full restock date;
+- Sale — `Badge` showing discount, plus full sale-end date when time-limited;
+- New — `Badge`, optionally with the full date the product was listed;
+- Made to order — `Badge`, with full estimated-ready date;
+- Low stock — `Badge variant="destructive"` or warning tone;
 - Wishlist active;
 - Loading skeleton.
 
@@ -773,8 +838,8 @@ Required content order:
 9. quantity selector;
 10. Add to cart;
 11. Buy now;
-12. delivery estimate;
-13. stock state;
+12. delivery estimate (shown as a full date, e.g. "Arrives by October 4, 2026");
+13. stock state — as a `Badge` (In stock / Low stock / Out of stock / Made to order);
 14. trust reassurance;
 15. wishlist and share actions.
 
@@ -786,7 +851,8 @@ Use:
 
 - `RadioGroup` for size and finish;
 - custom swatches for color;
-- `Select` only when many options exist;
+- `Select` when a short list of options exists;
+- `Combobox` instead of `Select` when a variant list is long (e.g. a rug size list spanning many dimensions, or a broad finish/material catalog);
 - inline validation when a required option is missing.
 
 Selected options must be visually strong and accessible.
@@ -815,7 +881,7 @@ Rules:
 
 ## 10.7 Product details
 
-Use `Accordion` with sections:
+Use **`Tabs`** on desktop (where horizontal space allows a persistent panel switch) with sections:
 
 - Story;
 - Materials;
@@ -825,7 +891,7 @@ Use `Accordion` with sections:
 - Origin and certification;
 - Shipping and returns.
 
-The first section may be open by default.
+On mobile, render the same sections as `Accordion` instead, since a tab strip with seven labels does not fit comfortably on small screens. The first tab/section is open or selected by default.
 
 ---
 
@@ -837,7 +903,7 @@ A dedicated card below the main product information:
 - artisan or workshop name;
 - location;
 - short bio;
-- verified badge;
+- verified badge (`Badge`, e.g. "Verified artisan", with the full verification date on hover/tooltip);
 - View profile CTA.
 
 Use `Avatar`, `Badge`, `Button`, and a custom bordered section.
@@ -849,7 +915,7 @@ Use `Avatar`, `Badge`, `Button`, and a custom bordered section.
 For custom products, replace the normal immediate purchase flow with:
 
 - customization options;
-- production time;
+- production time (stated as a full estimated completion date once options are chosen);
 - personalization text;
 - file upload where required;
 - artisan message field;
@@ -887,9 +953,9 @@ Use separate horizontal product sections instead of a large mixed carousel.
 The page should allow discovery by:
 
 - craft;
-- region;
+- region — use a `Combobox` for region selection when the region list spans all Algerian wilayas;
 - name;
-- verified status.
+- verified status (`Badge` filter chip).
 
 Each artisan card contains:
 
@@ -907,7 +973,7 @@ Use a three-column desktop grid and one-column mobile layout.
 
 ## 11.2 Artisan profile page
 
-Sections:
+Sections, presented as **`Tabs`** on desktop (Biography / Craft & Techniques / Products / Gallery / Certifications / Reviews) and as a stacked scroll with anchor links on mobile:
 
 1. Cover image;
 2. portrait and identity;
@@ -917,8 +983,8 @@ Sections:
 6. short video;
 7. products by the artisan;
 8. workshop gallery;
-9. certifications or awards;
-10. customer reviews.
+9. certifications or awards (each with a `Badge` and full award date);
+10. customer reviews (each review timestamped with a full date).
 
 The design should feel editorial and human, not like a seller dashboard.
 
@@ -1002,7 +1068,7 @@ Summary includes:
 
 - subtotal;
 - discounts;
-- estimated shipping;
+- estimated shipping (shown as a full delivery-window date);
 - taxes note;
 - total;
 - coupon input.
@@ -1046,11 +1112,20 @@ Do not show the full navigation menu.
 
 Use a single-page progressive form for the MVP unless the payment provider requires separate screens.
 
-## 14.5 Components
+## 14.5 Address fields — country and province
+
+The **Country** field and the **State / Province / Wilaya** field both use a `Combobox`:
+
+- `Country`: full, searchable list of all countries, showing flag + localized country name; typing filters instantly.
+- `State / Province / Wilaya`: a dependent `Combobox` scoped to the selected country — for Algeria it lists the 58 wilayas; for other countries it lists that country's states/provinces/regions. The field is disabled until a country is chosen, and repopulates whenever the country changes.
+- Both comboboxes remain fully keyboard-operable and screen-reader labeled, and mirror correctly in RTL.
+
+## 14.6 Components
 
 - `Form`;
 - `Input`;
-- `Select`;
+- `Combobox` for country and state/province/wilaya fields (see 14.5);
+- `Select` for short, fixed lists only (e.g. shipping method, payment method);
 - `RadioGroup`;
 - `Checkbox`;
 - `Alert`;
@@ -1059,7 +1134,7 @@ Use a single-page progressive form for the MVP unless the payment provider requi
 - `Skeleton`;
 - `Sonner`.
 
-## 14.6 Validation
+## 14.7 Validation
 
 Use React Hook Form and Zod.
 
@@ -1101,7 +1176,8 @@ Registration:
 - password;
 - confirmation;
 - terms agreement;
-- submit.
+- submit;
+- optional country field, using the same `Combobox` pattern as checkout (14.5) if collected at signup.
 
 Use `Card`, `Form`, `Input`, `Checkbox`, `Button`, and `Separator`.
 
@@ -1111,17 +1187,17 @@ Use `Card`, `Form`, `Input`, `Checkbox`, `Button`, and `Separator`.
 
 ## 16.1 Desktop layout
 
-Use a left navigation sidebar and right content panel.
+Use a left navigation sidebar and right content panel. Where a section itself has sub-views (e.g. Orders: Active / Completed / Cancelled), render those sub-views as **`Tabs`** within the content panel.
 
 ## 16.2 Mobile layout
 
-Use a top Select or list-based navigation.
+Use a top Select or list-based navigation; sub-views within a section still use `Tabs` when the content panel is wide enough, otherwise a `Combobox`/`Select` switch above the list.
 
 ## 16.3 Account sections
 
 - Overview;
 - Profile;
-- Addresses;
+- Addresses (country/province fields use the `Combobox` pattern from 14.5);
 - Orders;
 - Wishlist;
 - Notifications;
@@ -1130,10 +1206,10 @@ Use a top Select or list-based navigation.
 
 Use:
 
-- `Tabs` where the number of sections is small;
+- `Tabs` where the number of sections, or sub-sections within one section, is small;
 - otherwise custom sidebar navigation;
-- `Table` for desktop order history;
-- Cards for mobile order history.
+- `Table` for desktop order history, with an `Order status` column rendered as `Badge` and an `Order date` column always shown in full date format;
+- Cards for mobile order history, each showing the same `Badge` status and full date.
 
 ---
 
@@ -1142,25 +1218,25 @@ Use:
 Include:
 
 - order number;
-- date;
-- payment status;
-- fulfillment status;
+- date — shown in full (e.g. "Placed on September 26, 2026"), never abbreviated;
+- payment status — `Badge`;
+- fulfillment status — `Badge`;
 - delivery address;
 - items;
 - summary;
-- tracking timeline;
+- tracking timeline — each timeline entry paired with its own `Badge` status and full date/time;
 - support action;
 - invoice download.
 
 Use:
 
-- `Badge` for statuses;
+- `Badge` for every status (payment, fulfillment, and each timeline step);
 - `Separator`;
 - custom vertical timeline;
 - `Button`;
 - `Alert` where action is needed.
 
-Status color rules:
+Status color rules (all statuses use `Badge`, and every badge is shown next to its full date, e.g. "Shipped — September 24, 2026"):
 
 - Processing: neutral;
 - Confirmed: blue or primary;
@@ -1169,7 +1245,7 @@ Status color rules:
 - Cancelled: destructive;
 - Refunded: muted purple or neutral.
 
-Do not rely only on color; always include text and icon.
+Do not rely only on color; always include text and icon alongside the `Badge`.
 
 ---
 
@@ -1196,26 +1272,34 @@ Use custom layouts with limited Cards. Preserve a premium magazine feel.
 | Use case | shadcn/ui component |
 |---|---|
 | Navigation | `NavigationMenu`, `Sheet`, `DropdownMenu` |
+| Language selection | `Combobox` (searchable, flag + native name) |
+| Country / province / wilaya selection | `Combobox` (dependent pair: province list scoped to chosen country) |
 | Search | `Command`, `Dialog`, `Sheet` |
-| Product filters | `Accordion`, `Checkbox`, `Slider`, `RadioGroup`, `Select` |
-| Forms | `Form`, `Input`, `Textarea`, `Checkbox`, `Select` |
-| Product options | `RadioGroup`, custom swatches |
+| Product filters | `Accordion`, `Checkbox`, `Slider`, `RadioGroup`, `Select`, `Combobox` (for Artisan/Region filters) |
+| Forms | `Form`, `Input`, `Textarea`, `Checkbox`, `Select`, `Combobox` |
+| Product options | `RadioGroup`, custom swatches, `Combobox` (long variant lists) |
 | Cart | `Sheet`, `Separator`, `Progress` |
-| Checkout | `Form`, `RadioGroup`, `Alert`, `Button` |
-| Product details | `Accordion`, `Tabs`, `Dialog` |
+| Checkout | `Form`, `RadioGroup`, `Combobox` (country/province), `Alert`, `Button` |
+| Product details | `Tabs` (desktop), `Accordion` (mobile), `Dialog` |
+| Grouped content panels | `Tabs` (product details desktop, artisan profile desktop, account sub-sections) |
 | Product gallery | `Carousel`, `Dialog` |
 | Feedback | `Sonner`, `Alert`, `AlertDialog` |
 | Loading | `Skeleton` |
-| Status | `Badge` |
+| Status (order, stock, sale, verification) | `Badge` — always paired with a full date when time-relevant |
 | User identity | `Avatar` |
 | Tooltips | `Tooltip` |
 | Pagination | `Pagination` |
 | Data display | `Table` for desktop, custom cards for mobile |
 | Date selection | `Calendar`, `Popover` |
+| Theme switching | `ThemeToggle` (custom, `Button` + `DropdownMenu`: Light / Dark / System) |
 
 ### Component rule
 
 Do not use shadcn/ui components without visual adaptation. Apply AISHA spacing, colors, typography, and radius tokens to all components.
+
+### Select vs. Combobox rule
+
+Use `Select` only for short, fixed-length option lists (typically fewer than ~10 items, e.g. sort order, currency, shipping method). Use `Combobox` whenever the list is long, searchable, or grows over time — language, country, state/province/wilaya, artisan filter, region filter, and long variant lists.
 
 ---
 
@@ -1229,8 +1313,11 @@ AnnouncementBar
 DesktopNavigation
 MobileNavigation
 MegaMenu
-LanguageSwitcher
+LanguageSwitcher        (Combobox-based)
+ThemeToggle             (Light / Dark / System)
 CurrencySwitcher
+CountrySelect            (Combobox)
+ProvinceSelect           (Combobox, dependent on CountrySelect)
 GlobalSearch
 SiteFooter
 Breadcrumbs
@@ -1240,7 +1327,7 @@ ProductCardSkeleton
 ProductGrid
 ProductGallery
 ProductPrice
-ProductBadge
+ProductBadge             (Badge, with optional full-date slot)
 WishlistButton
 QuantitySelector
 VariantSelector
@@ -1254,6 +1341,8 @@ MobileFilterSheet
 SortSelect
 ArtisanCard
 ArtisanPreview
+ArtisanTabs               (Tabs — profile page sections)
+ProductDetailTabs         (Tabs — desktop details panel)
 RegionCard
 CategoryCard
 EditorialBanner
@@ -1264,7 +1353,8 @@ EmptyState
 ErrorState
 NewsletterForm
 AccountSidebar
-OrderStatusBadge
+AccountSectionTabs        (Tabs — sub-views within an account section)
+OrderStatusBadge          (Badge + full date)
 OrderTimeline
 LocalizedLink
 ResponsiveImage
@@ -1292,9 +1382,11 @@ xl: 1280px
 - Minimum touch target: `44 × 44px`.
 - Never place essential actions only on hover.
 - Use Sheets for filters, menus, and cart.
-- Avoid horizontal overflow except intentional carousels.
+- Avoid horizontal overflow in page layouts; long modal and drawer content may scroll horizontally when its content cannot safely collapse.
+- For artisan private-file rows, replace wide tables with stacked, labelled cards below `sm`; keep filename, type, date, and actions readable without page-level horizontal scrolling.
 - Keep primary checkout and add-to-cart actions visible.
 - Use one-column forms on mobile.
+- On mobile, collapse `Tabs` panels (Product details, Artisan profile) into `Accordion` where more than 3–4 tabs would otherwise crowd the screen.
 
 ### Desktop rules
 
@@ -1302,7 +1394,8 @@ xl: 1280px
 - sticky sidebars when useful;
 - hover previews;
 - mega menu navigation;
-- wider editorial compositions.
+- wider editorial compositions;
+- prefer `Tabs` over `Accordion` for grouped content panels where horizontal space allows.
 
 ---
 
@@ -1323,7 +1416,9 @@ Set direction at the locale layout level:
 - Mirror navigation and directional icons.
 - Keep product media order natural.
 - Make breadcrumb separators direction-aware.
-- Test `Sheet`, `DropdownMenu`, and `Carousel` in RTL.
+- Test `Sheet`, `DropdownMenu`, `Combobox`, `Tabs`, and `Carousel` in RTL.
+- `Combobox` popovers must open aligned to the correct logical edge in RTL, and the search input must accept Arabic input with correct caret direction.
+- `Tabs` order must follow reading direction (rightmost tab first in RTL).
 
 ### Localized content
 
@@ -1332,12 +1427,13 @@ Translate:
 - navigation;
 - buttons;
 - validation messages;
-- status labels;
+- status labels (every `Badge` label);
 - filters;
 - metadata labels;
-- checkout content;
+- checkout content, including country and province/wilaya names shown in the `Combobox`;
 - empty states;
-- system messages.
+- system messages;
+- date formatting — full dates must use the correct locale calendar/format conventions (e.g. Gregorian, day-month-year order per locale) while remaining unabbreviated.
 
 Product and artisan content should support localized fields where available.
 
@@ -1354,13 +1450,13 @@ Requirements:
 - visible focus indicators;
 - sufficient color contrast;
 - alt text for every meaningful image;
-- labels for every form field;
+- labels for every form field, including `Combobox` triggers and `Tabs` triggers;
 - accessible names for icon buttons;
-- no information communicated only by color;
+- no information communicated only by color — every status uses a `Badge` with text, and every `Combobox`/`Tabs` state is announced;
 - reduced-motion support;
-- correct dialog focus trapping;
+- correct dialog focus trapping (including the `Combobox` popover);
 - correct heading order;
-- live announcements for cart updates and form errors.
+- live announcements for cart updates, form errors, and `Tabs` panel changes.
 
 Use shadcn/ui accessibility behavior as a base, but verify every custom composition.
 
@@ -1373,9 +1469,9 @@ Motion should be subtle and functional.
 Recommended transitions:
 
 - button and card hover: `150–200ms`;
-- drawer and dialog: `200–300ms`;
+- drawer, dialog, and Combobox popover: `200–300ms`;
 - image zoom: `300ms`;
-- accordion: default Radix animation;
+- accordion and tab-panel switch: default Radix animation;
 - page content reveal: limited and optional.
 
 Avoid large parallax effects, excessive scroll animation, and animation that delays shopping actions.
@@ -1400,7 +1496,7 @@ Every data-driven screen must include:
 
 ### Loading
 
-Use `Skeleton` matching the final layout dimensions.
+Use `Skeleton` matching the final layout dimensions, including skeleton rows for `Combobox` option lists and `Tabs` panels while data loads.
 
 ### Error
 
@@ -1408,7 +1504,7 @@ Explain what failed and show a retry action.
 
 ### Empty
 
-Provide a useful next step, such as clear filters or continue shopping.
+Provide a useful next step, such as clear filters or continue shopping. A `Combobox` with no matching results shows an inline "No results" row rather than an empty popover.
 
 ### Product unavailable
 
@@ -1427,10 +1523,10 @@ Use trust messages contextually rather than in one overloaded section.
 Examples:
 
 - `Quality checked by AISHA` on the product page;
-- `Verified artisan` on artisan profiles;
+- `Verified artisan` on artisan profiles, as a `Badge` with full verification date on hover;
 - `Made in Algeria` on product metadata;
 - `Secure payment` in cart and checkout;
-- delivery estimates near purchase actions;
+- delivery estimates near purchase actions, shown as a full date;
 - return policy near checkout;
 - origin certification in product details.
 
@@ -1444,12 +1540,13 @@ Use `Badge`, `Tooltip`, and small icon-text rows.
 - Provide responsive sizes.
 - Lazy-load below-the-fold images.
 - Preload the hero image only.
-- Avoid shipping large client components.
+- Avoid shipping large client components; `Combobox` and `Tabs` interactivity should be isolated Client Components.
 - Use Server Components by default.
 - Load filters and interactive controls as focused Client Components.
 - Use image placeholders to prevent layout shift.
 - Keep icon libraries tree-shakeable.
 - Avoid autoplay video on mobile.
+- For the country/province `Combobox`, load the country list eagerly (small dataset) and lazy-load each country's province/wilaya list only after that country is selected.
 
 ---
 
@@ -1492,7 +1589,7 @@ Footer
 Header
 Breadcrumb
 Product gallery | Purchase panel
-Product story and specifications
+Product story and specifications (Tabs desktop / Accordion mobile)
 Artisan preview
 Shipping and trust information
 More from this artisan
@@ -1505,7 +1602,7 @@ Footer
 
 ```text
 Minimal checkout header
-Contact and address form | Order summary
+Contact and address form (Country/Province as Combobox) | Order summary
 Shipping method
 Payment method
 Review
@@ -1519,17 +1616,17 @@ Legal and security note
 
 The MVP must fully design and implement:
 
-1. Global header and footer;
+1. Global header and footer, including the `Combobox`-based language switcher;
 2. Homepage;
 3. Product listing and filters;
-4. Product card;
-5. Product detail page;
+4. Product card, with `Badge` status + full-date pattern;
+5. Product detail page, with `Tabs`/`Accordion` details panel;
 6. Artisan listing and profile;
 7. Search;
 8. Cart drawer and cart page;
-9. Checkout;
+9. Checkout, with `Combobox` country/province fields;
 10. Login and registration;
-11. Customer orders;
+11. Customer orders, with `Badge` status + full date throughout;
 12. Multilingual and RTL behavior;
 13. Responsive states;
 14. Loading, empty, and error states.
@@ -1554,13 +1651,17 @@ The UI is accepted when:
 - product photography dominates the browsing experience;
 - artisan identity and product origin are visible throughout the journey;
 - users can complete checkout without confusion;
-- Arabic RTL works correctly on every route;
+- Arabic RTL works correctly on every route, including `Combobox` and `Tabs`;
 - all pages are usable on mobile screens from 320px width;
 - all forms provide accessible validation;
 - filters and search work without visual instability;
 - loading and error states match final layouts;
+- every status anywhere in the app is a `Badge`, and every status tied to a point in time shows the full, unabbreviated, localized date;
+- language, country, and province/wilaya selection all use a searchable `Combobox`, with province scoped correctly to the chosen country;
+- grouped content panels (product details, artisan profile, account sub-sections) use `Tabs` on desktop and collapse sensibly on mobile;
 - shadcn/ui components follow a consistent AISHA theme;
-- the application maintains a premium, warm, trustworthy, and culturally authentic appearance.
+- the application fully supports **Light**, **Dark**, and **System** modes, with no flash of the wrong theme on load, correct AA contrast in both, and product photography left untouched by the theme;
+- the application maintains a premium, warm, trustworthy, and culturally authentic appearance in both light and dark mode.
 
 ---
 
@@ -1569,16 +1670,31 @@ The UI is accepted when:
 When generating the UI:
 
 - use Server Components by default;
-- add `"use client"` only where interaction requires it;
+- add `"use client"` only where interaction requires it — `Combobox` and `Tabs` triggers are client components;
 - create shared components instead of duplicating page markup;
-- keep mock content in typed data files;
+- keep mock content in typed data files, including a full country list and a per-country province/wilaya dataset for the `Combobox` fields;
 - use strict TypeScript;
 - use `cn()` for conditional Tailwind classes;
-- use translation keys for all visible labels;
+- use translation keys for all visible labels, including every `Badge` status label and every `Tabs` trigger label;
 - use logical spacing utilities compatible with RTL;
 - do not place business-critical pricing, stock, or payment rules only in the frontend;
-- preserve accessibility attributes provided by Radix and shadcn/ui;
+- preserve accessibility attributes provided by Radix and shadcn/ui, especially for `Combobox` (Command + Popover) and `Tabs`;
 - do not use placeholder gradients when suitable product imagery is available;
 - avoid generic dashboard styling for customer-facing pages;
-- keep commerce actions visually stronger than secondary editorial actions.
+- keep commerce actions visually stronger than secondary editorial actions;
+- centralize date formatting in one utility (`formatFullDate(date, locale)`) so every status/date pairing across the app stays consistent;
+- centralize theming in one provider (e.g. a `ThemeProvider` wrapping the locale layout) that reads/writes the persisted preference and toggles the `.dark` class, applied before hydration to avoid a flash of the wrong theme; never hardcode a color — always consume the CSS variable tokens so both themes render correctly everywhere, including inside `Combobox` popovers, `Sheet`/`Dialog` overlays, and `Tabs` panels.
 
+### Brand entry and navigation behavior
+
+- On the first browser visit, show a short AISHA splash with the wordmark, an
+  animated story line, and a progress bar. Store a completion timestamp locally
+  so normal navigation does not replay it; allow the opening splash again only
+  after a two-minute cooldown.
+- Language switching replaces only the locale segment of the current URL and
+  preserves the current page, query string, and hash. The header control uses
+  a flag and two-letter abbreviation while its options retain full language
+  names.
+- The theme menu supports Light, Dark, and System modes, closes with Escape or
+  an outside click, and uses the same persisted preference as the pre-hydration
+  theme bootstrap.

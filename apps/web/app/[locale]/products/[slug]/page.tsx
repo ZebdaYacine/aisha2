@@ -2,7 +2,12 @@ import { BadgeCheck, MapPin, PackageCheck, Share2 } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ProductGallery, ProductGrid, ProductPrice, PurchaseControls } from "@/features/product";
+import {
+  ProductGallery,
+  ProductGrid,
+  ProductPrice,
+  PurchaseControls,
+} from "@/features/product";
 import { Container } from "@/core/components/layout/container";
 import { Breadcrumbs } from "@/core/components/shared/breadcrumbs";
 import { SectionHeading } from "@/core/components/shared/section-heading";
@@ -12,12 +17,20 @@ import { localized } from "@/features/catalogue/format";
 import { isLocale } from "@/core/lib/i18n";
 import { storeCopy } from "@/core/lib/store-copy";
 
-export async function generateMetadata({ params }: { params: Promise<{ locale: string; slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}): Promise<Metadata> {
   const { locale, slug } = await params;
   if (!isLocale(locale)) return {};
   const product = await catalogueProduct(slug, locale).catch(() => undefined);
   if (!product) return {};
-  return { title: `${localized(product.name, locale)} — AISHA`, description: localized(product.summary, locale), alternates: { canonical: `/${locale}/products/${slug}` } };
+  return {
+    title: `${localized(product.name, locale)} — AISHA`,
+    description: localized(product.summary, locale),
+    alternates: { canonical: `/${locale}/products/${slug}` },
+  };
 }
 export default async function ProductPage({
   params,
@@ -31,7 +44,9 @@ export default async function ProductPage({
   const data = await catalogue(locale);
   const copy = storeCopy(locale),
     artisan = data.artisans.find((item) => item.slug === product.artisanSlug),
-    category = data.categories.find((item) => item.slug === product.categorySlug);
+    category = data.categories.find(
+      (item) => item.slug === product.categorySlug,
+    );
   return (
     <>
       <Container className="py-8">
@@ -69,6 +84,15 @@ export default async function ProductPage({
                 <BadgeCheck size={16} />
               </ButtonLink>
             )}
+            {product.workshopId && product.workshop && (
+              <ButtonLink
+                variant="ghost"
+                className="mt-2 h-auto min-h-0 border-0 p-0 text-muted-foreground"
+                href={`/${locale}/workshops/${product.workshopId}`}
+              >
+                {copy.workshop}: {product.workshop}
+              </ButtonLink>
+            )}
             <div className="mt-5 flex items-center gap-3 text-sm">
               <span aria-label={`${product.rating} ${copy.ratingLabel}`}>
                 ★ {product.rating}
@@ -94,7 +118,9 @@ export default async function ProductPage({
                     ? copy.lowStock
                     : product.availability === "made_to_order"
                       ? copy.madeToOrder
-                      : copy.outOfStock}
+                      : product.availability === "out_of_stock"
+                        ? copy.outOfStock
+                        : copy.availabilityPending}
               </p>
             </div>
             <div className="mt-7">
@@ -154,7 +180,15 @@ export default async function ProductPage({
       {artisan && (
         <section className="section-space">
           <Container className="grid items-center gap-10 lg:grid-cols-2">
-            <div className="relative aspect-[4/3] overflow-hidden bg-secondary"><Image src={artisan.image} alt={`${artisan.name}, ${artisan.workshop}`} fill sizes="(max-width:1024px) 100vw,50vw" className="object-cover" /></div>
+            <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
+              <Image
+                src={artisan.image}
+                alt={`${artisan.name}, ${artisan.workshop}`}
+                fill
+                sizes="(max-width:1024px) 100vw,50vw"
+                className="object-cover"
+              />
+            </div>
             <div>
               <p className="text-xs uppercase tracking-widest text-primary">
                 {copy.verified}

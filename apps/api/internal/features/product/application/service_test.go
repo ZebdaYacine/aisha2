@@ -19,8 +19,12 @@ type productRepositoryStub struct {
 	submitCalled  bool
 	media         domain.Media
 	addMediaInput domain.Media
+	workshops     []domain.Workshop
 }
 
+func (r *productRepositoryStub) ListOwnedWorkshops(context.Context, string) ([]domain.Workshop, error) {
+	return r.workshops, nil
+}
 func (r *productRepositoryStub) Create(context.Context, string, domain.Input) (domain.Product, error) {
 	r.createCalled = true
 	return r.item, nil
@@ -37,6 +41,10 @@ func (r *productRepositoryStub) Update(context.Context, string, string, domain.I
 func (r *productRepositoryStub) Submit(context.Context, string, string) (domain.Product, error) {
 	r.submitCalled = true
 	r.item.Status = "PENDING_REVIEW"
+	return r.item, nil
+}
+func (r *productRepositoryStub) Archive(context.Context, string, string) (domain.Product, error) {
+	r.item.Status = "ARCHIVED"
 	return r.item, nil
 }
 func (r *productRepositoryStub) AddMedia(_ context.Context, _ string, _ string, media domain.Media) (domain.Media, error) {
@@ -100,6 +108,24 @@ func TestCreateStopsBeforeRepositoryWhenForbidden(t *testing.T) {
 	}
 }
 
+func TestCreateRequiresWorkshop(t *testing.T) {
+	repository := &productRepositoryStub{}
+	service := NewService(repository, productAuthorizerStub{}, nil, "private", 1024)
+	_, err := service.Create(context.Background(), auth.Principal{UserID: "user-1"}, domain.Input{CategoryID: "category-1", ProductType: "ARTISAN_SPECIFIC", PriceMinor: 1, Currency: "EUR"})
+	if !errors.Is(err, domain.ErrValidation) || repository.createCalled {
+		t.Fatalf("err=%v createCalled=%v", err, repository.createCalled)
+	}
+}
+
+func TestListWorkshopsAuthorizesAndReturnsOwnedWorkshops(t *testing.T) {
+	repository := &productRepositoryStub{workshops: []domain.Workshop{{ID: "workshop-1", Name: "Atelier Tala", Status: "ACTIVE"}}}
+	service := NewService(repository, productAuthorizerStub{}, nil, "private", 1024)
+	items, err := service.ListWorkshops(context.Background(), auth.Principal{UserID: "user-1"})
+	if err != nil || len(items) != 1 || items[0].ID != "workshop-1" {
+		t.Fatalf("items=%#v err=%v", items, err)
+	}
+}
+
 func TestSubmitRequiresEveryLocaleAndMedia(t *testing.T) {
 	repository := &productRepositoryStub{item: completeProduct()}
 	repository.item.Media = nil
@@ -117,6 +143,18 @@ func TestSubmitRequiresEveryLocaleAndMedia(t *testing.T) {
 	}
 	if !repository.submitCalled || item.Status != "PENDING_REVIEW" {
 		t.Fatalf("submitCalled=%v status=%q", repository.submitCalled, item.Status)
+	}
+}
+
+func TestArchiveReturnsArchivedProduct(t *testing.T) {
+	repository := &productRepositoryStub{item: completeProduct()}
+	service := NewService(repository, productAuthorizerStub{}, nil, "private", 1024)
+	item, err := service.Archive(context.Background(), auth.Principal{UserID: "user-1"}, repository.item.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.Status != "ARCHIVED" {
+		t.Fatalf("status=%q", item.Status)
 	}
 }
 

@@ -2,6 +2,7 @@
   "brand": "AISHA",
   "homeLabel": "AISHA home",
   "languageLabel": "Language",
+  "currencyLabel": "Currency",
   "announcement": "A new home for Algerian craft — the first collection is being prepared.",
   "locales": {"en": "English", "fr": "Français", "ar": "العربية", "es": "Español"},
   "navigation": {

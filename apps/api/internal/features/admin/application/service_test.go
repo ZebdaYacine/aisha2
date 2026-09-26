@@ -18,6 +18,9 @@ func (r *adminRepositoryStub) SetRoles(_ context.Context, _, _ string, roles []s
 	r.roles = roles
 	return domain.User{Roles: roles}, nil
 }
+func (r *adminRepositoryStub) SetUserStatus(context.Context, string, string, string, string) (domain.User, error) {
+	return domain.User{Status: "SUSPENDED"}, nil
+}
 func (r *adminRepositoryStub) AuditEvents(context.Context, domain.AuditFilter, int, int) ([]domain.AuditEvent, int, error) {
 	return nil, 0, nil
 }
@@ -38,6 +41,17 @@ func TestSetRolesTrimsAndDeduplicatesBeforeRepository(t *testing.T) {
 	}
 	if len(item.Roles) != 2 || item.Roles[0] != "admin" || item.Roles[1] != "artisan" {
 		t.Fatalf("roles=%v", item.Roles)
+	}
+}
+
+func TestSetUserStatusRequiresReasonAndProtectsSelf(t *testing.T) {
+	repository := &adminRepositoryStub{}
+	service := NewService(repository, adminAuthorizerStub{})
+	if _, err := service.SetUserStatus(context.Background(), auth.Principal{UserID: "admin-1"}, "user-1", "SUSPENDED", ""); !errors.Is(err, domain.ErrValidation) {
+		t.Fatalf("missing reason error=%v", err)
+	}
+	if _, err := service.SetUserStatus(context.Background(), auth.Principal{UserID: "admin-1"}, "admin-1", "SUSPENDED", "policy"); !errors.Is(err, domain.ErrValidation) {
+		t.Fatalf("self status error=%v", err)
 	}
 }
 

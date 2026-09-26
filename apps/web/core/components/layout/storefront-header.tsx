@@ -2,16 +2,18 @@
 import { Menu, ShoppingBag, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 
 import { Container } from "@/core/components/layout/container";
+import { ThemeToggle } from "@/core/components/layout/theme-toggle";
+import { LanguageSwitcher, pathForLocale } from "@/core/components/layout/language-switcher";
 import type { Locale, Messages } from "@/core/lib/i18n";
-import { locales } from "@/core/lib/i18n";
 import { storeCopy } from "@/core/lib/store-copy";
 import { useCart } from "@/features/cart/viewmodel/cart-context";
 import { GlobalSearch } from "./global-search";
 import type { Artisan, Category, Product } from "@/features/catalogue/types";
 import { useOptionalAuth } from "@/features/auth/viewmodel/auth-context";
-import { userInitials } from "@/features/auth/types";
+import { landingPathForUser, userInitials } from "@/features/auth/types";
 
 const navItems = [
   ["new", "/products?sort=newest"],
@@ -32,6 +34,7 @@ export function StorefrontHeader({
 }) {
   const { count, setOpen: setCartOpen } = useCart();
   const auth = useOptionalAuth();
+  const pathname = usePathname() || `/${locale}`;
   const [menuOpen, setMenuOpen] = useState(false);
   const copy = storeCopy(locale);
   const cartCount = new Intl.NumberFormat(locale).format(count);
@@ -41,7 +44,7 @@ export function StorefrontHeader({
         <Container>{messages.announcement}</Container>
       </div>
       <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur-sm">
-        <Container className="grid min-h-16 grid-cols-[1fr_auto_1fr] items-center gap-3 lg:min-h-18">
+        <Container className="grid min-h-16 grid-cols-[1fr_auto_1fr] items-center gap-1 sm:gap-3 lg:min-h-18">
           <nav className="hidden items-center gap-5 text-xs lg:flex" aria-label={messages.navigation.primary}>
             {navItems.map(([key, path]) => (
               <Link
@@ -77,22 +80,28 @@ export function StorefrontHeader({
                   </Link>
                 ))}
               </nav>
+              <div className="mt-8 flex items-center justify-between border-t border-border pt-5">
+                <ThemeToggle locale={locale} />
+              </div>
             </div>}
           </div>
 
           <Link
             href={`/${locale}`}
-            className="justify-self-center font-serif text-2xl tracking-[0.16em]"
+            className="justify-self-center font-serif text-xl tracking-[0.16em] sm:text-2xl"
             aria-label={messages.homeLabel}
           >
             {messages.brand}
           </Link>
 
-          <div className="flex items-center justify-end gap-1 sm:gap-2">
+          <div className="flex items-center justify-end gap-0 sm:gap-2">
             <GlobalSearch locale={locale} copy={copy} {...catalogue}/>
+            <div className="hidden lg:block">
+              <ThemeToggle locale={locale} />
+            </div>
             <Link
               className="flex min-h-11 min-w-11 items-center justify-center"
-              href={`/${locale}/${auth?.user ? "account" : "login"}`}
+              href={auth?.user ? landingPathForUser(auth.user, locale) : `/${locale}/login`}
               aria-label={messages.navigation.account}
             >
               {auth?.user ? (
@@ -118,24 +127,14 @@ export function StorefrontHeader({
                 {cartCount}
               </span>
             </button>
-            <details className="relative">
-              <summary className="latin-tracking flex min-h-11 cursor-pointer list-none items-center px-2 text-[0.6875rem] font-medium uppercase tracking-[0.12em] [&::-webkit-details-marker]:hidden">
-                {locale}
-              </summary>
-              <div className="absolute end-0 top-full min-w-32 border border-border bg-background p-2">
-                {locales.map((item) => (
-                  <Link
-                    key={item}
-                    className="latin-tracking block px-3 py-2 text-xs uppercase tracking-[0.1em] hover:bg-muted"
-                    href={`/${item}`}
-                    hrefLang={item}
-                    lang={item}
-                  >
-                    {messages.locales[item]}
-                  </Link>
-                ))}
-              </div>
-            </details>
+            <LanguageSwitcher locale={locale} messages={messages} compact />
+            <nav className="sr-only" aria-label="Language links">
+              {(["en", "fr", "ar", "es"] as const).map((item) => (
+                  <Link key={item} href={pathForLocale(pathname, item)} hrefLang={item} lang={item}>
+                  {messages.locales[item]}
+                </Link>
+              ))}
+            </nav>
           </div>
         </Container>
       </header>

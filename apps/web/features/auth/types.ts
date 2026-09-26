@@ -4,6 +4,10 @@ export type AuthUser = {
   displayName: string;
   status?: string;
   roles?: string[];
+  customerEnabled: boolean;
+  artisanStatus: string;
+  artisanEnabled: boolean;
+  capabilities: string[];
 };
 
 type AuthResponse = {
@@ -22,10 +26,16 @@ export function normalizeAuthUser(value: unknown): AuthUser | null {
   if (!isRecord(value) || !stringValue(value.id)) return null;
 
   const email = stringValue(value.email);
-  const displayName = stringValue(value.displayName) || email || "AISHA customer";
+  const displayName =
+    stringValue(value.displayName) || email || "AISHA customer";
   const roles = Array.isArray(value.roles)
     ? value.roles.filter((role): role is string => typeof role === "string")
     : undefined;
+  const capabilities = Array.isArray(value.capabilities)
+    ? value.capabilities.filter(
+        (capability): capability is string => typeof capability === "string",
+      )
+    : [];
 
   return {
     id: stringValue(value.id),
@@ -33,6 +43,10 @@ export function normalizeAuthUser(value: unknown): AuthUser | null {
     displayName,
     status: stringValue(value.status) || undefined,
     roles,
+    customerEnabled: value.customerEnabled === true,
+    artisanStatus: stringValue(value.artisanStatus) || "NOT_STARTED",
+    artisanEnabled: value.artisanEnabled === true,
+    capabilities,
   };
 }
 
@@ -42,9 +56,22 @@ export function userFromAuthResponse(value: unknown) {
 }
 
 export function landingPathForUser(user: AuthUser, locale: string) {
-  if (user.roles?.includes("administrator")) return `/${locale}/admin/artisan-applications`;
-  if (user.roles?.includes("artisan")) return `/${locale}/artisan`;
+  if (hasCapability(user, "admin.audit.read"))
+    return `/${locale}/admin`;
+  if (hasCapability(user, "admin.product_moderation.read"))
+    return `/${locale}/admin/moderation`;
+  if (hasCapability(user, "warehouse.read"))
+    return `/${locale}/admin/warehouse`;
+  if (user.artisanEnabled && hasCapability(user, "artisan.account.read"))
+    return `/${locale}/artisan`;
   return `/${locale}/account`;
+}
+
+export function hasCapability(
+  user: AuthUser | null | undefined,
+  capability: string,
+) {
+  return user?.capabilities.includes(capability) ?? false;
 }
 
 export function userInitials(user: Pick<AuthUser, "displayName" | "email">) {

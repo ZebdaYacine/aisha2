@@ -13,6 +13,7 @@ import (
 type Profile = domain.Profile
 type Address = domain.Address
 type AddressInput = domain.AddressInput
+type AccountState = domain.AccountState
 
 var ErrNotFound = domain.ErrNotFound
 
@@ -20,6 +21,18 @@ type PostgresRepository struct{ pool *pgxpool.Pool }
 
 func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
+}
+
+func (r *PostgresRepository) AccountState(ctx context.Context, userID string) (AccountState, error) {
+	var state AccountState
+	err := r.pool.QueryRow(ctx, `SELECT u.status,COALESCE(m.status,CASE WHEN a.status='APPROVED' THEN 'ACTIVE' ELSE COALESCE(a.status,'') END) FROM users u LEFT JOIN artisan_profiles a ON a.user_id=u.id LEFT JOIN artisan_memberships m ON m.artisan_profile_id=a.id WHERE u.id=$1`, userID).Scan(&state.UserStatus, &state.ArtisanStatus)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return AccountState{}, ErrNotFound
+	}
+	if err != nil {
+		return AccountState{}, fmt.Errorf("query account state: %w", err)
+	}
+	return state, nil
 }
 func (r *PostgresRepository) Profile(ctx context.Context, userID string) (Profile, error) {
 	var p Profile

@@ -26,12 +26,27 @@ func TestPostgresSubmissionAndApprovalAreAtomic(t *testing.T) {
 	if err = pool.QueryRow(ctx, `INSERT INTO users(email,display_name) VALUES('admin-integration@example.test','Admin') RETURNING id`).Scan(&adminID); err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _, _ = pool.Exec(ctx, `DELETE FROM users WHERE id IN ($1,$2)`, userID, adminID) }()
+	defer func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM artisan_documents WHERE artisan_profile_id IN (SELECT id FROM artisan_profiles WHERE user_id=$1)`, userID)
+		_, _ = pool.Exec(ctx, `DELETE FROM artisan_media WHERE artisan_profile_id IN (SELECT id FROM artisan_profiles WHERE user_id=$1)`, userID)
+		_, _ = pool.Exec(ctx, `DELETE FROM artisan_profiles WHERE user_id=$1`, userID)
+		_, _ = pool.Exec(ctx, `DELETE FROM users WHERE id IN ($1,$2)`, userID, adminID)
+	}()
 	if err = pool.QueryRow(ctx, `SELECT id FROM categories WHERE is_active=true LIMIT 1`).Scan(&categoryID); err != nil {
 		t.Fatal(err)
 	}
 	repository := NewPostgresRepository(pool)
-	application, err := repository.Submit(ctx, userID, ApplicationInput{PublicDisplayName: "Integration Atelier", Wilaya: "Alger", ContactVisibility: "PRIVATE", CategoryIDs: []string{categoryID}, Translations: []Translation{{Locale: "en", Biography: "Workshop story"}}})
+	application, err := repository.SaveDraft(ctx, userID, ApplicationInput{PublicDisplayName: "Integration Atelier", WorkshopName: "Integration Workshop", Wilaya: "Alger", ContactVisibility: "PRIVATE", CategoryIDs: []string{categoryID}, Translations: []Translation{{Locale: "en", Biography: "Workshop story"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = repository.AddDocument(ctx, userID, DocumentUploadInput{DocumentType: "IDENTITY", ObjectKey: "tests/" + userID + "/identity.pdf", OriginalFilename: "identity.pdf", MediaType: "application/pdf", SizeBytes: 10}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = repository.AddMedia(ctx, userID, MediaUploadInput{MediaKind: "IMAGE", ObjectKey: "tests/" + userID + "/profile.jpg", OriginalFilename: "profile.jpg", MediaType: "image/jpeg", SizeBytes: 10}); err != nil {
+		t.Fatal(err)
+	}
+	application, err = repository.FinalizeSubmission(ctx, userID)
 	if err != nil {
 		t.Fatal(err)
 	}

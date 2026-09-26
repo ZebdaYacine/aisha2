@@ -17,7 +17,10 @@ func TestLoadUsesFoundationDefaults(t *testing.T) {
 	if cfg.AppName != "AISHA" || cfg.DatabaseMaxOpen != 12 || cfg.DatabaseMaxIdle != 3 {
 		t.Fatalf("unexpected config: %#v", cfg)
 	}
-	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:3000" {
+	if cfg.MinIOPublicEndpoint != "localhost:9000" {
+		t.Fatalf("unexpected public MinIO endpoint: %q", cfg.MinIOPublicEndpoint)
+	}
+	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:3033" {
 		t.Fatalf("unexpected origins: %#v", cfg.AllowedOrigins)
 	}
 	if cfg.AuthRateLimitMax != 10 || cfg.AuthRateLimitWindow != 60*time.Second {

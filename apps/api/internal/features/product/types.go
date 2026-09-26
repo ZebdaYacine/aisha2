@@ -6,14 +6,17 @@ type Translation = domain.Translation
 type Input = domain.Input
 type Media = domain.Media
 type Product = domain.Product
+type Workshop = domain.Workshop
 type Repository = domain.Repository
 type Authorizer = domain.Authorizer
 
 var (
-	ErrNotFound           = domain.ErrNotFound
-	ErrValidation         = domain.ErrValidation
-	ErrNotEditable        = domain.ErrNotEditable
-	ErrArtisanNotApproved = domain.ErrArtisanNotApproved
-	ErrInvalidTransition  = domain.ErrInvalidTransition
-	ErrMediaNotFound      = domain.ErrMediaNotFound
+	ErrNotFound                 = domain.ErrNotFound
+	ErrValidation               = domain.ErrValidation
+	ErrNotEditable              = domain.ErrNotEditable
+	ErrArtisanNotApproved       = domain.ErrArtisanNotApproved
+	ErrInvalidTransition        = domain.ErrInvalidTransition
+	ErrMediaNotFound            = domain.ErrMediaNotFound
+	ErrWorkshopNotOwned         = domain.ErrWorkshopNotOwned
+	ErrWorkshopProtectedHistory = domain.ErrWorkshopProtectedHistory
 )

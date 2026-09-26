@@ -3,10 +3,12 @@ package repositories
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/aisha-platform/aisha/apps/api/internal/features/admin/domain"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -14,6 +16,105 @@ type PostgresRepository struct{ pool *pgxpool.Pool }
 
 func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
+}
+
+func (r *PostgresRepository) ListUserMedia(ctx context.Context, limit, offset int) ([]domain.UserMedia, int, error) {
+	rows, err := r.pool.Query(ctx, `WITH media AS (
+SELECT am.id AS media_id,u.id AS user_id,COALESCE(u.display_name,'') AS user_display_name,COALESCE(u.email,'') AS user_email,'PROFILE_MEDIA' AS media_kind,NULLIF(am.media_kind,'') AS document_type,COALESCE(am.original_filename,'') AS original_filename,am.media_type,am.size_bytes,am.object_key,am.created_at
+FROM artisan_media am JOIN artisan_profiles ap ON ap.id=am.artisan_profile_id JOIN users u ON u.id=ap.user_id
+UNION ALL
+SELECT ad.id AS media_id,u.id AS user_id,COALESCE(u.display_name,'') AS user_display_name,COALESCE(u.email,'') AS user_email,'DOCUMENT' AS media_kind,ad.document_type,COALESCE(ad.original_filename,'') AS original_filename,ad.media_type,ad.size_bytes,ad.object_key,ad.created_at
+FROM artisan_documents ad JOIN artisan_profiles ap ON ap.id=ad.artisan_profile_id JOIN users u ON u.id=ap.user_id
+)
+SELECT media_id,user_id,user_display_name,user_email,media_kind,document_type,original_filename,media_type,size_bytes,object_key,created_at,count(*) OVER() FROM media ORDER BY created_at DESC,media_id LIMIT $1 OFFSET $2`, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	items := []domain.UserMedia{}
+	total := 0
+	for rows.Next() {
+		var item domain.UserMedia
+		if err = rows.Scan(&item.ID, &item.UserID, &item.UserDisplayName, &item.UserEmail, &item.MediaKind, &item.DocumentType, &item.OriginalFilename, &item.MediaType, &item.SizeBytes, &item.ObjectKey, &item.CreatedAt, &total); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	return items, total, rows.Err()
+}
+
+func (r *PostgresRepository) ListProductMedia(ctx context.Context, limit, offset int) ([]domain.ProductMedia, int, error) {
+	rows, err := r.pool.Query(ctx, `SELECT pm.id,pm.product_id,COALESCE((SELECT t.name FROM product_translations t WHERE t.product_id=p.id AND t.locale='en' LIMIT 1),(SELECT t.name FROM product_translations t WHERE t.product_id=p.id ORDER BY t.locale LIMIT 1),p.product_type),p.status,COALESCE(a.public_display_name,''),pm.media_kind,COALESCE(pm.original_filename,''),pm.media_type,pm.size_bytes,COALESCE(pm.alt_text,''),pm.visibility,pm.object_key,pm.created_at,count(*) OVER() FROM product_media pm JOIN products p ON p.id=pm.product_id JOIN artisan_profiles a ON a.id=p.artisan_profile_id ORDER BY pm.created_at DESC,pm.id LIMIT $1 OFFSET $2`, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	items := []domain.ProductMedia{}
+	total := 0
+	for rows.Next() {
+		var item domain.ProductMedia
+		if err = rows.Scan(&item.ID, &item.ProductID, &item.ProductName, &item.ProductStatus, &item.ArtisanName, &item.MediaKind, &item.OriginalFilename, &item.MediaType, &item.SizeBytes, &item.AltText, &item.Visibility, &item.ObjectKey, &item.CreatedAt, &total); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	return items, total, rows.Err()
+}
+
+func (r *PostgresRepository) DeleteUserMedia(ctx context.Context, actorID, mediaID string) (domain.UserMedia, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.UserMedia{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var item domain.UserMedia
+	err = tx.QueryRow(ctx, `DELETE FROM artisan_media WHERE id=$1 RETURNING id,object_key`, mediaID).Scan(&item.ID, &item.ObjectKey)
+	if errors.Is(err, pgx.ErrNoRows) {
+		err = tx.QueryRow(ctx, `DELETE FROM artisan_documents WHERE id=$1 RETURNING id,object_key`, mediaID).Scan(&item.ID, &item.ObjectKey)
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.UserMedia{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.UserMedia{}, fmt.Errorf("delete user media: %w", err)
+	}
+	if err = recordMediaDeletion(ctx, tx, actorID, "user_media", item.ID); err != nil {
+		return domain.UserMedia{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.UserMedia{}, err
+	}
+	return item, nil
+}
+
+func (r *PostgresRepository) DeleteProductMedia(ctx context.Context, actorID, mediaID string) (domain.ProductMedia, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.ProductMedia{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var item domain.ProductMedia
+	err = tx.QueryRow(ctx, `DELETE FROM product_media WHERE id=$1 RETURNING id,product_id,object_key`, mediaID).Scan(&item.ID, &item.ProductID, &item.ObjectKey)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ProductMedia{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.ProductMedia{}, fmt.Errorf("delete product media: %w", err)
+	}
+	if err = recordMediaDeletion(ctx, tx, actorID, "product_media", item.ID); err != nil {
+		return domain.ProductMedia{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.ProductMedia{}, err
+	}
+	return item, nil
+}
+
+func recordMediaDeletion(ctx context.Context, tx pgx.Tx, actorID, targetType, mediaID string) error {
+	if _, err := tx.Exec(ctx, `INSERT INTO audit_events(event_type,actor_user_id,target_type,target_id,reason) VALUES('MEDIA_DELETED',$1,$2,$3,'Deleted by administrator')`, actorID, targetType, mediaID); err != nil {
+		return fmt.Errorf("record media deletion audit: %w", err)
+	}
+	return nil
 }
 
 func (r *PostgresRepository) ListUsers(ctx context.Context, role, status string, limit, offset int) ([]domain.User, int, error) {
@@ -69,6 +170,42 @@ func (r *PostgresRepository) SetRoles(ctx context.Context, actorID, userID strin
 		return domain.User{}, err
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES('USER_ROLES_CHANGED','user',$1,jsonb_build_object('userId',$1::text))`, userID); err != nil {
+		return domain.User{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.User{}, err
+	}
+	return r.user(ctx, userID)
+}
+
+func (r *PostgresRepository) SetUserStatus(ctx context.Context, actorID, userID, status, reason string) (domain.User, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.User{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var previous string
+	if err = tx.QueryRow(ctx, `SELECT status FROM users WHERE id=$1 FOR UPDATE`, userID).Scan(&previous); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.User{}, domain.ErrNotFound
+		}
+		return domain.User{}, err
+	}
+	if previous == status {
+		return domain.User{}, domain.ErrValidation
+	}
+	if _, err = tx.Exec(ctx, `UPDATE users SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1`, userID, status); err != nil {
+		return domain.User{}, err
+	}
+	if status != "ACTIVE" {
+		if _, err = tx.Exec(ctx, `UPDATE sessions SET revoked_at=COALESCE(revoked_at,CURRENT_TIMESTAMP) WHERE user_id=$1`, userID); err != nil {
+			return domain.User{}, err
+		}
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO audit_events(event_type,actor_user_id,target_type,target_id,reason,previous_state,new_state) VALUES('USER_STATUS_CHANGED',$1,'user',$2,$3,jsonb_build_object('status',$4::text),jsonb_build_object('status',$5::text))`, actorID, userID, reason, previous, status); err != nil {
+		return domain.User{}, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES('USER_STATUS_CHANGED','user',$1,jsonb_build_object('userId',$1::uuid::text,'status',$2::text))`, userID, status); err != nil {
 		return domain.User{}, err
 	}
 	if err = tx.Commit(ctx); err != nil {

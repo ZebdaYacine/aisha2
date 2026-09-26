@@ -11,6 +11,10 @@ const user = {
   displayName: "Amina Sahra",
   status: "ACTIVE",
   roles: ["customer"],
+  customerEnabled: true,
+  artisanStatus: "NOT_STARTED",
+  artisanEnabled: false,
+  capabilities: ["customer.account.read"],
 };
 
 function jsonResponse(body: unknown, status = 200) {

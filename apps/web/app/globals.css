@@ -7,6 +7,8 @@
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
   --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
   --color-muted: hsl(var(--muted));
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-border: hsl(var(--border));
@@ -20,6 +22,7 @@
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
   --color-success: hsl(var(--success));
+  --color-ring: hsl(var(--ring));
   --font-sans: var(--font-ui);
   --font-serif: var(--font-display);
   --radius-sm: var(--radius);
@@ -36,7 +39,7 @@ html {
 }
 
 body {
-  min-width: 20rem;
+  min-width: 0;
   margin: 0;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
@@ -86,10 +89,30 @@ a {
   text-transform: none;
 }
 
-.auth-input { width: 100%; height: 3rem; border: 1px solid hsl(var(--input)); background: hsl(var(--background)); padding-inline: 1rem; }
+@media (max-width: 639px) {
+  h1.font-serif { font-size: clamp(2.25rem, 11vw, 3.5rem); line-height: 0.98; }
+}
+
+.auth-input { width: 100%; height: 3rem; border: 1px solid hsl(var(--input)); border-radius: var(--radius); background: hsl(var(--background)); padding-inline: 1rem; }
 .auth-input:focus { border-color: hsl(var(--foreground)); }
 .auth-input[aria-invalid="true"], input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="true"] { border-color: hsl(var(--destructive)); box-shadow: 0 1px 0 hsl(var(--destructive)); }
 input[type="checkbox"], input[type="radio"] { accent-color: hsl(var(--primary)); }
+
+@media (max-width: 639px) {
+  .artisan-media-table-wrap { overflow-x: hidden; }
+  .artisan-media-table { display: block; min-width: 0 !important; }
+  .artisan-media-table thead { display: none; }
+  .artisan-media-table tbody { display: grid; gap: 0.75rem; padding: 0.75rem; }
+  .artisan-media-table tbody > tr { display: grid; gap: 0.25rem; border: 1px solid hsl(var(--border)); border-radius: var(--radius); padding: 0.75rem; }
+  .artisan-media-table tbody > tr > td { display: grid; grid-template-columns: minmax(5.5rem, 7rem) minmax(0, 1fr); gap: 0.75rem; min-width: 0; padding: 0.35rem 0; }
+  .artisan-media-table tbody > tr > td::before { color: hsl(var(--muted-foreground)); content: attr(data-label); font-size: 0.7rem; line-height: 1.25rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .artisan-media-table tbody > tr > td:last-child { display: block; border-top: 1px solid hsl(var(--border)); margin-top: 0.35rem; padding-top: 0.75rem; }
+  .artisan-media-table tbody > tr > td:last-child::before { display: block; margin-bottom: 0.5rem; }
+  .artisan-media-table tbody > tr > td[colspan] { display: block; }
+  .artisan-media-table tbody > tr > td[colspan]::before { display: none; }
+  .artisan-media-table td > span, .artisan-media-table td > div, .artisan-media-table td > time { min-width: 0; overflow-wrap: anywhere; }
+  .artisan-media-table td:first-child span { white-space: normal; }
+}
 
 .product-media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; contain: layout paint; }
 .product-media > a { position: absolute; inset: 0; display: block; }
@@ -98,6 +121,25 @@ input[type="checkbox"], input[type="radio"] { accent-color: hsl(var(--primary));
 .gallery-thumb { position: relative; width: 5rem; aspect-ratio: 4 / 5; overflow: hidden; contain: layout paint; }
 .gallery-media img, .gallery-thumb img { pointer-events: none !important; }
 .cart-item-media { position: relative; width: 6rem; aspect-ratio: 4 / 5; overflow: hidden; }
+
+.brand-splash { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; overflow: hidden; background: hsl(var(--foreground)); color: hsl(var(--background)); animation: splashFadeOut 260ms ease 2.2s forwards; }
+.brand-splash__grain { position: absolute; inset: -50%; opacity: 0.14; background-image: radial-gradient(circle at 20% 20%, hsl(var(--background) / 0.8) 0 1px, transparent 1px), radial-gradient(circle at 80% 70%, hsl(var(--primary) / 0.8) 0 1px, transparent 1px); background-size: 2.5rem 2.5rem, 4rem 4rem; transform: rotate(-8deg); animation: splashDrift 12s linear infinite; }
+.brand-splash__content { position: relative; width: min(28rem, calc(100% - 3rem)); text-align: center; animation: splashRise 700ms ease both; }
+.brand-splash__eyebrow { color: hsl(var(--primary)); font-size: 0.6875rem; letter-spacing: 0.22em; text-transform: uppercase; }
+.brand-splash__mark { display: flex; justify-content: center; gap: 0.24em; margin-top: 1.25rem; font-family: var(--font-display); font-size: clamp(2.5rem, 12vw, 5rem); letter-spacing: 0.14em; line-height: 1; }
+.brand-splash__mark span { display: inline-block; animation: splashLetter 900ms ease both; }
+.brand-splash__mark span:nth-child(2) { animation-delay: 70ms; }.brand-splash__mark span:nth-child(3) { animation-delay: 140ms; }.brand-splash__mark span:nth-child(4) { animation-delay: 210ms; }.brand-splash__mark span:nth-child(5) { animation-delay: 280ms; }
+.brand-splash__story { min-height: 1.75rem; margin-top: 2rem; color: hsl(var(--background) / 0.78); font-family: var(--font-display); font-size: clamp(1.2rem, 4vw, 1.7rem); animation: splashStory 500ms ease both; }
+.brand-splash__progress { height: 1px; margin-top: 3.5rem; overflow: hidden; background: hsl(var(--background) / 0.25); transform-origin: center; }
+.brand-splash__progress span { display: block; height: 100%; background: hsl(var(--primary)); transform-origin: left center; transition: transform 80ms linear; }
+[dir="rtl"] .brand-splash__progress span { transform-origin: right center; }
+.brand-splash__meta { display: flex; justify-content: space-between; margin-top: 0.75rem; color: hsl(var(--background) / 0.52); font-size: 0.6875rem; letter-spacing: 0.12em; text-transform: uppercase; }
+
+@keyframes splashRise { from { opacity: 0; transform: translateY(1rem); } to { opacity: 1; transform: translateY(0); } }
+@keyframes splashLetter { from { opacity: 0; transform: translateY(0.75rem); } to { opacity: 1; transform: translateY(0); } }
+@keyframes splashStory { from { opacity: 0; transform: translateY(0.35rem); } to { opacity: 1; transform: translateY(0); } }
+@keyframes splashDrift { from { transform: rotate(-8deg) translate3d(0, 0, 0); } to { transform: rotate(-8deg) translate3d(2rem, 1rem, 0); } }
+@keyframes splashFadeOut { from { opacity: 1; } to { opacity: 0; pointer-events: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   *,

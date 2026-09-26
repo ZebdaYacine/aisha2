@@ -174,7 +174,7 @@ Required fields:
 - Created at.
 - Consumed/released at.
 
-A background job expires old active reservations.
+A background worker expires old active reservations; checkout also performs a locked expiry sweep as a safety net.
 
 ### Order
 
@@ -226,6 +226,7 @@ Suggested migration sequence:
 000012_custom_orders
 000013_notifications_outbox
 000014_audit_idempotency
+000018_cart_wishlist
 ```
 
 ## 9. API Endpoints
@@ -256,15 +257,30 @@ GET    /api/v1/artisans/:id
 
 ```text
 POST   /api/v1/artisan-applications
+POST   /api/v1/artisan-applications/draft
+POST   /api/v1/artisan-applications/me/submit
 GET    /api/v1/artisan-applications/me
 PATCH  /api/v1/artisan/profile
 POST   /api/v1/artisan/products
 PATCH  /api/v1/artisan/products/:id
 POST   /api/v1/artisan/products/:id/media
+GET    /api/v1/artisan/profile/media
+POST   /api/v1/artisan/profile/media
+PATCH  /api/v1/artisan/profile/media/:id
+DELETE /api/v1/artisan/profile/media/:id
+GET    /api/v1/artisan-applications/me/documents
+POST   /api/v1/artisan-applications/me/documents
 POST   /api/v1/artisan/products/:id/submit
 GET    /api/v1/artisan/products
 GET    /api/v1/artisan/inventory
 ```
+
+An existing customer starts artisan onboarding by saving a draft. The draft
+contains the proposed workshop details and profile information. The customer
+then uploads at least one private application document and one private profile
+media item. The final submit endpoint checks those server-side requirements
+before moving the application to `SUBMITTED`; a browser cannot bypass that
+check by calling the endpoint directly.
 
 ### Moderation
 
@@ -274,6 +290,10 @@ POST   /api/v1/admin/product-submissions/:id/approve
 POST   /api/v1/admin/product-submissions/:id/request-changes
 POST   /api/v1/admin/product-submissions/:id/reject
 POST   /api/v1/admin/products/:id/suspend
+GET    /api/v1/admin/media/users
+GET    /api/v1/admin/media/products
+GET    /api/v1/admin/artisan-applications/:id/documents
+GET    /api/v1/admin/artisan-applications/:id/media
 ```
 
 ### Warehouse and Inventory
@@ -282,6 +302,8 @@ POST   /api/v1/admin/products/:id/suspend
 POST   /api/v1/warehouse/receptions
 GET    /api/v1/warehouse/receptions
 POST   /api/v1/warehouse/receptions/:id/inspect
+POST   /api/v1/warehouse/receptions/:id/evidence
+GET    /api/v1/warehouse/receptions/:id/evidence
 GET    /api/v1/warehouse/inventory
 POST   /api/v1/warehouse/inventory/:productId/adjust
 GET    /api/v1/warehouse/orders
@@ -294,8 +316,12 @@ POST   /api/v1/warehouse/orders/:id/ship
 ```text
 GET    /api/v1/cart
 POST   /api/v1/cart/items
-PATCH  /api/v1/cart/items/:id
-DELETE /api/v1/cart/items/:id
+POST   /api/v1/cart/merge
+PATCH  /api/v1/cart/items/:productId
+DELETE /api/v1/cart/items/:productId
+GET    /api/v1/wishlist
+POST   /api/v1/wishlist/items/:productId
+DELETE /api/v1/wishlist/items/:productId
 POST   /api/v1/checkout
 GET    /api/v1/orders
 GET    /api/v1/orders/:id
@@ -406,6 +432,11 @@ Upload workflow:
 8. Publish selected product media only after moderation.
 
 Never trust the original filename as the storage path.
+
+The API uses `MINIO_ENDPOINT` for storage operations and `MINIO_PUBLIC_ENDPOINT`
+for signed URLs returned to browsers. The presigner is configured with MinIO's
+default `us-east-1` region so generating a URL does not require a bucket-location
+request through the browser-facing endpoint.
 
 ## 14. OpenAPI
 

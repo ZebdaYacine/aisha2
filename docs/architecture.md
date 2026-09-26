@@ -1719,6 +1719,8 @@ GET    /api/v1/artisans/:id
 
 ```text
 POST   /api/v1/artisan-applications
+POST   /api/v1/artisan-applications/draft
+POST   /api/v1/artisan-applications/me/submit
 GET    /api/v1/artisan-applications/me
 PATCH  /api/v1/artisan/profile
 POST   /api/v1/artisan/products

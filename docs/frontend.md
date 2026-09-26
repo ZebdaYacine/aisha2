@@ -357,6 +357,9 @@ Suggested MVP routes:
 /[locale]/admin/artisans
 /[locale]/admin/moderation
 /[locale]/admin/warehouse
+/[locale]/admin/inventory
+/[locale]/admin/media
+/[locale]/admin/artisan-applications (application Details modal includes authorized document/profile-media previews)
 /[locale]/admin/orders
 /[locale]/admin/audit
 ```
@@ -987,11 +990,12 @@ Form styling should remain clean:
 Cart behaviour:
 
 * May be local for anonymous visitors and server-backed after login.
-* Merge policy must be explicitly defined.
+* Anonymous items are merged into the authenticated owner cart on login; matching quantities are summed and capped at 100.
 * Display current price as provisional.
 * Revalidate when opening the cart and checkout.
 * Clearly mark unavailable items.
 * Do not claim that cart quantity is reserved.
+* Wishlist saves/removes use the authenticated owner API; unauthenticated visitors keep browsing without a fake saved state.
 
 ### Cart Drawer
 
@@ -1197,6 +1201,12 @@ MVP dashboard:
 
 * Profile completion.
 * Application status.
+
+Artisan onboarding is a staged customer flow. The form first saves the
+workshop/profile details as a draft, then uploads at least one supporting
+document and one profile media item, and finally submits the application. The
+submit action is unavailable until those files are selected or already exist;
+the API repeats the same requirement so a client cannot bypass it.
 * Product counts by status.
 * Create product.
 * Edit draft.
@@ -1204,6 +1214,39 @@ MVP dashboard:
 * View moderation reason.
 * View accepted, reserved, and shipped stock for owned products.
 * View custom-order requests when included.
+
+Workshop and product management use responsive data tables on desktop and a
+horizontal scroll container on narrow screens. Each table puts row actions in
+the first column, provides one primary Add/New action above the table, and
+uses read-only Details dialogs plus Update dialogs for editing. Workshop
+deletion is confirmation-protected and remains subject to ownership/history
+rules; products use the history-preserving Archive action.
+
+The approved artisan workspace groups these areas into an accessible tab panel:
+`Workshops`, `Private files`, and `Product authoring`. The Workshops tab is
+the default; private files and product authoring remain hidden when seller
+capabilities are unavailable or membership is suspended.
+Approved artisans do not see the onboarding/application form in this area;
+that form remains available only while an application is being started or
+completed.
+
+Private files use horizontally scrollable tables. Each profile-media row shows
+the media name, media type, locale-formatted upload date, and View, Update, and
+Delete actions. Add and Update open modal forms with a media-kind combobox and
+local file picker; Delete is confirmation-protected. Application documents use
+the same row treatment and an Add document modal. Product authoring keeps its
+table as the index and opens New draft and Update inside a scrollable modal.
+
+The header and footer language controls replace only the locale segment of the
+current pathname and preserve query strings and hashes. The header displays a
+flag plus the two-letter locale abbreviation; the option list retains the full
+language names. Theme switching uses Light, Dark, and System modes, closes on
+Escape or outside click, and shares the `aisha-theme` storage key with the
+pre-hydration theme bootstrap.
+
+The first visit in a browser starts with the AISHA brand splash: a short
+animated story sequence, progress bar, and reduced-motion-safe styling. It is
+stored in local storage after completion so route changes do not replay it.
 
 Use a distinct application shell separate from the public storefront.
 
@@ -1233,6 +1276,21 @@ Dashboard design rules:
 ## 19. Admin and Warehouse UI
 
 Admin and warehouse pages should prioritise efficiency.
+
+The shared admin presentation uses a consistent control language across the
+dashboard, user management, moderation, warehouse, artisan review, audit,
+artisan workspace, and account surfaces:
+
+* Searchable comboboxes are used for supported language, role, country, wilaya,
+  category, workshop, product type, and workflow status selections.
+* Multi-value role assignments render as removable chips and submit the exact
+  selected role list to the API.
+* Workflow states render as semantic badges with text and colour so the state
+  is never communicated by colour alone.
+* Administrative and customer-facing dates use locale-aware long date formats;
+  audit timestamps include the local time.
+* Native locale links remain available as a crawlable and accessible fallback
+  below the interactive language combobox.
 
 ### Moderation Queue
 

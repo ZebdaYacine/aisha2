@@ -15,7 +15,10 @@ type ObjectStore interface {
 	PresignedGet(ctx context.Context, bucket, key string, expiry time.Duration) (*url.URL, error)
 }
 
-type MinIOStore struct{ client minioClient }
+type MinIOStore struct {
+	client        minioClient
+	presignClient minioClient
+}
 
 type minioClient interface {
 	PutObject(context.Context, string, string, io.Reader, int64, minio.PutObjectOptions) (minio.UploadInfo, error)
@@ -24,7 +27,14 @@ type minioClient interface {
 }
 
 func NewObjectStore(client *minio.Client) ObjectStore {
-	return &MinIOStore{client: client}
+	return &MinIOStore{client: client, presignClient: client}
+}
+
+func NewObjectStoreWithPresigner(client, presignClient *minio.Client) ObjectStore {
+	if presignClient == nil {
+		presignClient = client
+	}
+	return &MinIOStore{client: client, presignClient: presignClient}
 }
 
 func (s *MinIOStore) Put(ctx context.Context, bucket, key, contentType string, body io.Reader, size int64) error {
@@ -37,5 +47,5 @@ func (s *MinIOStore) Delete(ctx context.Context, bucket, key string) error {
 }
 
 func (s *MinIOStore) PresignedGet(ctx context.Context, bucket, key string, expiry time.Duration) (*url.URL, error) {
-	return s.client.PresignedGetObject(ctx, bucket, key, expiry, nil)
+	return s.presignClient.PresignedGetObject(ctx, bucket, key, expiry, nil)
 }

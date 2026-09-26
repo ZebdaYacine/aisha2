@@ -8,12 +8,14 @@ import (
 )
 
 var (
-	ErrNotFound           = errors.New("product not found")
-	ErrValidation         = errors.New("product validation failed")
-	ErrNotEditable        = errors.New("product is not editable")
-	ErrArtisanNotApproved = errors.New("artisan is not approved")
-	ErrInvalidTransition  = errors.New("invalid product transition")
-	ErrMediaNotFound      = errors.New("product media not found")
+	ErrNotFound                 = errors.New("product not found")
+	ErrValidation               = errors.New("product validation failed")
+	ErrNotEditable              = errors.New("product is not editable")
+	ErrArtisanNotApproved       = errors.New("artisan is not approved")
+	ErrInvalidTransition        = errors.New("invalid product transition")
+	ErrMediaNotFound            = errors.New("product media not found")
+	ErrWorkshopNotOwned         = errors.New("workshop is not owned or active")
+	ErrWorkshopProtectedHistory = errors.New("product has protected workshop history")
 )
 
 var SupportedLocales = []string{"ar", "fr", "en", "es"}
@@ -27,6 +29,7 @@ type Translation struct {
 }
 
 type Input struct {
+	WorkshopID          string
 	CategoryID          string
 	ProductType         string
 	PriceMinor          int64
@@ -42,6 +45,13 @@ type Input struct {
 	FairTradeVerified   bool
 	MadeToOrderEligible bool
 	Translations        []Translation
+}
+
+type Workshop struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Status       string `json:"status"`
+	ProductCount int    `json:"productCount"`
 }
 
 type Media struct {
@@ -62,6 +72,9 @@ type Media struct {
 type Product struct {
 	ID                  string        `json:"id"`
 	ArtisanID           string        `json:"artisanId"`
+	WorkshopID          string        `json:"workshopId"`
+	WorkshopName        string        `json:"workshopName"`
+	WorkshopStatus      string        `json:"workshopStatus"`
 	CategoryID          string        `json:"categoryId"`
 	ProductType         string        `json:"productType"`
 	Status              string        `json:"status"`
@@ -82,11 +95,13 @@ type Product struct {
 }
 
 type Repository interface {
+	ListOwnedWorkshops(context.Context, string) ([]Workshop, error)
 	Create(context.Context, string, Input) (Product, error)
 	ListOwned(context.Context, string, string, int, int) ([]Product, int, error)
 	GetOwned(context.Context, string, string) (Product, error)
 	Update(context.Context, string, string, Input) (Product, error)
 	Submit(context.Context, string, string) (Product, error)
+	Archive(context.Context, string, string) (Product, error)
 	AddMedia(context.Context, string, string, Media) (Media, error)
 	DeleteMedia(context.Context, string, string, string) (Media, error)
 }

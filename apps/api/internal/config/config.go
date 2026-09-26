@@ -18,6 +18,7 @@ type Config struct {
 	DatabaseMaxIdle         int32
 	RedisURL                string
 	MinIOEndpoint           string
+	MinIOPublicEndpoint     string
 	MinIOAccessKey          string
 	MinIOSecretKey          string
 	MinIOUseSSL             bool
@@ -74,13 +75,14 @@ func Load() (Config, error) {
 	cfg := Config{
 		AppName:                 env("APP_NAME", "AISHA"),
 		Environment:             env("APP_ENV", "development"),
-		APIPort:                 env("API_PORT", "8080"),
+		APIPort:                 env("API_PORT", "8088"),
 		ShutdownTimeout:         10 * time.Second,
 		DatabaseURL:             env("DATABASE_URL", "postgres://aisha:aisha_dev@localhost:5432/aisha?sslmode=disable"),
 		DatabaseMaxOpen:         maxOpen,
 		DatabaseMaxIdle:         maxIdle,
 		RedisURL:                env("REDIS_URL", "redis://localhost:6379/0"),
 		MinIOEndpoint:           env("MINIO_ENDPOINT", "localhost:9000"),
+		MinIOPublicEndpoint:     env("MINIO_PUBLIC_ENDPOINT", "localhost:9000"),
 		MinIOAccessKey:          env("MINIO_ACCESS_KEY", "aisha"),
 		MinIOSecretKey:          env("MINIO_SECRET_KEY", "aisha_minio_dev"),
 		MinIOUseSSL:             useSSL,
@@ -91,7 +93,7 @@ func Load() (Config, error) {
 		ProductMediaMaxBytes:    productMediaMaxBytes,
 		ArtisanDocumentMaxBytes: artisanDocumentMaxBytes,
 		ArtisanMediaMaxBytes:    artisanMediaMaxBytes,
-		AllowedOrigins:          splitCSV(env("CORS_ALLOWED_ORIGINS", "http://localhost:3000")),
+		AllowedOrigins:          splitCSV(env("CORS_ALLOWED_ORIGINS", "http://localhost:3033")),
 		AuthSigningKey:          env("AUTH_SIGNING_KEY", "aisha-development-signing-key-change-me"),
 		AuthRateLimitMax:        authRateLimitMax,
 		AuthRateLimitWindow:     time.Duration(authRateLimitWindowSeconds) * time.Second,

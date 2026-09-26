@@ -2,6 +2,7 @@
   "brand": "AISHA",
   "homeLabel": "Inicio de AISHA",
   "languageLabel": "Idioma",
+  "currencyLabel": "Moneda",
   "announcement": "Un nuevo hogar para la artesanía argelina — la primera colección está en preparación.",
   "locales": {"en": "English", "fr": "Français", "ar": "العربية", "es": "Español"},
   "navigation": {

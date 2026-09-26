@@ -18,6 +18,10 @@ type AdminHandler struct {
 type rolesRequest struct {
 	Roles []string `json:"roles" validate:"required,min=1,max=10,dive,min=1,max=64"`
 }
+type userStatusRequest struct {
+	Status string `json:"status" validate:"required,oneof=ACTIVE SUSPENDED DISABLED"`
+	Reason string `json:"reason" validate:"max=1000"`
+}
 
 func NewAdminHandler(service *admin.Service, validator *RequestValidator) *AdminHandler {
 	return &AdminHandler{service: service, validator: validator}
@@ -55,6 +59,25 @@ func (h *AdminHandler) Roles(c fiber.Ctx) error {
 	return c.JSON(item)
 }
 
+func (h *AdminHandler) UserStatus(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var request userStatusRequest
+	if err = c.Bind().Body(&request); err != nil {
+		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	}
+	if err = h.validator.Validate(&request); err != nil {
+		return err
+	}
+	item, err := h.service.SetUserStatus(c.Context(), p, c.Params("id"), request.Status, request.Reason)
+	if err != nil {
+		return adminAPIError(err)
+	}
+	return c.JSON(item)
+}
+
 func (h *AdminHandler) Audit(c fiber.Ctx) error {
 	p, err := customerPrincipal(c)
 	if err != nil {
@@ -81,6 +104,54 @@ func (h *AdminHandler) Audit(c fiber.Ctx) error {
 		return adminAPIError(err)
 	}
 	return c.JSON(PageDTO[admin.AuditEvent]{Items: items, Page: max(page, 1), PageSize: min(max(size, 1), 100), Total: total})
+}
+
+func (h *AdminHandler) UserMedia(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	page, size := queryPage(c)
+	items, total, err := h.service.ListUserMedia(c.Context(), p, page, size)
+	if err != nil {
+		return adminAPIError(err)
+	}
+	return c.JSON(PageDTO[admin.UserMedia]{Items: items, Page: max(page, 1), PageSize: min(max(size, 1), 100), Total: total})
+}
+
+func (h *AdminHandler) ProductMedia(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	page, size := queryPage(c)
+	items, total, err := h.service.ListProductMedia(c.Context(), p, page, size)
+	if err != nil {
+		return adminAPIError(err)
+	}
+	return c.JSON(PageDTO[admin.ProductMedia]{Items: items, Page: max(page, 1), PageSize: min(max(size, 1), 100), Total: total})
+}
+
+func (h *AdminHandler) DeleteUserMedia(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	if err = h.service.DeleteUserMedia(c.Context(), p, c.Params("id")); err != nil {
+		return adminAPIError(err)
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *AdminHandler) DeleteProductMedia(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	if err = h.service.DeleteProductMedia(c.Context(), p, c.Params("id")); err != nil {
+		return adminAPIError(err)
+	}
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func queryPage(c fiber.Ctx) (int, int) {

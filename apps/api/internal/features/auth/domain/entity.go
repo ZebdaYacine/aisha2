@@ -42,6 +42,7 @@ type Repository interface {
 	SessionActive(context.Context, string, time.Time) (bool, error)
 	StorePasswordReset(context.Context, string, string, time.Time) error
 	ResetPassword(context.Context, string, string, time.Time) error
+	UpdatePassword(context.Context, string, string, time.Time) error
 }
 
 type ResetNotifier interface {

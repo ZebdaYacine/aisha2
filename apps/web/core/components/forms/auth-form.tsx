@@ -107,7 +107,7 @@ export function AuthForm({
           if (user) auth?.setUser(user);
           else user = (await auth?.refresh()) ?? null;
           toast.success(copy.account);
-          window.location.assign(landingPathForUser(user ?? { id: "", email: "", displayName: "" }, locale));
+          window.location.assign(landingPathForUser(user ?? { id: "", email: "", displayName: "", customerEnabled: true, artisanStatus: "NOT_STARTED", artisanEnabled: false, capabilities: [] }, locale));
           return;
         }
         toast.success(mode === "forgot" ? copy.forgot : copy.account);

@@ -18,7 +18,7 @@ export default async function SearchPage({
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const { q = "" } = await searchParams;
-  const { products } = await catalogue(locale);
+  const { products } = await catalogue(locale, { query: q });
   const copy = storeCopy(locale),
     query = q.trim().toLowerCase(),
     matches = query

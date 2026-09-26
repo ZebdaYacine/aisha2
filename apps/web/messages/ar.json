@@ -2,6 +2,7 @@
   "brand": "عائشة",
   "homeLabel": "الصفحة الرئيسية لعائشة",
   "languageLabel": "اللغة",
+  "currencyLabel": "العملة",
   "announcement": "وجهة جديدة للحرف الجزائرية — المجموعة الأولى قيد الإعداد.",
   "locales": {"en": "English", "fr": "Français", "ar": "العربية", "es": "Español"},
   "navigation": {

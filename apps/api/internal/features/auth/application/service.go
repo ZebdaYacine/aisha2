@@ -146,6 +146,23 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) error {
 	}
 	return nil
 }
+func (s *Service) ChangePassword(ctx context.Context, principal Principal, currentPassword, nextPassword string) error {
+	if len(nextPassword) < 12 || len(nextPassword) > 128 || strings.TrimSpace(currentPassword) == "" {
+		return ErrValidation
+	}
+	user, err := s.repo.UserByID(ctx, principal.UserID)
+	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)) != nil {
+		return ErrInvalidCredentials
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(nextPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	if err := s.repo.UpdatePassword(ctx, principal.UserID, string(hash), s.now()); err != nil {
+		return fmt.Errorf("change password: %w", err)
+	}
+	return nil
+}
 func (s *Service) ResetPassword(ctx context.Context, token, password string) error {
 	if len(password) < 12 {
 		return ErrInvalidCredentials

@@ -17,7 +17,7 @@ func (checker) Name() string                  { return "dependency" }
 func (c checker) Check(context.Context) error { return c.err }
 
 func TestLiveHealth(t *testing.T) {
-	app := New(config.Config{AppName: "AISHA", AllowedOrigins: []string{"http://localhost:3000"}}, health.New(), nil, nil, nil, nil, nil)
+	app := New(config.Config{AppName: "AISHA", AllowedOrigins: []string{"http://localhost:3033"}}, health.New(), nil, nil, nil, nil, nil)
 	response, err := app.Test(httptest.NewRequest("GET", "/health/live", nil))
 	if err != nil {
 		t.Fatal(err)
@@ -28,7 +28,7 @@ func TestLiveHealth(t *testing.T) {
 }
 
 func TestReadinessFailure(t *testing.T) {
-	app := New(config.Config{AppName: "AISHA", AllowedOrigins: []string{"http://localhost:3000"}}, health.New(checker{err: errors.New("down")}), nil, nil, nil, nil, nil)
+	app := New(config.Config{AppName: "AISHA", AllowedOrigins: []string{"http://localhost:3033"}}, health.New(checker{err: errors.New("down")}), nil, nil, nil, nil, nil)
 	response, err := app.Test(httptest.NewRequest("GET", "/health/ready", nil))
 	if err != nil {
 		t.Fatal(err)
@@ -39,7 +39,7 @@ func TestReadinessFailure(t *testing.T) {
 }
 
 func TestUnknownRouteUsesStandardErrorDTO(t *testing.T) {
-	app := New(config.Config{AppName: "AISHA", AllowedOrigins: []string{"http://localhost:3000"}}, health.New(), nil, nil, nil, nil, nil)
+	app := New(config.Config{AppName: "AISHA", AllowedOrigins: []string{"http://localhost:3033"}}, health.New(), nil, nil, nil, nil, nil)
 	response, err := app.Test(httptest.NewRequest("GET", "/missing", nil))
 	if err != nil {
 		t.Fatal(err)

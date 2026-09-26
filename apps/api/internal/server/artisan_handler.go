@@ -34,6 +34,28 @@ type artisanApplicationRequest struct {
 type decisionRequest struct {
 	Reason string `json:"reason" validate:"max=1000"`
 }
+type workshopRequest struct {
+	Name        string `json:"name" validate:"required,min=2,max=160"`
+	Description string `json:"description" validate:"max=2000"`
+	Wilaya      string `json:"wilaya" validate:"required,max=100"`
+	Location    string `json:"location" validate:"max=200"`
+	IsPublic    bool   `json:"isPublic"`
+}
+type membershipActivationRequest struct {
+	Name        string `json:"name" validate:"required,min=2,max=160"`
+	Description string `json:"description" validate:"max=2000"`
+	Wilaya      string `json:"wilaya" validate:"required,max=100"`
+	Location    string `json:"location" validate:"max=200"`
+	IsPublic    bool   `json:"isPublic"`
+}
+type membershipStatusRequest struct {
+	Status string `json:"status" validate:"required,oneof=ACTIVE SUSPENDED CLOSED"`
+	Reason string `json:"reason" validate:"max=1000"`
+}
+type verificationDecisionRequest struct {
+	Status string `json:"status" validate:"required,oneof=VERIFIED CHANGES_REQUESTED REJECTED"`
+	Reason string `json:"reason" validate:"max=1000"`
+}
 type artisanApplicationResponse struct {
 	ID                string                `json:"id"`
 	PublicDisplayName string                `json:"publicDisplayName"`
@@ -45,6 +67,7 @@ type artisanApplicationResponse struct {
 	ContactPhone      string                `json:"contactPhone"`
 	ContactVisibility string                `json:"contactVisibility"`
 	Status            string                `json:"status"`
+	MembershipStatus  string                `json:"membershipStatus"`
 	ReviewReason      string                `json:"reviewReason,omitempty"`
 	CategoryIDs       []string              `json:"categoryIds"`
 	Translations      []artisan.Translation `json:"translations"`
@@ -85,6 +108,32 @@ func (h *ArtisanHandler) Submit(c fiber.Ctx) error {
 		return artisanAPIError(err)
 	}
 	return c.Status(fiber.StatusCreated).JSON(artisanApplicationDTO(result))
+}
+func (h *ArtisanHandler) SaveDraft(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	input, err := h.input(c)
+	if err != nil {
+		return err
+	}
+	result, err := h.service.SaveDraft(c.Context(), p, input)
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(artisanApplicationDTO(result))
+}
+func (h *ArtisanHandler) FinalizeSubmission(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	result, err := h.service.FinalizeSubmission(c.Context(), p)
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.JSON(artisanApplicationDTO(result))
 }
 func (h *ArtisanHandler) Mine(c fiber.Ctx) error {
 	p, err := customerPrincipal(c)
@@ -165,8 +214,206 @@ func (h *ArtisanHandler) Documents(c fiber.Ctx) error {
 	}
 	return c.JSON(items)
 }
+
+func (h *ArtisanHandler) Media(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	if h.media == nil {
+		return c.JSON([]artisan.Media{})
+	}
+	items, err := h.media.AdminMedia(c.Context(), p, c.Params("id"))
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	response := make([]artisanMediaResponse, len(items))
+	for i, item := range items {
+		response[i] = artisanMediaDTO(item)
+	}
+	return c.JSON(response)
+}
+
+func (h *ArtisanHandler) ActivateMembership(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var req membershipActivationRequest
+	if err = c.Bind().Body(&req); err != nil {
+		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	}
+	if err = h.validator.Validate(&req); err != nil {
+		return err
+	}
+	v, err := h.service.ActivateMembership(c.Context(), p, artisan.WorkshopInput{Name: req.Name, Description: req.Description, Wilaya: req.Wilaya, Location: req.Location, IsPublic: req.IsPublic}, c.Get("Idempotency-Key"))
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(artisanApplicationDTO(v))
+}
+func (h *ArtisanHandler) Workshops(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	v, err := h.service.ListWorkshops(c.Context(), p)
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.JSON(struct {
+		Items []artisan.Workshop `json:"items"`
+	}{v})
+}
+func (h *ArtisanHandler) CreateWorkshop(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var req workshopRequest
+	if err = c.Bind().Body(&req); err != nil {
+		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	}
+	if err = h.validator.Validate(&req); err != nil {
+		return err
+	}
+	v, err := h.service.CreateWorkshop(c.Context(), p, artisan.WorkshopInput{Name: req.Name, Description: req.Description, Wilaya: req.Wilaya, Location: req.Location, IsPublic: req.IsPublic}, c.Get("Idempotency-Key"))
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(v)
+}
+func (h *ArtisanHandler) UpdateWorkshop(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var req workshopRequest
+	if err = c.Bind().Body(&req); err != nil {
+		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	}
+	if err = h.validator.Validate(&req); err != nil {
+		return err
+	}
+	v, err := h.service.UpdateWorkshop(c.Context(), p, c.Params("id"), artisan.WorkshopInput{Name: req.Name, Description: req.Description, Wilaya: req.Wilaya, Location: req.Location, IsPublic: req.IsPublic})
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.JSON(v)
+}
+func (h *ArtisanHandler) WorkshopStatus(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var req struct {
+		Status string `json:"status" validate:"required,oneof=ACTIVE INACTIVE ARCHIVED"`
+	}
+	if err = c.Bind().Body(&req); err != nil {
+		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	}
+	if err = h.validator.Validate(&req); err != nil {
+		return err
+	}
+	v, err := h.service.SetWorkshopStatus(c.Context(), p, c.Params("id"), req.Status)
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.JSON(v)
+}
+func (h *ArtisanHandler) AdminWorkshopStatus(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var req struct {
+		Status string `json:"status" validate:"required,oneof=ACTIVE INACTIVE ARCHIVED"`
+		Reason string `json:"reason" validate:"max=1000"`
+	}
+	if err = c.Bind().Body(&req); err != nil {
+		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	}
+	if err = h.validator.Validate(&req); err != nil {
+		return err
+	}
+	v, err := h.service.SetWorkshopStatusAdmin(c.Context(), p, c.Params("id"), req.Status, req.Reason)
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.JSON(v)
+}
+func (h *ArtisanHandler) DeleteWorkshop(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	if err = h.service.DeleteWorkshop(c.Context(), p, c.Params("id")); err != nil {
+		return artisanAPIError(err)
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+func (h *ArtisanHandler) Verification(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	v, err := h.service.MineVerification(c.Context(), p)
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.JSON(v)
+}
+func (h *ArtisanHandler) Verifications(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	page, size := queryPage(c)
+	v, total, err := h.service.ListVerifications(c.Context(), p, c.Query("status"), page, size)
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.JSON(PageDTO[artisan.Verification]{Items: v, Page: max(page, 1), PageSize: min(max(size, 1), 100), Total: total})
+}
+func (h *ArtisanHandler) DecideVerification(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var req verificationDecisionRequest
+	if err = c.Bind().Body(&req); err != nil {
+		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	}
+	if err = h.validator.Validate(&req); err != nil {
+		return err
+	}
+	v, err := h.service.DecideVerification(c.Context(), p, artisan.VerificationDecision{ID: c.Params("id"), Status: req.Status, Reason: req.Reason})
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.JSON(v)
+}
+func (h *ArtisanHandler) MembershipStatus(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var req membershipStatusRequest
+	if err = c.Bind().Body(&req); err != nil {
+		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
+	}
+	if err = h.validator.Validate(&req); err != nil {
+		return err
+	}
+	v, err := h.service.SetMembershipStatus(c.Context(), p, c.Params("id"), req.Status, req.Reason)
+	if err != nil {
+		return artisanAPIError(err)
+	}
+	return c.JSON(artisanApplicationDTO(v))
+}
+
 func artisanApplicationDTO(a artisan.Application) artisanApplicationResponse {
-	return artisanApplicationResponse{ID: a.ID, PublicDisplayName: a.PublicDisplayName, InternalName: a.InternalName, WorkshopName: a.WorkshopName, Wilaya: a.Wilaya, Location: a.Location, ContactEmail: a.ContactEmail, ContactPhone: a.ContactPhone, ContactVisibility: a.ContactVisibility, Status: a.Status, ReviewReason: a.ReviewReason, CategoryIDs: a.CategoryIDs, Translations: a.Translations}
+	return artisanApplicationResponse{ID: a.ID, PublicDisplayName: a.PublicDisplayName, InternalName: a.InternalName, WorkshopName: a.WorkshopName, Wilaya: a.Wilaya, Location: a.Location, ContactEmail: a.ContactEmail, ContactPhone: a.ContactPhone, ContactVisibility: a.ContactVisibility, Status: a.Status, MembershipStatus: a.MembershipStatus, ReviewReason: a.ReviewReason, CategoryIDs: a.CategoryIDs, Translations: a.Translations}
 }
 func artisanAPIError(err error) error {
 	switch {

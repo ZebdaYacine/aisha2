@@ -96,11 +96,21 @@ For the MVP, artisans may be created by an administrator or may submit an applic
 - Accept, reject, quarantine, or record damaged quantities.
 - Prepare paid orders.
 - Record shipment handover.
+- Read user and artisan-application context, including submitted application
+  files, without user-role, artisan-decision, or media-deletion permissions.
+
+### Moderator
+
+- Review, approve, request changes for, reject, suspend, activate, and archive
+  product submissions according to the moderation state machine.
+- Read user and product media for moderation context.
+- Cannot manage user roles, artisan applications, warehouse stock, or media deletion.
 
 ### Administrator
 
 - Manage users and roles.
 - Review artisan applications.
+- Manage all moderator, warehouse, artisan, media, and audit operations.
 - Review audit events.
 - Suspend users, artisans, and products.
 - Configure categories and operational data.

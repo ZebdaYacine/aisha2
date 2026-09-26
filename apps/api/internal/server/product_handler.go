@@ -26,6 +26,7 @@ type productTranslationRequest struct {
 }
 
 type productRequest struct {
+	WorkshopID          string                      `json:"workshopId" validate:"required,uuid"`
 	CategoryID          string                      `json:"categoryId" validate:"required,uuid"`
 	ProductType         string                      `json:"productType" validate:"required,oneof=ARTISAN_SPECIFIC STANDARD_TRADITIONAL"`
 	PriceMinor          int64                       `json:"priceMinor" validate:"gt=0"`
@@ -43,6 +44,10 @@ type productRequest struct {
 	Translations        []productTranslationRequest `json:"translations" validate:"max=4,dive"`
 }
 
+type artisanWorkshopResponse struct {
+	Items []product.Workshop `json:"items"`
+}
+
 type productMediaResponse struct {
 	ID               string `json:"id"`
 	MediaKind        string `json:"mediaKind"`
@@ -57,6 +62,18 @@ type productMediaResponse struct {
 
 func NewProductHandler(service *product.Service, validator *RequestValidator, maxUpload int64) *ProductHandler {
 	return &ProductHandler{service: service, validator: validator, maxUpload: maxUpload}
+}
+
+func (h *ProductHandler) ListWorkshops(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	items, err := h.service.ListWorkshops(c.Context(), p)
+	if err != nil {
+		return productAPIError(err)
+	}
+	return c.JSON(artisanWorkshopResponse{Items: items})
 }
 
 func (h *ProductHandler) Create(c fiber.Ctx) error {
@@ -129,6 +146,18 @@ func (h *ProductHandler) Submit(c fiber.Ctx) error {
 	return c.JSON(item)
 }
 
+func (h *ProductHandler) Archive(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	item, err := h.service.Archive(c.Context(), p, c.Params("id"))
+	if err != nil {
+		return productAPIError(err)
+	}
+	return c.JSON(item)
+}
+
 func (h *ProductHandler) UploadMedia(c fiber.Ctx) error {
 	p, err := customerPrincipal(c)
 	if err != nil {
@@ -186,7 +215,7 @@ func (h *ProductHandler) input(c fiber.Ctx) (product.Input, error) {
 	for i, item := range request.Translations {
 		translations[i] = product.Translation{Locale: item.Locale, Name: item.Name, Description: item.Description, Story: item.Story, CulturalContext: item.CulturalContext}
 	}
-	return product.Input{CategoryID: request.CategoryID, ProductType: request.ProductType, PriceMinor: request.PriceMinor, Currency: request.Currency, Materials: request.Materials, ProductionMethod: request.ProductionMethod, IntendedUse: request.IntendedUse, Dimensions: request.Dimensions, WeightGrams: request.WeightGrams, CountryOfOrigin: request.CountryOfOrigin, RegionOfOrigin: request.RegionOfOrigin, EcoFriendlyVerified: request.EcoFriendlyVerified, FairTradeVerified: request.FairTradeVerified, MadeToOrderEligible: request.MadeToOrderEligible, Translations: translations}, nil
+	return product.Input{WorkshopID: request.WorkshopID, CategoryID: request.CategoryID, ProductType: request.ProductType, PriceMinor: request.PriceMinor, Currency: request.Currency, Materials: request.Materials, ProductionMethod: request.ProductionMethod, IntendedUse: request.IntendedUse, Dimensions: request.Dimensions, WeightGrams: request.WeightGrams, CountryOfOrigin: request.CountryOfOrigin, RegionOfOrigin: request.RegionOfOrigin, EcoFriendlyVerified: request.EcoFriendlyVerified, FairTradeVerified: request.FairTradeVerified, MadeToOrderEligible: request.MadeToOrderEligible, Translations: translations}, nil
 }
 
 func productMediaDTO(media product.Media) productMediaResponse {
@@ -199,12 +228,16 @@ func productAPIError(err error) error {
 		return NewAPIError(CodeValidationError, "The product is invalid.", nil)
 	case errors.Is(err, product.ErrNotFound), errors.Is(err, product.ErrMediaNotFound):
 		return NewAPIError(CodeResourceNotFound, "The requested product resource was not found.", nil)
+	case errors.Is(err, product.ErrWorkshopNotOwned):
+		return NewAPIError(CodeForbidden, "The workshop is not owned by the artisan or is inactive.", nil)
+	case errors.Is(err, product.ErrWorkshopProtectedHistory):
+		return NewAPIError(CodeInvalidStateTransition, "The product cannot be moved after inventory history exists.", nil)
 	case errors.Is(err, product.ErrArtisanNotApproved):
 		return NewAPIError(CodeArtisanNotApproved, "An approved artisan profile is required.", nil)
 	case errors.Is(err, product.ErrNotEditable):
 		return NewAPIError(CodeProductNotEditable, "The product cannot be edited in its current state.", nil)
 	case errors.Is(err, product.ErrInvalidTransition):
-		return NewAPIError(CodeInvalidStateTransition, "The product cannot be submitted from its current state.", nil)
+		return NewAPIError(CodeInvalidStateTransition, "The product cannot be changed from its current state.", nil)
 	case errors.Is(err, authorization.ErrForbidden):
 		return NewAPIError(CodeForbidden, "Access is forbidden.", nil)
 	case errors.Is(err, storage.ErrUnsupportedFileType), errors.Is(err, storage.ErrInvalidFileSignature):

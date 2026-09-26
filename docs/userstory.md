@@ -12,7 +12,8 @@ The platform uses one user account model:
 - An artisan can browse, order, pay, cancel eligible orders, and track delivery like any other customer.
 - An artisan must own at least one workshop.
 - Creating the first workshop is mandatory during artisan onboarding.
-- Supporting documents are optional during onboarding.
+- A supporting document and profile media are required before an onboarding
+  application can be submitted.
 - One artisan can own multiple workshops.
 - Every product must belong to exactly one workshop.
 - One workshop can contain multiple products.
@@ -47,11 +48,12 @@ Visitor browses catalogue
 Registered user acts as customer
 -> user clicks "Become an Artisan"
 -> artisan onboarding page opens
--> user completes artisan profile information
--> user may upload supporting documents
--> user creates the first mandatory workshop
--> backend validates the artisan profile and workshop
--> artisan membership is activated on the existing account
+-> user saves the artisan profile and proposed workshop as a draft
+-> user uploads at least one supporting document and one profile media item
+-> backend validates the draft, files, and workshop before final submission
+-> application enters review
+-> administrator approves the application
+-> user creates the first mandatory workshop and activates membership
 -> user is redirected to artisan dashboard
 -> user retains all customer capabilities
 ```

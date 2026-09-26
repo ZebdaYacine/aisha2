@@ -3,8 +3,8 @@ package routes
 import "github.com/gofiber/fiber/v3"
 
 type PublicRoutes struct {
-	Register, Login, Refresh, Logout, ForgotPassword, ResetPassword []fiber.Handler
-	Categories, Products, Product, Artisans, Artisan                []fiber.Handler
+	Register, Login, Refresh, Logout, ForgotPassword, ResetPassword       []fiber.Handler
+	Categories, Products, Product, Artisans, Artisan, Workshops, Workshop []fiber.Handler
 }
 
 func RegisterPublic(api fiber.Router, r PublicRoutes) {
@@ -19,6 +19,8 @@ func RegisterPublic(api fiber.Router, r PublicRoutes) {
 	add(api, "GET", "/products/:id", r.Product...)
 	add(api, "GET", "/artisans", r.Artisans...)
 	add(api, "GET", "/artisans/:id", r.Artisan...)
+	add(api, "GET", "/workshops", r.Workshops...)
+	add(api, "GET", "/workshops/:id", r.Workshop...)
 }
 
 func add(api fiber.Router, method, path string, handlers ...fiber.Handler) {

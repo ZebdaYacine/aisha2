@@ -2,16 +2,47 @@
 -- Authentication and workflow records are intentionally inert.
 BEGIN;
 
+-- Development only: make every seed run a clean, deterministic reset.
+-- The migration metadata table is intentionally not included.
+TRUNCATE TABLE
+    audit_events, outbox_events, idempotency_keys,
+    addresses, password_reset_tokens,
+    inventory_movements,
+    product_media, product_translations, product_submissions, products,
+    workshop_translations, workshops,
+    artisan_profile_categories, artisan_media, artisan_documents,
+    artisan_profile_translations, artisan_verifications, artisan_memberships,
+    artisan_profiles,
+    category_translations, categories,
+    order_returns, shipment_events, payment_attempts, stock_reservations,
+    order_items, orders, product_moderation_decisions,
+    warehouse_evidence, warehouse_inspections, warehouse_receptions,
+    cart_items, carts, wishlist_items,
+    sessions, user_roles, users, roles
+RESTART IDENTITY CASCADE;
+
 INSERT INTO roles (id, code) VALUES
+    ('10000000-0000-0000-0000-000000000001', 'visitor'),
     ('10000000-0000-0000-0000-000000000002', 'customer'),
     ('10000000-0000-0000-0000-000000000003', 'artisan'),
+    ('10000000-0000-0000-0000-000000000004', 'moderator'),
+    ('10000000-0000-0000-0000-000000000005', 'warehouse_agent'),
     ('10000000-0000-0000-0000-000000000006', 'administrator')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO categories (id, slug, display_name, sort_order) VALUES
     ('20000000-0000-0000-0000-000000000001', 'decoration-and-art', 'Decoration and art', 10),
+    ('20000000-0000-0000-0000-000000000002', 'domestic-use', 'Domestic use', 20),
     ('20000000-0000-0000-0000-000000000003', 'jewellery-and-beauty-accessories', 'Jewellery and beauty accessories', 30),
-    ('20000000-0000-0000-0000-000000000005', 'carpets-and-textiles', 'Carpets and textiles', 50)
+    ('20000000-0000-0000-0000-000000000004', 'traditional-copper-products', 'Traditional copper products', 40),
+    ('20000000-0000-0000-0000-000000000005', 'carpets-and-textiles', 'Carpets and textiles', 50),
+    ('20000000-0000-0000-0000-000000000006', 'glassware', 'Glassware', 60),
+    ('20000000-0000-0000-0000-000000000007', 'bamboo-and-halfa-products', 'Bamboo and halfa products', 70),
+    ('20000000-0000-0000-0000-000000000008', 'traditional-musical-instruments', 'Traditional musical instruments', 80),
+    ('20000000-0000-0000-0000-000000000009', 'souvenirs', 'Souvenirs', 90),
+    ('20000000-0000-0000-0000-000000000010', 'leather-goods', 'Leather goods', 100),
+    ('20000000-0000-0000-0000-000000000011', 'pottery-and-porcelain', 'Pottery and porcelain', 110),
+    ('20000000-0000-0000-0000-000000000012', 'embroidery', 'Embroidery', 120)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO category_translations (category_id, locale, name, created_at, updated_at) VALUES
@@ -65,17 +96,17 @@ INSERT INTO category_translations (category_id, locale, name, created_at, update
     ('20000000-0000-0000-0000-000000000012', 'es', 'Bordado', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (category_id, locale) DO UPDATE SET name=EXCLUDED.name, updated_at=EXCLUDED.updated_at;
 
--- Development-only password for every seeded account: VPSforTest2026.
+-- Development-only password for every seeded account: Yassine1996@Got.
 INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
-    ('90000000-0000-0000-0000-000000000001', 'admin.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Seed Administrator', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000002', 'customer.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Seed Customer', '2025-01-01T00:00:00Z', '+213000000000', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000003', 'artisan.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Atelier Tala', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000001', 'saad.admin@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Saad', '2025-01-01T00:00:00Z', '+213550000001', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000002', 'kader.agent@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Kader', '2025-01-01T00:00:00Z', '+213550000002', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000003', 'yassine.warehouse@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Yassine', '2025-01-01T00:00:00Z', '+213550000003', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (id) DO UPDATE SET password_hash=EXCLUDED.password_hash;
 
 INSERT INTO user_roles (user_id, role_id, assigned_by_user_id, assigned_at) VALUES
     ('90000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000006', NULL, '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000005', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000005', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO sessions (id, user_id, token_hash, family_id, expires_at, revoked_at, created_at) VALUES
@@ -83,14 +114,14 @@ INSERT INTO sessions (id, user_id, token_hash, family_id, expires_at, revoked_at
 ON CONFLICT DO NOTHING;
 
 INSERT INTO artisan_profiles (id, user_id, public_display_name, internal_name, workshop_name, wilaya, location_text, contact_email, contact_visibility, status, profile_image_object_key, created_at, updated_at, approved_at, submitted_at) VALUES
-    ('90000000-0000-0000-0000-000000000020', '90000000-0000-0000-0000-000000000003', 'Atelier Tala', 'Seed Artisan', 'Atelier Tala', 'Tizi Ouzou', 'Kabylia', 'artisan.seed@example.test', 'PRIVATE', 'APPROVED', '/images/aisha/O5.jpg', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-01T12:00:00Z')
+    ('90000000-0000-0000-0000-000000000020', '90000000-0000-0000-0000-000000000003', 'Oussama Atelier', 'Oussama Artisan', 'Oussama Atelier', 'Tizi Ouzou', 'Kabylia', 'oussama.artisan@example.test', 'PRIVATE', 'APPROVED', '/images/aisha/O5.jpg', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-01T12:00:00Z')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO artisan_profile_translations (artisan_profile_id, locale, display_name, biography, created_at, updated_at) VALUES
-    ('90000000-0000-0000-0000-000000000020', 'en', 'Atelier Tala', 'A workshop preserving hand-shaped Algerian craft traditions.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000020', 'fr', 'Atelier Tala', 'Un atelier qui préserve les traditions artisanales algériennes façonnées à la main.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000020', 'ar', 'ورشة تالا', 'ورشة تحافظ على تقاليد الحرف الجزائرية اليدوية.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000020', 'es', 'Taller Tala', 'Un taller que preserva las tradiciones artesanales argelinas hechas a mano.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000020', 'en', 'Oussama Atelier', 'A workshop preserving hand-shaped Algerian craft traditions.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000020', 'fr', 'Atelier Oussama', 'Un atelier qui préserve les traditions artisanales algériennes façonnées à la main.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000020', 'ar', 'ورشة أسامة', 'ورشة تحافظ على تقاليد الحرف الجزائرية اليدوية.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000020', 'es', 'Taller Oussama', 'Un taller que preserva las tradiciones artesanales argelinas hechas a mano.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (artisan_profile_id, locale) DO UPDATE SET display_name=EXCLUDED.display_name, biography=EXCLUDED.biography, updated_at=EXCLUDED.updated_at;
 
 INSERT INTO artisan_documents (id, artisan_profile_id, document_type, object_key, original_filename, media_type, size_bytes, checksum_sha256, created_at) VALUES
@@ -105,9 +136,21 @@ INSERT INTO artisan_profile_categories (artisan_profile_id, category_id, created
     ('90000000-0000-0000-0000-000000000020', '20000000-0000-0000-0000-000000000003', '2025-01-01T00:00:00Z')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO products (id, artisan_profile_id, category_id, product_type, status, price_minor, currency, materials, production_method, intended_use, dimensions, weight_grams, region_of_origin, created_at, updated_at, published_at) VALUES
-    ('90000000-0000-0000-0000-000000000050', '90000000-0000-0000-0000-000000000020', '20000000-0000-0000-0000-000000000003', 'ARTISAN_SPECIFIC', 'ACTIVE', 12500, 'EUR', 'Silver and enamel', 'Hand engraving and enamelling', 'Adornment', 'Seed sample', 120, 'Kabylia', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z')
+INSERT INTO workshops (artisan_profile_id, name, description, wilaya, location_text, status, is_default, is_public) VALUES
+    ('90000000-0000-0000-0000-000000000020', 'Oussama Atelier', 'A public development workshop preserving hand-shaped Algerian craft traditions.', 'Tizi Ouzou', 'Kabylia', 'ACTIVE', true, true)
+ON CONFLICT (artisan_profile_id) WHERE is_default DO UPDATE
+SET name = EXCLUDED.name, description = EXCLUDED.description, wilaya = EXCLUDED.wilaya,
+    location_text = EXCLUDED.location_text, status = EXCLUDED.status, is_public = EXCLUDED.is_public,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO products (workshop_id, id, artisan_profile_id, category_id, product_type, status, price_minor, currency, materials, production_method, intended_use, dimensions, weight_grams, region_of_origin, created_at, updated_at, published_at) VALUES
+    ((SELECT id FROM workshops WHERE artisan_profile_id = '90000000-0000-0000-0000-000000000020' AND is_default = true), '90000000-0000-0000-0000-000000000050', '90000000-0000-0000-0000-000000000020', '20000000-0000-0000-0000-000000000003', 'ARTISAN_SPECIFIC', 'ACTIVE', 12500, 'EUR', 'Silver and enamel', 'Hand engraving and enamelling', 'Adornment', 'Seed sample', 120, 'Kabylia', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z')
 ON CONFLICT DO NOTHING;
+
+UPDATE products p
+SET workshop_id = w.id
+FROM workshops w
+WHERE w.artisan_profile_id = p.artisan_profile_id AND w.is_default = true AND p.workshop_id IS NULL;
 
 INSERT INTO product_translations (product_id, locale, name, description, story, cultural_context, created_at, updated_at) VALUES
     ('90000000-0000-0000-0000-000000000050', 'en', 'Kabyle silver brooch', 'A hand-enamelled silver brooch.', 'Engraved and enamelled by hand.', 'A development catalogue sample.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
@@ -121,7 +164,7 @@ INSERT INTO product_media (id, product_id, media_kind, object_key, original_file
 ON CONFLICT DO NOTHING;
 
 INSERT INTO addresses (id, user_id, full_name, phone, line1, city, postal_code, country, is_default, created_at, updated_at) VALUES
-    ('90000000-0000-0000-0000-000000000070', '90000000-0000-0000-0000-000000000002', 'Seed Customer', '+213000000000', 'Development address', 'Tizi Ouzou', '00000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000070', '90000000-0000-0000-0000-000000000002', 'Kader', '+213550000002', 'Development address', 'Tizi Ouzou', '15000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, consumed_at, created_at) VALUES
@@ -143,17 +186,16 @@ ON CONFLICT DO NOTHING;
 -- Additional development catalogue fixtures backed by images in
 -- apps/web/public/images/aisha.
 INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
-    ('90000000-0000-0000-0000-000000000004', 'noura.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Atelier Noura', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000005', 'tifawt.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Maison Tifawt', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000006', 'zina.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Atelier Zina', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000007', 'tissili.seed@example.test', '$2a$12$D08dhCYfzMjTS7tYY3alL.eBdIjHvBMQU9oZPz4Rm1j3SUIKm4Meq', 'ACTIVE', 'Dar Tissili', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000004', 'lyna.customer@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Lyna', '2025-01-01T00:00:00Z', '+213550000004', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000005', 'oussama.artisan@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Oussama', '2025-01-01T00:00:00Z', '+213550000005', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000006', 'youcef.moderator@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Youcef', '2025-01-01T00:00:00Z', '+213550000006', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000007', 'legacy.removed@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Legacy fixture', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (id) DO UPDATE SET password_hash=EXCLUDED.password_hash;
 
 INSERT INTO user_roles (user_id, role_id, assigned_by_user_id, assigned_at) VALUES
-    ('90000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
     ('90000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000007', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000006', '10000000-0000-0000-0000-000000000004', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO artisan_profiles (id, user_id, public_display_name, internal_name, workshop_name, wilaya, location_text, contact_email, contact_visibility, status, profile_image_object_key, created_at, updated_at, approved_at, submitted_at) VALUES
@@ -162,6 +204,29 @@ INSERT INTO artisan_profiles (id, user_id, public_display_name, internal_name, w
     ('90000000-0000-0000-0000-000000000122', '90000000-0000-0000-0000-000000000006', 'Atelier Zina', 'Seed Woodwork Artisan', 'Atelier Zina', 'Blida', 'Mitidja', 'zina.seed@example.test', 'PRIVATE', 'APPROVED', '/images/aisha/plateu en bois 1.jpg', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-01T12:00:00Z'),
     ('90000000-0000-0000-0000-000000000123', '90000000-0000-0000-0000-000000000007', 'Dar Tissili', 'Seed Textile Artisan', 'Dar Tissili', 'Ghardaïa', 'M''zab', 'tissili.seed@example.test', 'PRIVATE', 'APPROVED', '/images/aisha/Comme l’âme trouve sa paix dans un bel espace, le tapis révèle toute sa beauté là où il se sent chez lui.#homedecor #interiordesign #rugs #carpet#dubai.jpg', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-01T12:00:00Z')
 ON CONFLICT DO NOTHING;
+
+INSERT INTO workshops (artisan_profile_id, name, description, wilaya, location_text, status, is_default, is_public) VALUES
+    ('90000000-0000-0000-0000-000000000020', 'Oussama Atelier', 'A public development workshop preserving hand-shaped Algerian craft traditions.', 'Tizi Ouzou', 'Kabylia', 'ACTIVE', true, true),
+    ('90000000-0000-0000-0000-000000000120', 'Atelier Noura', 'A public development workshop for jewellery and ceremonial pieces.', 'Sétif', 'High Plateaus', 'ACTIVE', true, true),
+    ('90000000-0000-0000-0000-000000000121', 'Maison Tifawt', 'A public development atelier for embroidery and festive textiles.', 'Tlemcen', 'Old Town', 'ACTIVE', true, true),
+    ('90000000-0000-0000-0000-000000000122', 'Atelier Zina', 'A public development workshop for painted woodwork.', 'Blida', 'Mitidja', 'ACTIVE', true, true),
+    ('90000000-0000-0000-0000-000000000123', 'Dar Tissili', 'A public development textile house for woven decoration.', 'Ghardaïa', 'M''zab', 'ACTIVE', true, true)
+ON CONFLICT (artisan_profile_id) WHERE is_default DO UPDATE
+SET name = EXCLUDED.name, description = EXCLUDED.description, wilaya = EXCLUDED.wilaya,
+    location_text = EXCLUDED.location_text, status = EXCLUDED.status, is_public = EXCLUDED.is_public,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO workshop_translations (workshop_id, locale, name, description)
+SELECT w.id, 'en', w.name, w.description
+FROM workshops w
+WHERE w.is_default = true
+ON CONFLICT (workshop_id, locale) DO UPDATE
+SET name = EXCLUDED.name, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP;
+
+UPDATE products p
+SET workshop_id = w.id
+FROM workshops w
+WHERE w.artisan_profile_id = p.artisan_profile_id AND w.is_default = true AND p.workshop_id IS NULL;
 
 INSERT INTO artisan_profile_translations (artisan_profile_id, locale, display_name, biography, created_at, updated_at) VALUES
     ('90000000-0000-0000-0000-000000000120', 'en', 'Atelier Noura', 'A development workshop creating pearl and ceremonial jewellery.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
@@ -196,12 +261,17 @@ INSERT INTO artisan_profile_categories (artisan_profile_id, category_id, created
     ('90000000-0000-0000-0000-000000000123', '20000000-0000-0000-0000-000000000005', '2025-01-01T00:00:00Z')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO products (id, artisan_profile_id, category_id, product_type, status, price_minor, currency, materials, production_method, intended_use, dimensions, weight_grams, region_of_origin, created_at, updated_at, published_at) VALUES
-    ('90000000-0000-0000-0000-000000000150', '90000000-0000-0000-0000-000000000120', '20000000-0000-0000-0000-000000000003', 'ARTISAN_SPECIFIC', 'ACTIVE', 9800, 'EUR', 'Pearls and gold-tone metal', 'Hand assembly and finishing', 'Ceremonial wear', 'Development sample', 85, 'High Plateaus', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000151', '90000000-0000-0000-0000-000000000121', '20000000-0000-0000-0000-000000000012', 'ARTISAN_SPECIFIC', 'ACTIVE', 24500, 'EUR', 'Silk, textile and embroidery thread', 'Hand embroidery and tailoring', 'Festive wear', 'Development sample', 480, 'Tlemcen', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000152', '90000000-0000-0000-0000-000000000122', '20000000-0000-0000-0000-000000000002', 'ARTISAN_SPECIFIC', 'ACTIVE', 7600, 'EUR', 'Wood and painted inlay', 'Hand cutting, sanding and painting', 'Serving and display', 'Development sample', 950, 'Mitidja', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000153', '90000000-0000-0000-0000-000000000123', '20000000-0000-0000-0000-000000000005', 'ARTISAN_SPECIFIC', 'ACTIVE', 18900, 'EUR', 'Wool and cotton', 'Hand weaving and finishing', 'Interior decoration', 'Development sample', 1800, 'Mzab', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z')
+INSERT INTO products (workshop_id, id, artisan_profile_id, category_id, product_type, status, price_minor, currency, materials, production_method, intended_use, dimensions, weight_grams, region_of_origin, created_at, updated_at, published_at) VALUES
+    ((SELECT id FROM workshops WHERE artisan_profile_id = '90000000-0000-0000-0000-000000000120' AND is_default = true), '90000000-0000-0000-0000-000000000150', '90000000-0000-0000-0000-000000000120', '20000000-0000-0000-0000-000000000003', 'ARTISAN_SPECIFIC', 'ACTIVE', 9800, 'EUR', 'Pearls and gold-tone metal', 'Hand assembly and finishing', 'Ceremonial wear', 'Development sample', 85, 'High Plateaus', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z'),
+    ((SELECT id FROM workshops WHERE artisan_profile_id = '90000000-0000-0000-0000-000000000121' AND is_default = true), '90000000-0000-0000-0000-000000000151', '90000000-0000-0000-0000-000000000121', '20000000-0000-0000-0000-000000000012', 'ARTISAN_SPECIFIC', 'ACTIVE', 24500, 'EUR', 'Silk, textile and embroidery thread', 'Hand embroidery and tailoring', 'Festive wear', 'Development sample', 480, 'Tlemcen', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z'),
+    ((SELECT id FROM workshops WHERE artisan_profile_id = '90000000-0000-0000-0000-000000000122' AND is_default = true), '90000000-0000-0000-0000-000000000152', '90000000-0000-0000-0000-000000000122', '20000000-0000-0000-0000-000000000002', 'ARTISAN_SPECIFIC', 'ACTIVE', 7600, 'EUR', 'Wood and painted inlay', 'Hand cutting, sanding and painting', 'Serving and display', 'Development sample', 950, 'Mitidja', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z'),
+    ((SELECT id FROM workshops WHERE artisan_profile_id = '90000000-0000-0000-0000-000000000123' AND is_default = true), '90000000-0000-0000-0000-000000000153', '90000000-0000-0000-0000-000000000123', '20000000-0000-0000-0000-000000000005', 'ARTISAN_SPECIFIC', 'ACTIVE', 18900, 'EUR', 'Wool and cotton', 'Hand weaving and finishing', 'Interior decoration', 'Development sample', 1800, 'Mzab', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z')
 ON CONFLICT DO NOTHING;
+
+UPDATE products p
+SET workshop_id = w.id
+FROM workshops w
+WHERE w.artisan_profile_id = p.artisan_profile_id AND w.is_default = true AND p.workshop_id IS NULL;
 
 INSERT INTO product_translations (product_id, locale, name, description, story, cultural_context, created_at, updated_at) VALUES
     ('90000000-0000-0000-0000-000000000150', 'en', 'Pearl ceremonial necklace', 'A development sample of layered pearl jewellery.', 'Assembled by hand in a small workshop.', 'A contemporary fixture inspired by Algerian celebration jewellery.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
@@ -228,5 +298,127 @@ INSERT INTO product_media (id, product_id, media_kind, object_key, original_file
     ('90000000-0000-0000-0000-000000000162', '90000000-0000-0000-0000-000000000152', 'IMAGE', '/images/aisha/plateu en bois 1.jpg', 'plateu en bois 1.jpg', 'image/jpeg', 266984, 1080, 1080, repeat('a', 64), 'Painted wood serving tray', 0, 'PUBLIC', '2025-01-01T00:00:00Z'),
     ('90000000-0000-0000-0000-000000000163', '90000000-0000-0000-0000-000000000153', 'IMAGE', '/images/aisha/Comme l’âme trouve sa paix dans un bel espace, le tapis révèle toute sa beauté là où il se sent chez lui.#homedecor #interiordesign #rugs #carpet#dubai.jpg', 'carpet-development-sample.jpg', 'image/jpeg', 230685, 1080, 1350, repeat('b', 64), 'Woven colour field rug', 0, 'PUBLIC', '2025-01-01T00:00:00Z')
 ON CONFLICT DO NOTHING;
+
+-- Keep the reset dataset focused on the six named demo accounts above. The
+-- catalogue block remains useful as a source of representative fixtures, but
+-- these older identities must not leak into a fresh local environment.
+DELETE FROM product_media
+WHERE product_id IN (
+    '90000000-0000-0000-0000-000000000150',
+    '90000000-0000-0000-0000-000000000151',
+    '90000000-0000-0000-0000-000000000152',
+    '90000000-0000-0000-0000-000000000153'
+);
+DELETE FROM product_translations
+WHERE product_id IN (
+    '90000000-0000-0000-0000-000000000150',
+    '90000000-0000-0000-0000-000000000151',
+    '90000000-0000-0000-0000-000000000152',
+    '90000000-0000-0000-0000-000000000153'
+);
+DELETE FROM product_submissions
+WHERE product_id IN (
+    '90000000-0000-0000-0000-000000000150',
+    '90000000-0000-0000-0000-000000000151',
+    '90000000-0000-0000-0000-000000000152',
+    '90000000-0000-0000-0000-000000000153'
+);
+DELETE FROM product_moderation_decisions
+WHERE product_id IN (
+    '90000000-0000-0000-0000-000000000150',
+    '90000000-0000-0000-0000-000000000151',
+    '90000000-0000-0000-0000-000000000152',
+    '90000000-0000-0000-0000-000000000153'
+);
+DELETE FROM products
+WHERE id IN (
+    '90000000-0000-0000-0000-000000000150',
+    '90000000-0000-0000-0000-000000000151',
+    '90000000-0000-0000-0000-000000000152',
+    '90000000-0000-0000-0000-000000000153'
+);
+DELETE FROM workshop_translations
+WHERE workshop_id IN (
+    SELECT id FROM workshops
+    WHERE artisan_profile_id IN (
+        '90000000-0000-0000-0000-000000000120',
+        '90000000-0000-0000-0000-000000000121',
+        '90000000-0000-0000-0000-000000000122',
+        '90000000-0000-0000-0000-000000000123'
+    )
+);
+DELETE FROM workshops
+WHERE artisan_profile_id IN (
+    '90000000-0000-0000-0000-000000000120',
+    '90000000-0000-0000-0000-000000000121',
+    '90000000-0000-0000-0000-000000000122',
+    '90000000-0000-0000-0000-000000000123'
+);
+DELETE FROM artisan_profile_categories
+WHERE artisan_profile_id IN (
+    '90000000-0000-0000-0000-000000000120',
+    '90000000-0000-0000-0000-000000000121',
+    '90000000-0000-0000-0000-000000000122',
+    '90000000-0000-0000-0000-000000000123'
+);
+DELETE FROM artisan_media
+WHERE artisan_profile_id IN (
+    '90000000-0000-0000-0000-000000000120',
+    '90000000-0000-0000-0000-000000000121',
+    '90000000-0000-0000-0000-000000000122',
+    '90000000-0000-0000-0000-000000000123'
+);
+DELETE FROM artisan_documents
+WHERE artisan_profile_id IN (
+    '90000000-0000-0000-0000-000000000120',
+    '90000000-0000-0000-0000-000000000121',
+    '90000000-0000-0000-0000-000000000122',
+    '90000000-0000-0000-0000-000000000123'
+);
+DELETE FROM artisan_profile_translations
+WHERE artisan_profile_id IN (
+    '90000000-0000-0000-0000-000000000120',
+    '90000000-0000-0000-0000-000000000121',
+    '90000000-0000-0000-0000-000000000122',
+    '90000000-0000-0000-0000-000000000123'
+);
+DELETE FROM artisan_profiles
+WHERE id IN (
+    '90000000-0000-0000-0000-000000000120',
+    '90000000-0000-0000-0000-000000000121',
+    '90000000-0000-0000-0000-000000000122',
+    '90000000-0000-0000-0000-000000000123'
+);
+DELETE FROM user_roles
+WHERE user_id = '90000000-0000-0000-0000-000000000007';
+DELETE FROM users
+WHERE id = '90000000-0000-0000-0000-000000000007';
+
+-- Oussama is the sole artisan demo account. The migration creates a membership
+-- automatically for approved profiles, so the explicit upsert below also makes
+-- this fixture safe when the seed is loaded against a migrated database.
+UPDATE artisan_profiles
+SET user_id = '90000000-0000-0000-0000-000000000005',
+    public_display_name = 'Oussama Atelier',
+    internal_name = 'Oussama Artisan',
+    workshop_name = 'Oussama Atelier',
+    contact_email = 'oussama.artisan@example.test'
+WHERE id = '90000000-0000-0000-0000-000000000020';
+
+INSERT INTO artisan_memberships (user_id, artisan_profile_id, status, activated_at)
+VALUES ('90000000-0000-0000-0000-000000000005', '90000000-0000-0000-0000-000000000020', 'ACTIVE', '2025-01-02T00:00:00Z')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO artisan_verifications (artisan_membership_id, status, decided_by_user_id, decided_at)
+SELECT id, 'VERIFIED', '90000000-0000-0000-0000-000000000001', '2025-01-02T00:00:00Z'
+FROM artisan_memberships
+WHERE artisan_profile_id = '90000000-0000-0000-0000-000000000020'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO inventory_movements (product_id, movement_type, quantity_delta, reference_key, reason)
+SELECT id, 'ACCEPTED', 5, 'development-seed:' || id::text, 'Accepted development seed stock'
+FROM products
+WHERE status = 'ACTIVE'
+ON CONFLICT (reference_key) DO NOTHING;
 
 COMMIT;

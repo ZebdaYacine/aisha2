@@ -1,2 +1,9 @@
 export { ArtisanReview } from "./components/artisan-review";
 export { AdminControlPanel } from "./components/admin-control-panel";
+export { ArtisanMembershipReview } from "./components/artisan-membership-review";
+export { AdminDashboardShell } from "./components/admin-dashboard-shell";
+export { AdminProfileModal } from "./components/admin-profile-modal";
+export { ProductModeration } from "./components/product-moderation";
+export { WarehouseOperations } from "./components/warehouse-operations";
+export { InventoryOperations } from "./components/inventory-operations";
+export { AdminMediaOperations } from "./components/admin-media-operations";

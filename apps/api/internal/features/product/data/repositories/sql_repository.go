@@ -27,7 +27,25 @@ const productColumns = `p.id,p.artisan_profile_id,p.category_id,p.product_type,p
 COALESCE(p.materials,''),COALESCE(p.production_method,''),COALESCE(p.intended_use,''),COALESCE(p.dimensions,''),
 p.weight_grams,COALESCE(p.country_of_origin,''),COALESCE(p.region_of_origin,''),p.eco_friendly_verified,
 p.fair_trade_verified,p.made_to_order_eligible,
+COALESCE(w.id::text,''),COALESCE(w.name,''),COALESCE(w.status,''),
 COALESCE((SELECT json_agg(json_build_object('locale',t.locale,'name',t.name,'description',t.description,'story',COALESCE(t.story,''),'culturalContext',COALESCE(t.cultural_context,'')) ORDER BY t.locale) FROM product_translations t WHERE t.product_id=p.id),'[]')`
+
+func (r *PostgresRepository) ListOwnedWorkshops(ctx context.Context, userID string) ([]domain.Workshop, error) {
+	rows, err := r.pool.Query(ctx, `SELECT w.id,w.name,w.status,COUNT(p.id)::int FROM workshops w JOIN artisan_profiles a ON a.id=w.artisan_profile_id LEFT JOIN products p ON p.workshop_id=w.id WHERE a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') GROUP BY w.id,w.name,w.status,w.is_default ORDER BY w.is_default DESC,w.name`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list artisan workshops: %w", err)
+	}
+	defer rows.Close()
+	items := []domain.Workshop{}
+	for rows.Next() {
+		var item domain.Workshop
+		if err = rows.Scan(&item.ID, &item.Name, &item.Status, &item.ProductCount); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
 
 func (r *PostgresRepository) Create(ctx context.Context, userID string, input domain.Input) (domain.Product, error) {
 	tx, err := r.pool.Begin(ctx)
@@ -41,8 +59,11 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, input do
 	if err = ensureCategory(ctx, tx, input.CategoryID); err != nil {
 		return domain.Product{}, err
 	}
+	if err = ensureOwnedActiveWorkshop(ctx, tx, userID, input.WorkshopID); err != nil {
+		return domain.Product{}, err
+	}
 	var id string
-	err = tx.QueryRow(ctx, `INSERT INTO products(artisan_profile_id,category_id,product_type,status,price_minor,currency,materials,production_method,intended_use,dimensions,weight_grams,country_of_origin,region_of_origin,eco_friendly_verified,fair_trade_verified,made_to_order_eligible) SELECT a.id,$2,$3,'DRAFT',$4,$5,NULLIF($6,''),NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),$10,NULLIF($11,''),NULLIF($12,''),$13,$14,$15 FROM artisan_profiles a WHERE a.user_id=$1 AND a.status='APPROVED' RETURNING id`, userID, input.CategoryID, input.ProductType, input.PriceMinor, input.Currency, input.Materials, input.ProductionMethod, input.IntendedUse, input.Dimensions, input.WeightGrams, input.CountryOfOrigin, input.RegionOfOrigin, input.EcoFriendlyVerified, input.FairTradeVerified, input.MadeToOrderEligible).Scan(&id)
+	err = tx.QueryRow(ctx, `INSERT INTO products(artisan_profile_id,workshop_id,category_id,product_type,status,price_minor,currency,materials,production_method,intended_use,dimensions,weight_grams,country_of_origin,region_of_origin,eco_friendly_verified,fair_trade_verified,made_to_order_eligible) SELECT a.id,$2,$3,$4,'DRAFT',$5,$6,NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),$11,NULLIF($12,''),NULLIF($13,''),$14,$15,$16 FROM artisan_profiles a WHERE a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') RETURNING id`, userID, input.WorkshopID, input.CategoryID, input.ProductType, input.PriceMinor, input.Currency, input.Materials, input.ProductionMethod, input.IntendedUse, input.Dimensions, input.WeightGrams, input.CountryOfOrigin, input.RegionOfOrigin, input.EcoFriendlyVerified, input.FairTradeVerified, input.MadeToOrderEligible).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Product{}, domain.ErrArtisanNotApproved
 	}
@@ -62,7 +83,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, input do
 }
 
 func (r *PostgresRepository) ListOwned(ctx context.Context, userID, status string, limit, offset int) ([]domain.Product, int, error) {
-	rows, err := r.pool.Query(ctx, `SELECT p.id,count(*) OVER() FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE a.user_id=$1 AND ($2='' OR p.status=$2) ORDER BY p.updated_at DESC LIMIT $3 OFFSET $4`, userID, status, limit, offset)
+	rows, err := r.pool.Query(ctx, `SELECT p.id,count(*) OVER() FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') AND ($2='' OR p.status=$2) ORDER BY p.updated_at DESC LIMIT $3 OFFSET $4`, userID, status, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list artisan products: %w", err)
 	}
@@ -91,7 +112,7 @@ func (r *PostgresRepository) ListOwned(ctx context.Context, userID, status strin
 }
 
 func (r *PostgresRepository) GetOwned(ctx context.Context, userID, id string) (domain.Product, error) {
-	item, err := loadProduct(ctx, r.pool, `WHERE p.id=$1 AND a.user_id=$2`, id, userID)
+	item, err := loadProduct(ctx, r.pool, `WHERE p.id=$1 AND a.user_id=$2 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE')`, id, userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Product{}, domain.ErrNotFound
 	}
@@ -104,8 +125,8 @@ func (r *PostgresRepository) Update(ctx context.Context, userID, id string, inpu
 		return domain.Product{}, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	var status string
-	err = tx.QueryRow(ctx, `SELECT p.status FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE p.id=$2 AND a.user_id=$1 FOR UPDATE`, userID, id).Scan(&status)
+	var status, currentWorkshopID string
+	err = tx.QueryRow(ctx, `SELECT p.status,p.workshop_id::text FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE p.id=$2 AND a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') FOR UPDATE`, userID, id).Scan(&status, &currentWorkshopID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Product{}, domain.ErrNotFound
 	}
@@ -118,7 +139,19 @@ func (r *PostgresRepository) Update(ctx context.Context, userID, id string, inpu
 	if err = ensureCategory(ctx, tx, input.CategoryID); err != nil {
 		return domain.Product{}, err
 	}
-	_, err = tx.Exec(ctx, `UPDATE products SET category_id=$3,product_type=$4,price_minor=$5,currency=$6,materials=NULLIF($7,''),production_method=NULLIF($8,''),intended_use=NULLIF($9,''),dimensions=NULLIF($10,''),weight_grams=$11,country_of_origin=NULLIF($12,''),region_of_origin=NULLIF($13,''),eco_friendly_verified=$14,fair_trade_verified=$15,made_to_order_eligible=$16,updated_at=CURRENT_TIMESTAMP WHERE id=$2 AND artisan_profile_id=(SELECT id FROM artisan_profiles WHERE user_id=$1)`, userID, id, input.CategoryID, input.ProductType, input.PriceMinor, input.Currency, input.Materials, input.ProductionMethod, input.IntendedUse, input.Dimensions, input.WeightGrams, input.CountryOfOrigin, input.RegionOfOrigin, input.EcoFriendlyVerified, input.FairTradeVerified, input.MadeToOrderEligible)
+	if err = ensureOwnedActiveWorkshop(ctx, tx, userID, input.WorkshopID); err != nil {
+		return domain.Product{}, err
+	}
+	if currentWorkshopID != input.WorkshopID {
+		var protected bool
+		if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM inventory_movements WHERE product_id=$1)`, id).Scan(&protected); err != nil {
+			return domain.Product{}, err
+		}
+		if protected {
+			return domain.Product{}, domain.ErrWorkshopProtectedHistory
+		}
+	}
+	_, err = tx.Exec(ctx, `UPDATE products SET workshop_id=$3,category_id=$4,product_type=$5,price_minor=$6,currency=$7,materials=NULLIF($8,''),production_method=NULLIF($9,''),intended_use=NULLIF($10,''),dimensions=NULLIF($11,''),weight_grams=$12,country_of_origin=NULLIF($13,''),region_of_origin=NULLIF($14,''),eco_friendly_verified=$15,fair_trade_verified=$16,made_to_order_eligible=$17,updated_at=CURRENT_TIMESTAMP WHERE id=$2 AND artisan_profile_id=(SELECT id FROM artisan_profiles WHERE user_id=$1)`, userID, id, input.WorkshopID, input.CategoryID, input.ProductType, input.PriceMinor, input.Currency, input.Materials, input.ProductionMethod, input.IntendedUse, input.Dimensions, input.WeightGrams, input.CountryOfOrigin, input.RegionOfOrigin, input.EcoFriendlyVerified, input.FairTradeVerified, input.MadeToOrderEligible)
 	if err != nil {
 		return domain.Product{}, fmt.Errorf("update product: %w", err)
 	}
@@ -140,8 +173,8 @@ func (r *PostgresRepository) Submit(ctx context.Context, userID, id string) (dom
 		return domain.Product{}, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	var status string
-	err = tx.QueryRow(ctx, `SELECT p.status FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE p.id=$2 AND a.user_id=$1 FOR UPDATE`, userID, id).Scan(&status)
+	var status, workshopID string
+	err = tx.QueryRow(ctx, `SELECT p.status,p.workshop_id::text FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE p.id=$2 AND a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') FOR UPDATE`, userID, id).Scan(&status, &workshopID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Product{}, domain.ErrNotFound
 	}
@@ -151,7 +184,10 @@ func (r *PostgresRepository) Submit(ctx context.Context, userID, id string) (dom
 	if status != "DRAFT" && status != "CHANGES_REQUESTED" {
 		return domain.Product{}, domain.ErrInvalidTransition
 	}
-	item, err := loadProduct(ctx, tx, `WHERE p.id=$1 AND a.user_id=$2`, id, userID)
+	if err = ensureOwnedActiveWorkshop(ctx, tx, userID, workshopID); err != nil {
+		return domain.Product{}, err
+	}
+	item, err := loadProduct(ctx, tx, `WHERE p.id=$1 AND a.user_id=$2 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE')`, id, userID)
 	if err != nil {
 		return domain.Product{}, err
 	}
@@ -178,9 +214,39 @@ func (r *PostgresRepository) Submit(ctx context.Context, userID, id string) (dom
 	return r.GetOwned(ctx, userID, id)
 }
 
+func (r *PostgresRepository) Archive(ctx context.Context, userID, id string) (domain.Product, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Product{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var status string
+	err = tx.QueryRow(ctx, `SELECT p.status FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE p.id=$2 AND a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') FOR UPDATE`, userID, id).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Product{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.Product{}, err
+	}
+	if status == "ARCHIVED" || status == "PENDING_REVIEW" {
+		return domain.Product{}, domain.ErrInvalidTransition
+	}
+	if _, err = tx.Exec(ctx, `UPDATE products SET status='ARCHIVED',published_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE id=$1`, id); err != nil {
+		return domain.Product{}, err
+	}
+	if err = productEvent(ctx, tx, "PRODUCT_ARCHIVED", userID, id, "artisan archive", status, "ARCHIVED"); err != nil {
+		return domain.Product{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.Product{}, err
+	}
+	return r.GetOwned(ctx, userID, id)
+}
+
 func (r *PostgresRepository) AddMedia(ctx context.Context, userID, productID string, media domain.Media) (domain.Media, error) {
 	var result domain.Media
-	err := r.pool.QueryRow(ctx, `INSERT INTO product_media(product_id,media_kind,object_key,original_filename,media_type,size_bytes,checksum_sha256,alt_text,visibility) SELECT p.id,$3,$4,NULLIF($5,''),$6,$7,$8,NULLIF($9,''),'PRIVATE' FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE p.id=$2 AND a.user_id=$1 AND p.status IN ('DRAFT','CHANGES_REQUESTED') RETURNING id,product_id,media_kind,object_key,COALESCE(original_filename,''),media_type,size_bytes,COALESCE(alt_text,''),sort_order,visibility`, userID, productID, media.MediaKind, media.ObjectKey, media.OriginalFilename, media.MediaType, media.SizeBytes, media.Checksum, media.AltText).Scan(&result.ID, &result.ProductID, &result.MediaKind, &result.ObjectKey, &result.OriginalFilename, &result.MediaType, &result.SizeBytes, &result.AltText, &result.SortOrder, &result.Visibility)
+	err := r.pool.QueryRow(ctx, `INSERT INTO product_media(product_id,media_kind,object_key,original_filename,media_type,size_bytes,checksum_sha256,alt_text,visibility) SELECT p.id,$3,$4,NULLIF($5,''),$6,$7,$8,NULLIF($9,''),'PRIVATE' FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id AND w.status='ACTIVE' WHERE p.id=$2 AND a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') AND p.status IN ('DRAFT','CHANGES_REQUESTED') RETURNING id,product_id,media_kind,object_key,COALESCE(original_filename,''),media_type,size_bytes,COALESCE(alt_text,''),sort_order,visibility`, userID, productID, media.MediaKind, media.ObjectKey, media.OriginalFilename, media.MediaType, media.SizeBytes, media.Checksum, media.AltText).Scan(&result.ID, &result.ProductID, &result.MediaKind, &result.ObjectKey, &result.OriginalFilename, &result.MediaType, &result.SizeBytes, &result.AltText, &result.SortOrder, &result.Visibility)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Media{}, domain.ErrNotEditable
 	}
@@ -192,7 +258,7 @@ func (r *PostgresRepository) AddMedia(ctx context.Context, userID, productID str
 
 func (r *PostgresRepository) DeleteMedia(ctx context.Context, userID, productID, mediaID string) (domain.Media, error) {
 	var result domain.Media
-	err := r.pool.QueryRow(ctx, `DELETE FROM product_media m USING products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE m.id=$3 AND m.product_id=p.id AND p.id=$2 AND a.user_id=$1 AND p.status IN ('DRAFT','CHANGES_REQUESTED') RETURNING m.id,m.product_id,m.object_key`, userID, productID, mediaID).Scan(&result.ID, &result.ProductID, &result.ObjectKey)
+	err := r.pool.QueryRow(ctx, `DELETE FROM product_media m USING products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id AND w.status='ACTIVE' WHERE m.id=$3 AND m.product_id=p.id AND p.id=$2 AND a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') AND p.status IN ('DRAFT','CHANGES_REQUESTED') RETURNING m.id,m.product_id,m.object_key`, userID, productID, mediaID).Scan(&result.ID, &result.ProductID, &result.ObjectKey)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Media{}, domain.ErrMediaNotFound
 	}
@@ -206,7 +272,7 @@ func loadProduct(ctx context.Context, q rowQuerier, where string, args ...any) (
 	var item domain.Product
 	var translations []byte
 	var weight pgtype.Int4
-	err := q.QueryRow(ctx, `SELECT `+productColumns+` FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id `+where, args...).Scan(&item.ID, &item.ArtisanID, &item.CategoryID, &item.ProductType, &item.Status, &item.PriceMinor, &item.Currency, &item.Materials, &item.ProductionMethod, &item.IntendedUse, &item.Dimensions, &weight, &item.CountryOfOrigin, &item.RegionOfOrigin, &item.EcoFriendlyVerified, &item.FairTradeVerified, &item.MadeToOrderEligible, &translations)
+	err := q.QueryRow(ctx, `SELECT `+productColumns+` FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id LEFT JOIN workshops w ON w.id=p.workshop_id `+where, args...).Scan(&item.ID, &item.ArtisanID, &item.CategoryID, &item.ProductType, &item.Status, &item.PriceMinor, &item.Currency, &item.Materials, &item.ProductionMethod, &item.IntendedUse, &item.Dimensions, &weight, &item.CountryOfOrigin, &item.RegionOfOrigin, &item.EcoFriendlyVerified, &item.FairTradeVerified, &item.MadeToOrderEligible, &item.WorkshopID, &item.WorkshopName, &item.WorkshopStatus, &translations)
 	if err != nil {
 		return domain.Product{}, err
 	}
@@ -247,6 +313,17 @@ func ensureApprovedArtisan(ctx context.Context, tx pgx.Tx, userID string) error 
 	return err
 }
 
+func ensureOwnedActiveWorkshop(ctx context.Context, tx pgx.Tx, userID, workshopID string) error {
+	var exists bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM workshops w JOIN artisan_profiles a ON a.id=w.artisan_profile_id WHERE w.id=$2 AND w.status='ACTIVE' AND a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE'))`, userID, workshopID).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return domain.ErrWorkshopNotOwned
+	}
+	return nil
+}
+
 func ensureCategory(ctx context.Context, tx pgx.Tx, id string) error {
 	var exists bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM categories WHERE id=$1 AND is_active=true)`, id).Scan(&exists); err != nil {
@@ -271,10 +348,10 @@ func replaceTranslations(ctx context.Context, tx pgx.Tx, productID string, trans
 }
 
 func productEvent(ctx context.Context, tx pgx.Tx, eventType, actor, productID, reason, previous, next string) error {
-	if _, err := tx.Exec(ctx, `INSERT INTO audit_events(event_type,actor_user_id,target_type,target_id,reason,previous_state,new_state) VALUES($1,$2,'product',$3,NULLIF($4,''),jsonb_build_object('status',NULLIF($5,'')),jsonb_build_object('status',$6))`, eventType, actor, productID, reason, previous, next); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO audit_events(event_type,actor_user_id,target_type,target_id,reason,previous_state,new_state) VALUES($1::text,$2::text::uuid,'product',$3::text::uuid,NULLIF($4::text,''),jsonb_build_object('status',NULLIF($5::text,'')),jsonb_build_object('status',$6::text))`, eventType, actor, productID, reason, previous, next); err != nil {
 		return fmt.Errorf("insert product audit event: %w", err)
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES($1,'product',$2,jsonb_build_object('productId',$2::text,'status',$3))`, eventType, productID, next); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES($1::text,'product',$2::text::uuid,jsonb_build_object('productId',$2::text,'status',$3::text))`, eventType, productID, next); err != nil {
 		return fmt.Errorf("insert product outbox event: %w", err)
 	}
 	return nil

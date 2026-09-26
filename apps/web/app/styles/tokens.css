@@ -1,26 +1,57 @@
 :root {
   color-scheme: light;
-  --background: 40 33% 98%;
-  --foreground: 20 10% 10%;
+  --background: 42 33% 97%;
+  --foreground: 24 24% 14%;
   --card: 0 0% 100%;
-  --card-foreground: 20 10% 10%;
-  --muted: 35 18% 93%;
-  --muted-foreground: 25 8% 42%;
-  --border: 30 12% 86%;
-  --input: 30 12% 86%;
-  --primary: 14 48% 38%;
-  --primary-foreground: 40 33% 98%;
-  --secondary: 75 18% 30%;
-  --secondary-foreground: 40 33% 98%;
-  --accent: 40 40% 56%;
-  --accent-foreground: 20 10% 10%;
-  --destructive: 0 62% 42%;
+  --card-foreground: 24 24% 14%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 24 24% 14%;
+  --muted: 38 24% 93%;
+  --muted-foreground: 24 10% 42%;
+  --border: 33 22% 84%;
+  --input: 33 22% 84%;
+  --primary: 24 43% 30%;
+  --primary-foreground: 42 40% 98%;
+  --secondary: 38 34% 90%;
+  --secondary-foreground: 24 33% 22%;
+  --accent: 148 20% 34%;
+  --accent-foreground: 42 40% 98%;
+  --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --success: 135 40% 28%;
-  --radius: 0.25rem;
+  --success: 148 32% 34%;
+  --ring: 24 43% 30%;
+  --radius: 0.75rem;
+  --shadow-soft: 0 10px 30px rgb(46 35 29 / 0.08);
+  --shadow-floating: 0 18px 50px rgb(46 35 29 / 0.14);
   --font-ui: "Geist", "Inter", system-ui, sans-serif;
   --font-display: "Iowan Old Style", "Baskerville", "Times New Roman", serif;
   --container: 100rem;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: 24 22% 9%;
+  --foreground: 42 30% 94%;
+  --card: 24 18% 12%;
+  --card-foreground: 42 30% 94%;
+  --popover: 24 18% 12%;
+  --popover-foreground: 42 30% 94%;
+  --muted: 24 14% 16%;
+  --muted-foreground: 33 12% 65%;
+  --border: 24 14% 20%;
+  --input: 24 14% 20%;
+  --primary: 33 46% 62%;
+  --primary-foreground: 24 24% 12%;
+  --secondary: 24 14% 18%;
+  --secondary-foreground: 42 25% 90%;
+  --accent: 148 18% 46%;
+  --accent-foreground: 24 24% 12%;
+  --destructive: 0 62% 52%;
+  --destructive-foreground: 0 0% 98%;
+  --success: 148 35% 52%;
+  --ring: 33 46% 62%;
+  --shadow-soft: 0 10px 30px rgb(0 0 0 / 0.2);
+  --shadow-floating: 0 18px 50px rgb(0 0 0 / 0.35);
 }
 
 [lang="ar"] {

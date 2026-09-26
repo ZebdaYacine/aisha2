@@ -6,6 +6,7 @@ type PageRequest = domain.PageRequest
 type Category = domain.Category
 type Product = domain.Product
 type Artisan = domain.Artisan
+type Workshop = domain.Workshop
 type Page[T any] = domain.Page[T]
 type Repository = domain.Repository
 

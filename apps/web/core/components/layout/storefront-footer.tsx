@@ -1,8 +1,10 @@
+"use client";
+
 import Link from "next/link";
 
 import { Container } from "@/core/components/layout/container";
+import { LanguageSwitcher } from "@/core/components/layout/language-switcher";
 import type { Locale, Messages } from "@/core/lib/i18n";
-import { locales } from "@/core/lib/i18n";
 import { storeCopy } from "@/core/lib/store-copy";
 
 export function StorefrontFooter({
@@ -33,11 +35,15 @@ export function StorefrontFooter({
             <Link href={`/${locale}/account/orders`}>{copy.orders}</Link>
           </FooterGroup>
           <FooterGroup title={messages.languageLabel}>
-            {locales.map((item) => (
-              <Link href={`/${item}`} hrefLang={item} lang={item} key={item}>
-                {messages.locales[item]}
-              </Link>
-            ))}
+            <LanguageSwitcher locale={locale} messages={messages} />
+            <label className="mt-3 text-xs text-background/60" htmlFor="footer-currency">
+              {messages.currencyLabel}
+            </label>
+            <select id="footer-currency" className="h-11 max-w-52 rounded-md border border-background/30 bg-transparent px-3 text-sm text-background">
+              <option className="text-foreground" value="DZD">DZD — Algerian dinar</option>
+              <option className="text-foreground" value="EUR">EUR — Euro</option>
+              <option className="text-foreground" value="USD">USD — US dollar</option>
+            </select>
           </FooterGroup>
         </div>
         <div className="mt-16 flex flex-col gap-3 border-t border-background/20 pt-6 text-xs text-background/60 sm:flex-row sm:items-center sm:justify-between">

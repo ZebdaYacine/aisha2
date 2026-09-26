@@ -18,7 +18,7 @@ func TestPostgresCataloguePublicationRules(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	var userID, artisanID, categoryID, activeID, draftID string
+	var userID, artisanID, workshopID, categoryID, activeID, draftID string
 	if err = pool.QueryRow(ctx, `INSERT INTO users(email,display_name)VALUES('catalogue-test@example.test','Maker')RETURNING id`).Scan(&userID); err != nil {
 		t.Fatal(err)
 	}
@@ -26,6 +26,9 @@ func TestPostgresCataloguePublicationRules(t *testing.T) {
 		_, _ = pool.Exec(ctx, `DELETE FROM product_media WHERE product_id IN ($1,$2)`, activeID, draftID)
 		_, _ = pool.Exec(ctx, `DELETE FROM product_translations WHERE product_id IN ($1,$2)`, activeID, draftID)
 		_, _ = pool.Exec(ctx, `DELETE FROM products WHERE id IN ($1,$2)`, activeID, draftID)
+		_, _ = pool.Exec(ctx, `DELETE FROM workshops WHERE artisan_profile_id=$1`, artisanID)
+		_, _ = pool.Exec(ctx, `DELETE FROM artisan_verifications WHERE artisan_membership_id IN (SELECT id FROM artisan_memberships WHERE artisan_profile_id=$1)`, artisanID)
+		_, _ = pool.Exec(ctx, `DELETE FROM artisan_memberships WHERE artisan_profile_id=$1`, artisanID)
 		_, _ = pool.Exec(ctx, `DELETE FROM artisan_profile_translations WHERE artisan_profile_id=$1`, artisanID)
 		_, _ = pool.Exec(ctx, `DELETE FROM artisan_profiles WHERE id=$1`, artisanID)
 		_, _ = pool.Exec(ctx, `DELETE FROM users WHERE id=$1`, userID)
@@ -33,6 +36,12 @@ func TestPostgresCataloguePublicationRules(t *testing.T) {
 		_, _ = pool.Exec(ctx, `DELETE FROM categories WHERE id=$1`, categoryID)
 	}()
 	if err = pool.QueryRow(ctx, `INSERT INTO artisan_profiles(user_id,public_display_name,status,profile_image_object_key)VALUES($1,'Maker','APPROVED','/images/aisha/test-artisan.jpg')RETURNING id`, userID).Scan(&artisanID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = pool.Exec(ctx, `INSERT INTO artisan_memberships(user_id,artisan_profile_id,status,activated_at)VALUES($1,$2,'ACTIVE',CURRENT_TIMESTAMP)`, userID, artisanID); err != nil {
+		t.Fatal(err)
+	}
+	if err = pool.QueryRow(ctx, `INSERT INTO workshops(artisan_profile_id,name,status,is_default,is_public)VALUES($1,'Test Workshop','ACTIVE',true,true)RETURNING id`, artisanID).Scan(&workshopID); err != nil {
 		t.Fatal(err)
 	}
 	if err = pool.QueryRow(ctx, `INSERT INTO categories(slug,display_name)VALUES('catalogue-test-'||gen_random_uuid()::text,'Test category')RETURNING id`).Scan(&categoryID); err != nil {
@@ -44,10 +53,10 @@ func TestPostgresCataloguePublicationRules(t *testing.T) {
 	if _, err = pool.Exec(ctx, `INSERT INTO artisan_profile_translations(artisan_profile_id,locale,display_name,biography)VALUES($1,'en','Maker EN','Story EN'),($1,'fr','Artisan FR','Story FR')`, artisanID); err != nil {
 		t.Fatal(err)
 	}
-	if err = pool.QueryRow(ctx, `INSERT INTO products(artisan_profile_id,category_id,product_type,status,price_minor,currency,published_at)VALUES($1,$2,'ARTISAN_SPECIFIC','ACTIVE',1000,'EUR',CURRENT_TIMESTAMP)RETURNING id`, artisanID, categoryID).Scan(&activeID); err != nil {
+	if err = pool.QueryRow(ctx, `INSERT INTO products(artisan_profile_id,workshop_id,category_id,product_type,status,price_minor,currency,published_at)VALUES($1,$2,$3,'ARTISAN_SPECIFIC','ACTIVE',1000,'EUR',CURRENT_TIMESTAMP)RETURNING id`, artisanID, workshopID, categoryID).Scan(&activeID); err != nil {
 		t.Fatal(err)
 	}
-	if err = pool.QueryRow(ctx, `INSERT INTO products(artisan_profile_id,category_id,product_type,status,price_minor,currency)VALUES($1,$2,'ARTISAN_SPECIFIC','DRAFT',1000,'EUR')RETURNING id`, artisanID, categoryID).Scan(&draftID); err != nil {
+	if err = pool.QueryRow(ctx, `INSERT INTO products(artisan_profile_id,workshop_id,category_id,product_type,status,price_minor,currency)VALUES($1,$2,$3,'ARTISAN_SPECIFIC','DRAFT',1000,'EUR')RETURNING id`, artisanID, workshopID, categoryID).Scan(&draftID); err != nil {
 		t.Fatal(err)
 	}
 	for _, id := range []string{activeID, draftID} {
@@ -62,7 +71,7 @@ func TestPostgresCataloguePublicationRules(t *testing.T) {
 		t.Fatal(err)
 	}
 	repository := NewPostgresRepository(pool)
-	page, err := repository.Products(ctx, PageRequest{Locale: "en", Page: 1, PageSize: 100}, "")
+	page, err := repository.Products(ctx, PageRequest{Locale: "en", Page: 1, PageSize: 100}, "", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +115,7 @@ func TestPostgresCataloguePublicationRules(t *testing.T) {
 			t.Fatalf("category name=%q", item.Name)
 		}
 	}
-	localizedProducts, err := repository.Products(ctx, PageRequest{Locale: "fr", Page: 1, PageSize: 100}, "")
+	localizedProducts, err := repository.Products(ctx, PageRequest{Locale: "fr", Page: 1, PageSize: 100}, "", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}

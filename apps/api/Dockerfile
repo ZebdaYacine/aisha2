@@ -29,5 +29,5 @@ COPY --from=runtime-assets /bin/busybox /bin/busybox
 COPY --from=build /out/api /app/api
 COPY --from=build /src/openapi /app/openapi
 USER aisha
-EXPOSE 8080
+EXPOSE 8088
 ENTRYPOINT ["./api"]

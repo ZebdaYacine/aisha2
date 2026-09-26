@@ -1,12 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArtisanCard } from "@/features/artisan";
 import { Container } from "@/core/components/layout/container";
 import { Breadcrumbs } from "@/core/components/shared/breadcrumbs";
 import { catalogue } from "@/features/catalogue/api";
-import { localized } from "@/features/catalogue/format";
 import { isLocale } from "@/core/lib/i18n";
 import { storeCopy } from "@/core/lib/store-copy";
+import { ArtisanDirectory } from "@/features/catalogue";
 
 export async function generateMetadata({
   params,
@@ -45,48 +44,7 @@ export default async function ArtisansPage({
           {copy.artisanDirectoryBody}
         </p>
       </header>
-      <form className="mt-10 grid gap-3 border-y border-border py-5 sm:grid-cols-3">
-        <label>
-          <span className="sr-only">{copy.search}</span>
-          <input
-            className="h-12 w-full border border-border bg-background px-4"
-            placeholder={copy.search}
-            type="search"
-          />
-        </label>
-        <label>
-          <span className="sr-only">{copy.region}</span>
-          <select className="h-12 w-full border border-border bg-background px-4">
-            <option>{copy.region}</option>
-            {artisans.map((artisan) => (
-              <option key={artisan.slug}>
-                {localized(artisan.region, locale)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          <span className="sr-only">{copy.craft}</span>
-          <select className="h-12 w-full border border-border bg-background px-4">
-            <option>{copy.craft}</option>
-            {artisans.map((artisan) => (
-              <option key={artisan.slug}>
-                {localized(artisan.craft, locale)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </form>
-      <div className="mt-12 grid gap-10 md:grid-cols-2 lg:grid-cols-3">
-        {artisans.map((artisan) => (
-          <ArtisanCard
-            artisan={artisan}
-            locale={locale}
-            copy={copy}
-            key={artisan.slug}
-          />
-        ))}
-      </div>
+      <ArtisanDirectory artisans={artisans} locale={locale} copy={copy} />
     </Container>
   );
 }

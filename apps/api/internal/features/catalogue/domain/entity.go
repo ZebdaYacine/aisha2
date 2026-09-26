@@ -34,16 +34,23 @@ func (p PageRequest) Normalized() PageRequest {
 
 type Category struct{ ID, Slug, Name string }
 type Product struct {
-	ID, ArtisanID, ArtisanName, CategoryID, CategorySlug, Name, Description, Story string
-	Materials, ProductionMethod, Region, Currency, Status                          string
-	PriceMinor                                                                     int64
-	Media                                                                          []string
-	PublishedAt                                                                    *time.Time
+	ID, ArtisanID, ArtisanName, WorkshopID, WorkshopName, CategoryID, CategorySlug, Name, Description, Story string
+	Materials, ProductionMethod, Region, Currency, Status                                                    string
+	PriceMinor, AvailableQuantity                                                                            int64
+	MadeToOrderEligible                                                                                      bool
+	Media                                                                                                    []string
+	PublishedAt                                                                                              *time.Time
 }
 type Artisan struct {
-	ID, Name, Workshop, Wilaya, Location, Biography string
-	Media                                           []string
-	ProductCount                                    int
+	ID, Name, WorkshopID, Workshop, Wilaya, Location, Biography, Craft string
+	Media                                                              []string
+	ProductCount                                                       int
+}
+
+type Workshop struct {
+	ID, Name, Description, Wilaya, Location, Craft, ArtisanID, ArtisanName string
+	Media                                                                  []string
+	ProductCount                                                           int
 }
 type Page[T any] struct {
 	Items                 []T
@@ -52,8 +59,10 @@ type Page[T any] struct {
 
 type Repository interface {
 	Categories(context.Context, PageRequest) (Page[Category], error)
-	Products(context.Context, PageRequest, string) (Page[Product], error)
+	Products(context.Context, PageRequest, string, string, string) (Page[Product], error)
 	Product(context.Context, string, string) (Product, error)
 	Artisans(context.Context, PageRequest) (Page[Artisan], error)
 	Artisan(context.Context, string, string) (Artisan, error)
+	Workshops(context.Context, PageRequest) (Page[Workshop], error)
+	Workshop(context.Context, string, string) (Workshop, error)
 }

@@ -17,6 +17,19 @@ test("Arabic storefront is RTL", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 });
+
+test("registration form follows the locale-specific panel placement", async ({ page }) => {
+  const formPanel = page.locator("main > div > section");
+
+  await page.goto("/en/register");
+  await expect(formPanel).toHaveAttribute("dir", "ltr");
+  await expect(formPanel).toHaveClass(/lg:order-1/);
+
+  await page.goto("/ar/register");
+  await expect(formPanel).toHaveAttribute("dir", "rtl");
+  await expect(formPanel).toHaveClass(/lg:order-2/);
+});
+
 test("Arabic public catalogue pages preserve RTL and localized controls", async ({ page }, testInfo) => {
   await page.goto("/ar/products");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");

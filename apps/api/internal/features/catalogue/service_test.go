@@ -10,7 +10,7 @@ type repositoryStub struct{ request PageRequest }
 func (r *repositoryStub) Categories(context.Context, PageRequest) (Page[Category], error) {
 	return Page[Category]{}, nil
 }
-func (r *repositoryStub) Products(_ context.Context, request PageRequest, _ string) (Page[Product], error) {
+func (r *repositoryStub) Products(_ context.Context, request PageRequest, _, _, _ string) (Page[Product], error) {
 	r.request = request
 	return Page[Product]{}, nil
 }
@@ -23,11 +23,17 @@ func (r *repositoryStub) Artisans(context.Context, PageRequest) (Page[Artisan], 
 func (r *repositoryStub) Artisan(context.Context, string, string) (Artisan, error) {
 	return Artisan{}, nil
 }
+func (r *repositoryStub) Workshops(context.Context, PageRequest) (Page[Workshop], error) {
+	return Page[Workshop]{}, nil
+}
+func (r *repositoryStub) Workshop(context.Context, string, string) (Workshop, error) {
+	return Workshop{}, nil
+}
 
 func TestProductsNormalizesPaginationAndLocale(t *testing.T) {
 	repository := &repositoryStub{}
 	service := NewService(repository)
-	_, err := service.Products(context.Background(), PageRequest{Locale: "xx", Page: -1, PageSize: 1000}, "")
+	_, err := service.Products(context.Background(), PageRequest{Locale: "xx", Page: -1, PageSize: 1000}, "", "", "")
 	if err != nil {
 		t.Fatalf("Products() error = %v", err)
 	}

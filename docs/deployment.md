@@ -120,6 +120,7 @@ DATABASE_MAX_IDLE_CONNS
 REDIS_URL
 
 MINIO_ENDPOINT
+MINIO_PUBLIC_ENDPOINT
 MINIO_ACCESS_KEY
 MINIO_SECRET_KEY
 MINIO_USE_SSL
@@ -176,7 +177,8 @@ Bootstrap:
 2. Start PostgreSQL, Redis, and MinIO.
 3. Run migrations.
 4. Create buckets.
-5. Seed minimum roles, admin, categories, and development data.
+5. Seed the deterministic development roles, demo accounts, categories, and
+   application data (local development only; the seed resets development data).
 6. Start API, worker, and frontend.
 
 ## 7. Jenkins Pipeline

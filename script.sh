@@ -187,9 +187,9 @@ echo "Current service status:"
 
 echo
 echo "Services:"
-echo "  Frontend:      http://localhost:3000"
-echo "  API:           http://localhost:8080"
-echo "  Nginx:         http://localhost:8088"
+echo "  Frontend:      http://localhost:3033"
+echo "  API:           http://localhost:8088"
+echo "  Nginx:         http://localhost:8089"
 echo "  MinIO API:     http://localhost:9000"
 echo "  MinIO Console: http://localhost:9001"
 echo "  PostgreSQL:    127.0.0.1:5433"

@@ -5,9 +5,15 @@ import (
 	"github.com/aisha-platform/aisha/apps/api/internal/features/admin"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/artisan"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/auth"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/cart"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/catalogue"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/inventory"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/moderation"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/order"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/product"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/user"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/warehouse"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/wishlist"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/authorization"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/health"
 	servermiddleware "github.com/aisha-platform/aisha/apps/api/internal/server/middleware"
@@ -16,14 +22,18 @@ import (
 )
 
 func New(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, catalogueServices ...*catalogue.Service) *fiber.App {
-	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, nil, nil, nil, catalogueServices...)
+	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, nil, nil, nil, nil, nil, nil, nil, nil, nil, catalogueServices...)
 }
 
 func NewWithProduct(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, catalogueServices ...*catalogue.Service) *fiber.App {
-	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, productService, artisanMediaService, adminService, catalogueServices...)
+	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, productService, artisanMediaService, adminService, nil, nil, nil, nil, nil, nil, catalogueServices...)
 }
 
-func newServer(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, catalogueServices ...*catalogue.Service) *fiber.App {
+func NewWithWorkflows(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, moderationService *moderation.Service, orderService *order.Service, warehouseService *warehouse.Service, inventoryService *inventory.Service, cartService *cart.Service, wishlistService *wishlist.Service, catalogueServices ...*catalogue.Service) *fiber.App {
+	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, productService, artisanMediaService, adminService, moderationService, orderService, warehouseService, inventoryService, cartService, wishlistService, catalogueServices...)
+}
+
+func newServer(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, moderationService *moderation.Service, orderService *order.Service, warehouseService *warehouse.Service, inventoryService *inventory.Service, cartService *cart.Service, wishlistService *wishlist.Service, catalogueServices ...*catalogue.Service) *fiber.App {
 	bodyLimit := cfg.UploadMaxBytes + 2*1024*1024
 	if bodyLimit <= 2*1024*1024 {
 		bodyLimit = 52 * 1024 * 1024
@@ -39,7 +49,11 @@ func newServer(cfg config.Config, healthService *health.Service, authService *au
 	api := APIGroup(app)
 	var authHandler *AuthHandler
 	if authService != nil {
-		authHandler = NewAuthHandler(authService, NewRequestValidator())
+		if customerService != nil {
+			authHandler = NewAuthHandler(authService, NewRequestValidator(), customerService)
+		} else {
+			authHandler = NewAuthHandler(authService, NewRequestValidator())
+		}
 	}
 
 	public := routes.PublicRoutes{}
@@ -58,6 +72,8 @@ func newServer(cfg config.Config, healthService *health.Service, authService *au
 		public.Product = []fiber.Handler{handler.Product}
 		public.Artisans = []fiber.Handler{handler.Artisans}
 		public.Artisan = []fiber.Handler{handler.Artisan}
+		public.Workshops = []fiber.Handler{handler.Workshops}
+		public.Workshop = []fiber.Handler{handler.Workshop}
 	}
 	routes.RegisterPublic(api, public)
 
@@ -83,27 +99,297 @@ func newServer(cfg config.Config, healthService *health.Service, authService *au
 		if productService != nil {
 			productHandler = NewProductHandler(productService, NewRequestValidator(), cfg.ProductMediaMaxBytes)
 		}
+		var moderationHandler *ModerationHandler
+		if moderationService != nil {
+			moderationHandler = NewModerationHandler(moderationService, NewRequestValidator())
+		}
+		var orderHandler *OrderHandler
+		if orderService != nil {
+			orderHandler = NewOrderHandler(orderService, NewRequestValidator())
+		}
+		var warehouseHandler *WarehouseHandler
+		if warehouseService != nil {
+			warehouseHandler = NewWarehouseHandler(warehouseService, NewRequestValidator(), cfg.UploadMaxBytes)
+		}
+		var inventoryHandler *InventoryHandler
+		if inventoryService != nil {
+			inventoryHandler = NewInventoryHandler(inventoryService, NewRequestValidator())
+		}
+		var cartHandler *CartHandler
+		if cartService != nil {
+			cartHandler = NewCartHandler(cartService, NewRequestValidator())
+		}
+		var wishlistHandler *WishlistHandler
+		if wishlistService != nil {
+			wishlistHandler = NewWishlistHandler(wishlistService)
+		}
 		routes.RegisterAuthenticated(api, routes.AuthenticatedRoutes{
 			Authenticate: authHandler.RequirePrincipal, Authorize: casbin.Require, Me: authHandler.Me,
-			Profile: customerProfile(customerHandler), UpdateProfile: customerUpdateProfile(customerHandler),
+			Profile: customerProfile(customerHandler), UpdateProfile: customerUpdateProfile(customerHandler), ChangePassword: authChangePassword(authHandler),
 			Addresses: customerAddresses(customerHandler), CreateAddress: customerCreateAddress(customerHandler),
 			UpdateAddress: customerUpdateAddress(customerHandler), DeleteAddress: customerDeleteAddress(customerHandler),
-			SubmitArtisan: artisanSubmit(artisanHandler), MineArtisan: artisanMine(artisanHandler),
+			SubmitArtisan: artisanSubmit(artisanHandler), SaveArtisanDraft: artisanSaveDraft(artisanHandler), MineArtisan: artisanMine(artisanHandler), FinalizeArtisanSubmission: artisanFinalizeSubmission(artisanHandler),
 			UpdateArtisanProfile: artisanUpdateProfile(artisanHandler),
-			ListProducts:         productList(productHandler), CreateProduct: productCreate(productHandler), GetProduct: productGet(productHandler),
-			UpdateProduct: productUpdate(productHandler), SubmitProduct: productSubmit(productHandler), UploadProductMedia: productUploadMedia(productHandler), DeleteProductMedia: productDeleteMedia(productHandler),
-			ArtisanDocuments: artisanDocumentsMine(artisanMediaHandler), UploadArtisanDocument: artisanDocumentUpload(artisanMediaHandler), ArtisanMedia: artisanMediaList(artisanMediaHandler), UploadArtisanMedia: artisanMediaUpload(artisanMediaHandler),
+			ListWorkshops:        artisanWorkshops(artisanHandler), CreateWorkshop: artisanCreateWorkshop(artisanHandler), UpdateWorkshop: artisanUpdateWorkshop(artisanHandler), WorkshopStatus: artisanWorkshopStatus(artisanHandler), DeleteWorkshop: artisanDeleteWorkshop(artisanHandler), ActivateMembership: artisanActivateMembership(artisanHandler), Verification: artisanVerification(artisanHandler),
+			ListProducts: productList(productHandler), CreateProduct: productCreate(productHandler), GetProduct: productGet(productHandler),
+			UpdateProduct: productUpdate(productHandler), SubmitProduct: productSubmit(productHandler), ArchiveProduct: productArchive(productHandler), UploadProductMedia: productUploadMedia(productHandler), DeleteProductMedia: productDeleteMedia(productHandler),
+			ArtisanDocuments: artisanDocumentsMine(artisanMediaHandler), UploadArtisanDocument: artisanDocumentUpload(artisanMediaHandler), ArtisanMedia: artisanMediaList(artisanMediaHandler), UploadArtisanMedia: artisanMediaUpload(artisanMediaHandler), ReplaceArtisanMedia: artisanMediaReplace(artisanMediaHandler), DeleteArtisanMedia: artisanMediaDelete(artisanMediaHandler),
+			Checkout: orderCheckout(orderHandler), ListOrders: orderList(orderHandler), GetOrder: orderGet(orderHandler), CancelOrder: orderCancel(orderHandler), SellerOrders: orderSeller(orderHandler),
+			WarehouseReceptions: warehouseList(warehouseHandler), WarehouseReceptionCreate: warehouseCreate(warehouseHandler), WarehouseInspect: warehouseInspect(warehouseHandler), WarehouseReceptionEvidence: warehouseUploadEvidence(warehouseHandler), WarehouseReceptionEvidenceList: warehouseListEvidence(warehouseHandler), Inventory: inventoryList(inventoryHandler), InventoryAdjust: inventoryAdjust(inventoryHandler),
+			Cart: cartList(cartHandler), CartAdd: cartAdd(cartHandler), CartSet: cartSet(cartHandler), CartRemove: cartRemove(cartHandler), CartMerge: cartMerge(cartHandler), Wishlist: wishlistList(wishlistHandler), WishlistAdd: wishlistAdd(wishlistHandler), WishlistRemove: wishlistRemove(wishlistHandler),
 		})
 		routes.RegisterAdmin(api, routes.AdminRoutes{
 			Authenticate: authHandler.RequirePrincipal, Authorize: casbin.Require,
 			ListApplications: artisanList(artisanHandler), DecideApplication: artisanDecide(artisanHandler),
-			ApplicationDocuments: artisanDocuments(artisanHandler),
-			ListUsers:            adminUsers(adminHandler), UpdateUserRoles: adminRoles(adminHandler), AuditEvents: adminAudit(adminHandler),
+			ApplicationDocuments: artisanDocuments(artisanHandler), ApplicationMedia: artisanApplicationMedia(artisanHandler),
+			ListUsers: adminUsers(adminHandler), UpdateUserRoles: adminRoles(adminHandler), UserStatus: adminUserStatus(adminHandler), AuditEvents: adminAudit(adminHandler),
+			ProductSubmissions: moderationQueue(moderationHandler), ProductDecision: moderationDecision(moderationHandler), RecordReturn: orderReturn(orderHandler), MembershipStatus: artisanMembershipStatus(artisanHandler), WorkshopStatus: artisanAdminWorkshopStatus(artisanHandler), ListVerifications: artisanVerifications(artisanHandler), DecideVerification: artisanDecideVerification(artisanHandler),
+			UserMedia: adminUserMedia(adminHandler), ProductMedia: adminProductMedia(adminHandler), DeleteUserMedia: adminDeleteUserMedia(adminHandler), DeleteProductMedia: adminDeleteProductMedia(adminHandler),
 		})
 	}
 	return app
 }
 
+func moderationQueue(h *ModerationHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Queue
+}
+func moderationDecision(h *ModerationHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Decide
+}
+func orderCheckout(h *OrderHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Checkout
+}
+func orderList(h *OrderHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.List
+}
+func orderGet(h *OrderHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Get
+}
+func orderCancel(h *OrderHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Cancel
+}
+func orderSeller(h *OrderHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Seller
+}
+func orderReturn(h *OrderHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Return
+}
+
+func warehouseList(h *WarehouseHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.List
+}
+func warehouseCreate(h *WarehouseHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Create
+}
+func warehouseInspect(h *WarehouseHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Inspect
+}
+func warehouseUploadEvidence(h *WarehouseHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.UploadEvidence
+}
+func warehouseListEvidence(h *WarehouseHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Evidence
+}
+
+func adminUserMedia(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.UserMedia
+}
+func adminProductMedia(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.ProductMedia
+}
+func adminDeleteUserMedia(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.DeleteUserMedia
+}
+func adminDeleteProductMedia(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.DeleteProductMedia
+}
+
+func inventoryList(h *InventoryHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.List
+}
+func inventoryAdjust(h *InventoryHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Adjust
+}
+
+func cartList(h *CartHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.List
+}
+func cartAdd(h *CartHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Add
+}
+func cartSet(h *CartHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Set
+}
+func cartRemove(h *CartHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Remove
+}
+func cartMerge(h *CartHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Merge
+}
+func wishlistList(h *WishlistHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.List
+}
+func wishlistAdd(h *WishlistHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Add
+}
+func wishlistRemove(h *WishlistHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Remove
+}
+
+func artisanWorkshops(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Workshops
+}
+func artisanCreateWorkshop(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.CreateWorkshop
+}
+func artisanUpdateWorkshop(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.UpdateWorkshop
+}
+func artisanWorkshopStatus(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.WorkshopStatus
+}
+func artisanDeleteWorkshop(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.DeleteWorkshop
+}
+func artisanActivateMembership(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.ActivateMembership
+}
+func artisanVerification(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Verification
+}
+func artisanAdminWorkshopStatus(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.AdminWorkshopStatus
+}
+func artisanMembershipStatus(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.MembershipStatus
+}
+func artisanVerifications(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Verifications
+}
+func artisanDecideVerification(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.DecideVerification
+}
+
+func productWorkshops(h *ProductHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.ListWorkshops
+}
 func productList(h *ProductHandler) fiber.Handler {
 	if h == nil {
 		return nil
@@ -133,6 +419,12 @@ func productSubmit(h *ProductHandler) fiber.Handler {
 		return nil
 	}
 	return h.Submit
+}
+func productArchive(h *ProductHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Archive
 }
 func productUploadMedia(h *ProductHandler) fiber.Handler {
 	if h == nil {
@@ -170,6 +462,18 @@ func artisanMediaUpload(h *ArtisanMediaHandler) fiber.Handler {
 	}
 	return h.UploadMedia
 }
+func artisanMediaReplace(h *ArtisanMediaHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.ReplaceMedia
+}
+func artisanMediaDelete(h *ArtisanMediaHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.DeleteMedia
+}
 func adminUsers(h *AdminHandler) fiber.Handler {
 	if h == nil {
 		return nil
@@ -182,6 +486,12 @@ func adminRoles(h *AdminHandler) fiber.Handler {
 	}
 	return h.Roles
 }
+func adminUserStatus(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.UserStatus
+}
 func adminAudit(h *AdminHandler) fiber.Handler {
 	if h == nil {
 		return nil
@@ -189,6 +499,12 @@ func adminAudit(h *AdminHandler) fiber.Handler {
 	return h.Audit
 }
 
+func authChangePassword(h *AuthHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.ChangePassword
+}
 func customerProfile(h *CustomerHandler) fiber.Handler {
 	if h == nil {
 		return nil
@@ -231,11 +547,23 @@ func artisanSubmit(h *ArtisanHandler) fiber.Handler {
 	}
 	return h.Submit
 }
+func artisanSaveDraft(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.SaveDraft
+}
 func artisanMine(h *ArtisanHandler) fiber.Handler {
 	if h == nil {
 		return nil
 	}
 	return h.Mine
+}
+func artisanFinalizeSubmission(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.FinalizeSubmission
 }
 func artisanUpdateProfile(h *ArtisanHandler) fiber.Handler {
 	if h == nil {
@@ -260,4 +588,11 @@ func artisanDocuments(h *ArtisanHandler) fiber.Handler {
 		return nil
 	}
 	return h.Documents
+}
+
+func artisanApplicationMedia(h *ArtisanHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Media
 }

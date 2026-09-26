@@ -26,29 +26,47 @@ type CategoryDTO struct {
 	Name string `json:"name"`
 }
 type ProductDTO struct {
-	ID               string   `json:"id"`
-	ArtisanID        string   `json:"artisanId"`
-	ArtisanName      string   `json:"artisanName"`
-	CategoryID       string   `json:"categoryId"`
-	CategorySlug     string   `json:"categorySlug"`
-	Name             string   `json:"name"`
-	Description      string   `json:"description"`
-	Story            string   `json:"story"`
-	Materials        string   `json:"materials"`
-	ProductionMethod string   `json:"productionMethod"`
-	Region           string   `json:"region"`
-	Currency         string   `json:"currency"`
-	Status           string   `json:"status"`
-	PriceMinor       int64    `json:"priceMinor"`
-	Media            []string `json:"media"`
+	ID                string   `json:"id"`
+	ArtisanID         string   `json:"artisanId"`
+	ArtisanName       string   `json:"artisanName"`
+	WorkshopID        string   `json:"workshopId"`
+	Workshop          string   `json:"workshop"`
+	CategoryID        string   `json:"categoryId"`
+	CategorySlug      string   `json:"categorySlug"`
+	Name              string   `json:"name"`
+	Description       string   `json:"description"`
+	Story             string   `json:"story"`
+	Materials         string   `json:"materials"`
+	ProductionMethod  string   `json:"productionMethod"`
+	Region            string   `json:"region"`
+	Currency          string   `json:"currency"`
+	Status            string   `json:"status"`
+	PriceMinor        int64    `json:"priceMinor"`
+	Availability      string   `json:"availability"`
+	AvailableQuantity int64    `json:"availableQuantity"`
+	Media             []string `json:"media"`
 }
 type ArtisanDTO struct {
 	ID           string   `json:"id"`
+	WorkshopID   string   `json:"workshopId"`
 	Name         string   `json:"name"`
 	Workshop     string   `json:"workshop"`
 	Wilaya       string   `json:"wilaya"`
 	Location     string   `json:"location"`
 	Biography    string   `json:"biography"`
+	Craft        string   `json:"craft"`
+	Media        []string `json:"media"`
+	ProductCount int      `json:"productCount"`
+}
+type WorkshopDTO struct {
+	ID           string   `json:"id"`
+	Name         string   `json:"name"`
+	Description  string   `json:"description"`
+	Wilaya       string   `json:"wilaya"`
+	Location     string   `json:"location"`
+	Craft        string   `json:"craft"`
+	ArtisanID    string   `json:"artisanId"`
+	ArtisanName  string   `json:"artisanName"`
 	Media        []string `json:"media"`
 	ProductCount int      `json:"productCount"`
 }
@@ -70,7 +88,7 @@ func (h *CatalogueHandler) Categories(c fiber.Ctx) error {
 	return c.JSON(PageDTO[CategoryDTO]{Items: items, Page: result.Page, PageSize: result.PageSize, Total: result.Total})
 }
 func (h *CatalogueHandler) Products(c fiber.Ctx) error {
-	result, err := h.service.Products(c.Context(), pageRequest(c), c.Query("category"))
+	result, err := h.service.Products(c.Context(), pageRequest(c), c.Query("category"), c.Query("q"), c.Query("workshop"))
 	if err != nil {
 		return catalogueError(err)
 	}
@@ -105,11 +123,44 @@ func (h *CatalogueHandler) Artisan(c fiber.Ctx) error {
 	}
 	return c.JSON(artisanDTO(item))
 }
+func (h *CatalogueHandler) Workshops(c fiber.Ctx) error {
+	result, err := h.service.Workshops(c.Context(), pageRequest(c))
+	if err != nil {
+		return catalogueError(err)
+	}
+	items := make([]WorkshopDTO, len(result.Items))
+	for i, item := range result.Items {
+		items[i] = workshopDTO(item)
+	}
+	return c.JSON(PageDTO[WorkshopDTO]{Items: items, Page: result.Page, PageSize: result.PageSize, Total: result.Total})
+}
+func (h *CatalogueHandler) Workshop(c fiber.Ctx) error {
+	item, err := h.service.Workshop(c.Context(), c.Params("id"), c.Query("locale", "en"))
+	if err != nil {
+		return catalogueError(err)
+	}
+	return c.JSON(workshopDTO(item))
+}
 func productDTO(item catalogue.Product) ProductDTO {
-	return ProductDTO{ID: item.ID, ArtisanID: item.ArtisanID, ArtisanName: item.ArtisanName, CategoryID: item.CategoryID, CategorySlug: item.CategorySlug, Name: item.Name, Description: item.Description, Story: item.Story, Materials: item.Materials, ProductionMethod: item.ProductionMethod, Region: item.Region, Currency: item.Currency, Status: item.Status, PriceMinor: item.PriceMinor, Media: item.Media}
+	return ProductDTO{ID: item.ID, ArtisanID: item.ArtisanID, ArtisanName: item.ArtisanName, WorkshopID: item.WorkshopID, Workshop: item.WorkshopName, CategoryID: item.CategoryID, CategorySlug: item.CategorySlug, Name: item.Name, Description: item.Description, Story: item.Story, Materials: item.Materials, ProductionMethod: item.ProductionMethod, Region: item.Region, Currency: item.Currency, Status: item.Status, PriceMinor: item.PriceMinor, Availability: productAvailability(item), AvailableQuantity: item.AvailableQuantity, Media: item.Media}
+}
+func productAvailability(item catalogue.Product) string {
+	if item.AvailableQuantity <= 0 {
+		if item.MadeToOrderEligible {
+			return "MADE_TO_ORDER"
+		}
+		return "OUT_OF_STOCK"
+	}
+	if item.AvailableQuantity <= 2 {
+		return "LOW_STOCK"
+	}
+	return "IN_STOCK"
 }
 func artisanDTO(item catalogue.Artisan) ArtisanDTO {
-	return ArtisanDTO{ID: item.ID, Name: item.Name, Workshop: item.Workshop, Wilaya: item.Wilaya, Location: item.Location, Biography: item.Biography, Media: item.Media, ProductCount: item.ProductCount}
+	return ArtisanDTO{ID: item.ID, WorkshopID: item.WorkshopID, Name: item.Name, Workshop: item.Workshop, Wilaya: item.Wilaya, Location: item.Location, Biography: item.Biography, Craft: item.Craft, Media: item.Media, ProductCount: item.ProductCount}
+}
+func workshopDTO(item catalogue.Workshop) WorkshopDTO {
+	return WorkshopDTO{ID: item.ID, Name: item.Name, Description: item.Description, Wilaya: item.Wilaya, Location: item.Location, Craft: item.Craft, ArtisanID: item.ArtisanID, ArtisanName: item.ArtisanName, Media: item.Media, ProductCount: item.ProductCount}
 }
 func catalogueError(err error) error {
 	if errors.Is(err, catalogue.ErrNotFound) {
