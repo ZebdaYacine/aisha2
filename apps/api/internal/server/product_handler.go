@@ -29,6 +29,8 @@ type productRequest struct {
 	WorkshopID          string                      `json:"workshopId" validate:"required,uuid"`
 	CategoryID          string                      `json:"categoryId" validate:"required,uuid"`
 	ProductType         string                      `json:"productType" validate:"required,oneof=ARTISAN_SPECIFIC STANDARD_TRADITIONAL"`
+	PlannedQuantity     int64                       `json:"plannedQuantity" validate:"gt=0"`
+	OrderTotalMinor     int64                       `json:"orderTotalMinor" validate:"gt=0"`
 	PriceMinor          int64                       `json:"priceMinor" validate:"gt=0"`
 	Currency            string                      `json:"currency" validate:"required,len=3,uppercase"`
 	Materials           string                      `json:"materials" validate:"max=2000"`
@@ -41,7 +43,7 @@ type productRequest struct {
 	EcoFriendlyVerified bool                        `json:"ecoFriendlyVerified"`
 	FairTradeVerified   bool                        `json:"fairTradeVerified"`
 	MadeToOrderEligible bool                        `json:"madeToOrderEligible"`
-	Translations        []productTranslationRequest `json:"translations" validate:"max=4,dive"`
+	Translations        []productTranslationRequest `json:"translations" validate:"required,len=1,dive"`
 }
 
 type artisanWorkshopResponse struct {
@@ -215,7 +217,7 @@ func (h *ProductHandler) input(c fiber.Ctx) (product.Input, error) {
 	for i, item := range request.Translations {
 		translations[i] = product.Translation{Locale: item.Locale, Name: item.Name, Description: item.Description, Story: item.Story, CulturalContext: item.CulturalContext}
 	}
-	return product.Input{WorkshopID: request.WorkshopID, CategoryID: request.CategoryID, ProductType: request.ProductType, PriceMinor: request.PriceMinor, Currency: request.Currency, Materials: request.Materials, ProductionMethod: request.ProductionMethod, IntendedUse: request.IntendedUse, Dimensions: request.Dimensions, WeightGrams: request.WeightGrams, CountryOfOrigin: request.CountryOfOrigin, RegionOfOrigin: request.RegionOfOrigin, EcoFriendlyVerified: request.EcoFriendlyVerified, FairTradeVerified: request.FairTradeVerified, MadeToOrderEligible: request.MadeToOrderEligible, Translations: translations}, nil
+	return product.Input{WorkshopID: request.WorkshopID, CategoryID: request.CategoryID, ProductType: request.ProductType, PlannedQuantity: request.PlannedQuantity, OrderTotalMinor: request.OrderTotalMinor, PriceMinor: request.PriceMinor, Currency: request.Currency, Materials: request.Materials, ProductionMethod: request.ProductionMethod, IntendedUse: request.IntendedUse, Dimensions: request.Dimensions, WeightGrams: request.WeightGrams, CountryOfOrigin: request.CountryOfOrigin, RegionOfOrigin: request.RegionOfOrigin, EcoFriendlyVerified: request.EcoFriendlyVerified, FairTradeVerified: request.FairTradeVerified, MadeToOrderEligible: request.MadeToOrderEligible, Translations: translations}, nil
 }
 
 func productMediaDTO(media product.Media) productMediaResponse {
@@ -226,6 +228,8 @@ func productAPIError(err error) error {
 	switch {
 	case errors.Is(err, product.ErrValidation):
 		return NewAPIError(CodeValidationError, "The product is invalid.", nil)
+	case errors.Is(err, product.ErrMediaLimit):
+		return NewAPIError(CodeValidationError, "A product can have at most four media files.", nil)
 	case errors.Is(err, product.ErrNotFound), errors.Is(err, product.ErrMediaNotFound):
 		return NewAPIError(CodeResourceNotFound, "The requested product resource was not found.", nil)
 	case errors.Is(err, product.ErrWorkshopNotOwned):

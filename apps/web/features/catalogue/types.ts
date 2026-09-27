@@ -39,6 +39,7 @@ export interface Product {
   priceMinor: number;
   previousPriceMinor?: number;
   currency: string;
+  availableQuantity?: number;
   availability: Availability;
   images: string[];
   featured?: boolean;
@@ -64,6 +65,7 @@ export interface CartItem {
   productName?: string;
   artisanName?: string;
   workshopName?: string;
+  image?: string;
   priceMinor?: number;
   currency?: string;
   active?: boolean;

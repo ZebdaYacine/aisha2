@@ -14,6 +14,7 @@ type Item struct {
 	ProductName string    `json:"productName"`
 	PriceMinor  int64     `json:"priceMinor"`
 	Currency    string    `json:"currency"`
+	Image       string    `json:"image,omitempty"`
 	Active      bool      `json:"active"`
 	CreatedAt   time.Time `json:"createdAt"`
 }

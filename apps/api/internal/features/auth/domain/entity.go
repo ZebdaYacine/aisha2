@@ -17,6 +17,7 @@ var (
 type User struct {
 	ID           string
 	Email        string
+	Phone        string
 	PasswordHash string
 	DisplayName  string
 	Status       string
@@ -35,6 +36,7 @@ type Session struct {
 type Repository interface {
 	CreateUser(context.Context, string, string, string) (User, error)
 	UserByEmail(context.Context, string) (User, error)
+	UserByIdentifier(context.Context, string) (User, error)
 	UserByID(context.Context, string) (User, error)
 	CreateSession(context.Context, string, string, string, time.Time) (Session, error)
 	RotateSession(context.Context, string, string, time.Time) (Session, error)

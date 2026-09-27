@@ -11,11 +11,21 @@ import { ProductPrice } from "./product-price";
 import { Badge } from "@/core/components/ui/badge";
 import { Skeleton } from "@/core/components/ui/skeleton";
 import { useOptionalCart } from "@/features/cart/viewmodel/cart-context";
+import { toast } from "sonner";
 
 export function ProductCard({ product, locale, copy }: { product: Product; locale: Locale; copy: StoreCopy }) {
   const [saved, setSaved] = useState(false);
   const cart = useOptionalCart();
-  const toggleWishlist = async () => { const response = await fetch(`/api/wishlist/items/${product.slug}`, { method: saved ? "DELETE" : "POST" }); if (response.ok || response.status === 401) setSaved(!saved); };
+  const toggleWishlist = async () => {
+    try {
+      const response = await fetch(`/api/wishlist/items/${product.slug}`, { method: saved ? "DELETE" : "POST" });
+      if (response.status === 401) { toast.info(copy.wishlistSignIn); return; }
+      if (response.ok) { setSaved(!saved); return; }
+      toast.error(copy.wishlistError);
+    } catch {
+      toast.error(copy.wishlistError);
+    }
+  };
   return <article className="group min-w-0">
     <div className="product-media relative isolate aspect-[4/5] overflow-hidden rounded-xl border border-border bg-muted">
       <LocalizedLink className="block h-full w-full" locale={locale} href={`/products/${product.slug}`} aria-label={localized(product.name, locale)}>
@@ -25,9 +35,9 @@ export function ProductCard({ product, locale, copy }: { product: Product; local
       {product.availability === "low_stock" && <Badge className="bg-destructive text-destructive-foreground">{copy.lowStock}</Badge>}
       {product.availability === "out_of_stock" && <Badge className="bg-muted text-muted-foreground">{copy.outOfStock}</Badge>}
       <button type="button" onClick={() => void toggleWishlist()} aria-pressed={saved} aria-label={copy.wishlist} className="absolute end-2 top-2 grid size-11 place-items-center rounded-md bg-background/90 transition hover:bg-background"><Heart fill={saved ? "currentColor" : "none"} size={18} /></button>
-      {["in_stock", "low_stock", "made_to_order"].includes(product.availability) && <button type="button" onClick={() => cart?.add(product.slug, 1, { productName: localized(product.name, locale), artisanName: product.artisanName, workshopName: product.workshop, priceMinor: product.priceMinor, currency: product.currency })} aria-label={copy.addToCart} className="absolute inset-x-3 bottom-3 hidden min-h-11 items-center justify-center gap-2 bg-background text-xs font-medium opacity-0 transition group-hover:opacity-100 focus:opacity-100 lg:flex"><Plus size={16} />{copy.addToCart}</button>}
+      {["in_stock", "low_stock", "made_to_order"].includes(product.availability) && <button type="button" onClick={() => cart?.add(product.slug, 1, { productName: localized(product.name, locale), artisanName: product.artisanName, workshopName: product.workshop, image: product.images[0], priceMinor: product.priceMinor, currency: product.currency })} aria-label={copy.addToCart} className="absolute inset-x-3 bottom-3 hidden min-h-11 items-center justify-center gap-2 bg-background text-xs font-medium opacity-0 transition group-hover:opacity-100 focus:opacity-100 lg:flex"><Plus size={16} />{copy.addToCart}</button>}
     </div>
-    <div className="pt-4"><p className="text-[.68rem] uppercase tracking-[.13em] text-muted-foreground">{localized(product.region, locale)}</p><LocalizedLink locale={locale} href={`/products/${product.slug}`} className="mt-1 block font-serif text-xl leading-tight hover:text-primary">{localized(product.name, locale)}</LocalizedLink><LocalizedLink locale={locale} href={`/artisans/${product.artisanSlug}`} className="mt-1 block text-xs text-muted-foreground hover:text-foreground">{product.artisanName}</LocalizedLink><ProductPrice className="mt-3" {...product} locale={locale} /></div>
+    <div className="pt-4"><p className="text-[.68rem] uppercase tracking-[.13em] text-muted-foreground">{localized(product.region, locale)}</p><LocalizedLink locale={locale} href={`/products/${product.slug}`} className="mt-1 block font-serif text-xl leading-tight hover:text-primary">{localized(product.name, locale)}</LocalizedLink><LocalizedLink locale={locale} href={`/artisans/${product.artisanSlug}`} className="mt-1 block text-xs text-muted-foreground hover:text-foreground">{product.artisanName}</LocalizedLink><ProductPrice className="mt-3" {...product} locale={locale} />{typeof product.availableQuantity === "number" && product.availability !== "made_to_order" && <p className="mt-2 text-xs text-muted-foreground">{copy.available}: {product.availableQuantity}</p>}</div>
   </article>;
 }
 

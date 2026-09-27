@@ -18,6 +18,7 @@ var (
 type QueueItem struct {
 	SubmissionID  string          `json:"submissionId"`
 	ProductID     string          `json:"productId"`
+	ProductCode   string          `json:"productCode,omitempty"`
 	ProductName   string          `json:"productName"`
 	Version       int             `json:"version"`
 	Snapshot      json.RawMessage `json:"snapshot"`

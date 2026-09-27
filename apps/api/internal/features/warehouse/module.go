@@ -9,6 +9,7 @@ import (
 
 type Service = application.Service
 type Reception = application.Reception
+type ValidatedProduct = application.ValidatedProduct
 type Inspection = application.Inspection
 type Evidence = application.Evidence
 type ReceptionInput = application.ReceptionInput

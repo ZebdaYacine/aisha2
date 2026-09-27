@@ -28,6 +28,12 @@ func (r *fakeRepository) UserByEmail(context.Context, string) (User, error) {
 	}
 	return r.user, nil
 }
+func (r *fakeRepository) UserByIdentifier(context.Context, string) (User, error) {
+	if r.user.ID == "" {
+		return User{}, ErrInvalidCredentials
+	}
+	return r.user, nil
+}
 func (r *fakeRepository) UserByID(context.Context, string) (User, error) { return r.user, nil }
 func (r *fakeRepository) CreateSession(_ context.Context, userID, hash, family string, expires time.Time) (Session, error) {
 	r.createdTokenHash = hash
@@ -94,6 +100,19 @@ func TestLoginRejectsWrongPassword(t *testing.T) {
 	_, _, err = service.Login(context.Background(), "user@example.com", "wrong-password")
 	if !errors.Is(err, ErrInvalidCredentials) {
 		t.Fatalf("expected invalid credentials, got %v", err)
+	}
+}
+
+func TestLoginAcceptsPhoneIdentifier(t *testing.T) {
+	repo := &fakeRepository{}
+	service := NewService(repo, nil, "key")
+	user, _, err := service.Register(context.Background(), "user@example.com", "long-password-value", "Amina")
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo.user.Phone = "0555123456"
+	if _, _, err = service.Login(context.Background(), "0555123456", "long-password-value"); err != nil {
+		t.Fatalf("phone identifier should authenticate user %q: %v", user.ID, err)
 	}
 }
 

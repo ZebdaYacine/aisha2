@@ -73,11 +73,13 @@ func NewRuntime(ctx context.Context, cfg config.Config) (*Runtime, error) {
 		return nil, err
 	}
 	rateLimiter := cache.NewRateLimiter(redisClient)
-	catalogueService := catalogue.NewService(catalogue.NewPostgresRepository(pool))
+	// Use the browser-facing presigner for public product media so catalogue
+	// responses contain URLs that a customer browser can actually load.
+	objectStore := storage.NewObjectStoreWithPresigner(minioClient, minioPresignClient)
+	catalogueService := catalogue.NewServiceWithMedia(catalogue.NewPostgresRepository(pool), objectStore, cfg.MinIOPrivateBucket)
 	customerService := customer.NewService(customer.NewPostgresRepository(pool), authorizationService)
 	artisanRepository := artisan.NewPostgresRepository(pool)
 	artisanService := artisan.NewService(artisanRepository, authorizationService)
-	objectStore := storage.NewObjectStoreWithPresigner(minioClient, minioPresignClient)
 	artisanMediaService := artisan.NewMediaService(artisanRepository, authorizationService, objectStore, cfg.MinIOArtisanBucket, cfg.ArtisanDocumentMaxBytes, cfg.ArtisanMediaMaxBytes)
 	productService := product.NewService(product.NewPostgresRepository(pool), authorizationService, objectStore, cfg.MinIOPrivateBucket, cfg.ProductMediaMaxBytes)
 	adminMediaService := admin.NewMediaService(pool, authorizationService, objectStore, cfg.MinIOArtisanBucket, cfg.MinIOPrivateBucket)

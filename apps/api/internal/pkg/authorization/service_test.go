@@ -59,7 +59,7 @@ func TestAuthorizeArtisanRetainsCustomerAccountAccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	principal := auth.Principal{UserID: "artisan-user", Roles: []string{"artisan"}}
-	for _, permission := range [][2]string{{"/api/v1/me", "write"}, {"/api/v1/addresses", "write"}} {
+	for _, permission := range [][2]string{{"/api/v1/me", "write"}, {"/api/v1/addresses", "write"}, {"/api/v1/artisan-applications/me", "read"}, {"/api/v1/artisan-applications/me/documents", "read"}} {
 		if err := service.Authorize(context.Background(), principal, permission[0], permission[1]); err != nil {
 			t.Fatalf("artisan permission %s:%s denied: %v", permission[0], permission[1], err)
 		}

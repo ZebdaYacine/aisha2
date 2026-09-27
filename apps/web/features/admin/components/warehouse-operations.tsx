@@ -27,8 +27,10 @@ type Inspection = {
 type Reception = {
   id: string;
   productId: string;
+  productCode: string;
   productName: string;
   artisanName: string;
+  artisanPhone?: string;
   workshopName: string;
   receivedQuantity: number;
   referenceKey: string;
@@ -39,6 +41,18 @@ type Reception = {
   receivedAt: string;
   inspection?: Inspection;
   evidence: Evidence[];
+};
+type ValidatedProduct = {
+  productCode: string;
+  productName: string;
+  productStatus: string;
+  artisanName: string;
+  artisanPhone: string;
+  workshopId: string;
+  workshopName: string;
+  priceMinor: number;
+  currency: string;
+  availableQuantity: number;
 };
 
 const statuses: Array<"" | ReceptionStatus> = [
@@ -55,10 +69,15 @@ export function WarehouseOperations() {
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [validatedProducts, setValidatedProducts] = useState<ValidatedProduct[]>([]);
+  const [artisanPhone, setArtisanPhone] = useState("");
+  const [workshopId, setWorkshopId] = useState("");
+  const [productQuery, setProductQuery] = useState("");
+  const [productsLoading, setProductsLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [createForm, setCreateForm] = useState({
-    productId: "",
+    productCode: "",
     receivedQuantity: "",
     referenceKey: "",
     supplierName: "",
@@ -75,6 +94,43 @@ export function WarehouseOperations() {
   const [evidence, setEvidence] = useState<File | null>(null);
   const pageSize = 10;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  const loadValidatedProducts = useCallback(async (nextWorkshopId = workshopId) => {
+    if (!artisanPhone.trim()) {
+      toast.error("Enter the artisan phone number first");
+      return;
+    }
+    setProductsLoading(true);
+    try {
+      const query = new URLSearchParams({ artisanPhone: artisanPhone.trim(), page: "1", pageSize: "100" });
+      if (nextWorkshopId) query.set("workshopId", nextWorkshopId);
+      if (productQuery.trim()) query.set("query", productQuery.trim());
+      const response = await fetch(`/api/warehouse/products?${query}`, { cache: "no-store" });
+      if (!response.ok) throw new Error();
+      const data = (await response.json()) as { items?: ValidatedProduct[] };
+      setValidatedProducts(data.items ?? []);
+      if (nextWorkshopId && !(data.items ?? []).some((item) => item.workshopId === nextWorkshopId)) {
+        setWorkshopId("");
+      }
+      if (!(data.items ?? []).length) toast.info("No approved products found for this artisan");
+    } catch {
+      toast.error("Unable to find validated products");
+    } finally {
+      setProductsLoading(false);
+    }
+  }, [artisanPhone, productQuery, workshopId]);
+
+  const workshops = Array.from(new Map(validatedProducts.map((item) => [item.workshopId, item.workshopName])).entries()).map(([value, label]) => ({ value, label }));
+  const workshopProducts = validatedProducts.filter((item) => !workshopId || item.workshopId === workshopId);
+  const productOptions = workshopProducts
+    .filter((item) => !productQuery.trim() || `${item.productCode} ${item.productName}`.toLocaleLowerCase().includes(productQuery.trim().toLocaleLowerCase()))
+    .map((item) => ({ value: item.productCode, label: `${item.productCode} · ${item.productName} · ${item.availableQuantity} available` }));
+  const selectedProduct = validatedProducts.find((item) => item.productCode === createForm.productCode);
+  const inspectionTotal =
+    Number(inspection.acceptedQuantity || 0) +
+    Number(inspection.rejectedQuantity || 0) +
+    Number(inspection.quarantinedQuantity || 0) +
+    Number(inspection.damagedQuantity || 0);
 
   const load = useCallback(
     async (nextPage = page, nextStatus = status) => {
@@ -126,15 +182,21 @@ export function WarehouseOperations() {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error?.message ?? "Unable to record reception");
       }
+      const reception = (await response.json()) as Reception;
       setCreateForm({
-        productId: "",
+        productCode: "",
         receivedQuantity: "",
         referenceKey: "",
         supplierName: "",
         parcelReference: "",
         notes: "",
       });
-      toast.success("Reception recorded");
+      setValidatedProducts([]);
+      setArtisanPhone("");
+      setWorkshopId("");
+      setProductQuery("");
+      selectItem(reception);
+      toast.success("Reception recorded — complete the inspection to publish stock");
       await load(1, status);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to record reception");
@@ -219,8 +281,38 @@ export function WarehouseOperations() {
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2 border border-border bg-muted/20 p-4">
+            <p className="text-sm font-medium">Find a validated product</p>
+            <p className="mt-1 text-xs text-muted-foreground">Search by artisan phone, choose the workshop, then select the moderator-approved product code.</p>
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
+              <label className="block text-sm">
+                <span className="mb-2 block">Artisan phone</span>
+                <input className="auth-input w-full" type="tel" value={artisanPhone} placeholder="e.g. 0550123456" onChange={(event) => setArtisanPhone(event.target.value)} />
+              </label>
+              <Button className="self-end" type="button" variant="outline" disabled={productsLoading || !artisanPhone.trim()} onClick={() => void loadValidatedProducts("")}>
+                {productsLoading ? "Searching…" : "Find products"}
+              </Button>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="block text-sm">
+                <span className="mb-2 block">Workshop</span>
+                <Combobox className="w-full" options={workshops} value={workshopId} onChange={(next) => { setWorkshopId(next); setCreateForm({ ...createForm, productCode: "" }); }} placeholder="Select a workshop" emptyMessage="Search an artisan first" ariaLabel="Workshop" disabled={!workshops.length} />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-2 block">Product code or name</span>
+                <input className="auth-input w-full" value={productQuery} placeholder="Filter products" onChange={(event) => setProductQuery(event.target.value)} />
+              </label>
+            </div>
+            <label className="mt-4 block text-sm">
+              <span className="mb-2 block">Validated product</span>
+              <Combobox className="w-full" options={productOptions} value={createForm.productCode} onChange={(next) => {
+                const product = validatedProducts.find((item) => item.productCode === next);
+                setCreateForm({ ...createForm, productCode: next, supplierName: product?.artisanName ?? createForm.supplierName });
+              }} placeholder="Select an approved product" emptyMessage="No validated products match" ariaLabel="Validated product" disabled={!productOptions.length} />
+            </label>
+            {selectedProduct && <p className="mt-3 text-xs text-muted-foreground">{selectedProduct.artisanName} · {selectedProduct.artisanPhone} · {selectedProduct.workshopName} · <span className="font-medium text-foreground">{selectedProduct.productCode}</span> · {selectedProduct.availableQuantity} available</p>}
+          </div>
           {[
-            ["productId", "Product ID", "text"],
             ["receivedQuantity", "Received quantity", "number"],
             ["referenceKey", "Reception reference", "text"],
             ["supplierName", "Supplier or artisan", "text"],
@@ -232,7 +324,7 @@ export function WarehouseOperations() {
                 className="auth-input w-full"
                 type={type}
                 min={type === "number" ? 1 : undefined}
-                required={key === "productId" || key === "receivedQuantity" || key === "referenceKey"}
+                required={key === "receivedQuantity" || key === "referenceKey"}
                 value={createForm[key as keyof typeof createForm]}
                 onChange={(event) =>
                   setCreateForm({ ...createForm, [key]: event.target.value })
@@ -249,7 +341,7 @@ export function WarehouseOperations() {
             />
           </label>
         </div>
-        <Button className="mt-5" type="submit" disabled={saving}>
+        <Button className="mt-5" type="submit" disabled={saving || !createForm.productCode}>
           Record reception
         </Button>
       </form>
@@ -294,7 +386,7 @@ export function WarehouseOperations() {
               <tbody className="divide-y divide-border">
                 {items.map((item) => (
                   <tr key={item.id}>
-                    <td className="px-4 py-4">{item.productName}<br /><span className="text-xs text-muted-foreground">{item.productId}</span></td>
+                    <td className="px-4 py-4">{item.productName}<br /><span className="text-xs text-muted-foreground">{item.productCode || "Validated product"}</span></td>
                     <td className="px-4 py-4">{item.workshopName}</td>
                     <td className="px-4 py-4">{item.receivedQuantity}</td>
                     <td className="px-4 py-4">{item.referenceKey}</td>
@@ -324,7 +416,7 @@ export function WarehouseOperations() {
               <Button type="button" variant="ghost" onClick={() => setSelected(null)}>Close</Button>
             </div>
             <dl className="mt-6 grid gap-4 text-sm md:grid-cols-2">
-              <div><dt className="text-muted-foreground">Product</dt><dd>{selected.productName} ({selected.productId})</dd></div>
+              <div><dt className="text-muted-foreground">Product</dt><dd>{selected.productName} ({selected.productCode || "Validated product"})</dd></div>
               <div><dt className="text-muted-foreground">Artisan / workshop</dt><dd>{selected.artisanName} / {selected.workshopName}</dd></div>
               <div><dt className="text-muted-foreground">Received quantity</dt><dd>{selected.receivedQuantity}</dd></div>
               <div><dt className="text-muted-foreground">Status</dt><dd><StatusBadge status={selected.status} /></dd></div>
@@ -339,10 +431,10 @@ export function WarehouseOperations() {
                 <h3 className="font-medium">Inspect batch</h3>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   {(["acceptedQuantity", "rejectedQuantity", "quarantinedQuantity", "damagedQuantity"] as const).map((key) => <label className="block text-sm" key={key}><span className="mb-2 block">{key.replace("Quantity", " quantity")}</span><input className="auth-input w-full" type="number" min={0} value={inspection[key]} onChange={(event) => setInspection({ ...inspection, [key]: event.target.value })} /></label>)}
-                  <label className="block text-sm md:col-span-2"><span className="mb-2 block">Inspection reason</span><textarea className="auth-input min-h-24 w-full" value={inspection.reason} onChange={(event) => setInspection({ ...inspection, reason: event.target.value })} /></label>
+                  <label className="block text-sm md:col-span-2"><span className="mb-2 block">Inspection reason (minimum 3 characters)</span><textarea className="auth-input min-h-24 w-full" required minLength={3} value={inspection.reason} onChange={(event) => setInspection({ ...inspection, reason: event.target.value })} /></label>
                 </div>
-                <p className="mt-3 text-xs text-muted-foreground">The four outcomes must total {selected.receivedQuantity}. At least one evidence file is required.</p>
-                <Button className="mt-4" type="button" disabled={saving} onClick={() => void inspect()}>Commit inspection</Button>
+                <p className="mt-3 text-xs text-muted-foreground">The four outcomes must total {selected.receivedQuantity}. At least one evidence file and a reason of at least 3 characters are required before committing.</p>
+                <Button className="mt-4" type="button" disabled={saving || selected.evidence.length === 0 || inspectionTotal !== selected.receivedQuantity || inspection.reason.trim().length < 3} onClick={() => void inspect()}>Commit inspection</Button>
               </div>
             ) : selected.inspection ? <div className="mt-6 border-t border-border pt-5"><h3 className="font-medium">Inspection outcome</h3><p className="mt-3 text-sm">Accepted {selected.inspection.acceptedQuantity} · Rejected {selected.inspection.rejectedQuantity} · Quarantined {selected.inspection.quarantinedQuantity} · Damaged {selected.inspection.damagedQuantity}</p><p className="mt-2 text-sm text-muted-foreground">{selected.inspection.reason}</p></div> : null}
           </div>

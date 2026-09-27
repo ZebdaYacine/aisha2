@@ -19,7 +19,7 @@ func (r *PostgresRepository) ListQueue(ctx context.Context, status string, limit
 	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM products p WHERE ($1='' OR p.status=$1)`, status).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count moderation queue: %w", err)
 	}
-	rows, err := r.pool.Query(ctx, `SELECT COALESCE(s.id::text,''),p.id,COALESCE((SELECT t.name FROM product_translations t WHERE t.product_id=p.id AND t.locale='en' LIMIT 1),(SELECT t.name FROM product_translations t WHERE t.product_id=p.id ORDER BY t.locale LIMIT 1),p.product_type),COALESCE(s.version,0),COALESCE(s.snapshot,'{}'::jsonb),p.status,p.price_minor,p.currency,COALESCE(a.public_display_name,''),COALESCE(w.name,'') FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id LEFT JOIN LATERAL (SELECT ps.id,ps.version,ps.snapshot,ps.submitted_at FROM product_submissions ps WHERE ps.product_id=p.id ORDER BY ps.version DESC LIMIT 1) s ON true WHERE ($1='' OR p.status=$1) ORDER BY COALESCE(s.submitted_at,p.updated_at) ASC,p.id LIMIT $2 OFFSET $3`, status, limit, offset)
+	rows, err := r.pool.Query(ctx, `SELECT COALESCE(s.id::text,''),p.id,COALESCE(p.product_code,''),COALESCE((SELECT t.name FROM product_translations t WHERE t.product_id=p.id AND t.locale='en' LIMIT 1),(SELECT t.name FROM product_translations t WHERE t.product_id=p.id ORDER BY t.locale LIMIT 1),p.product_type),COALESCE(s.version,0),COALESCE(s.snapshot,'{}'::jsonb),p.status,p.price_minor,p.currency,COALESCE(a.public_display_name,''),COALESCE(w.name,'') FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id LEFT JOIN LATERAL (SELECT ps.id,ps.version,ps.snapshot,ps.submitted_at FROM product_submissions ps WHERE ps.product_id=p.id ORDER BY ps.version DESC LIMIT 1) s ON true WHERE ($1='' OR p.status=$1) ORDER BY COALESCE(s.submitted_at,p.updated_at) ASC,p.id LIMIT $2 OFFSET $3`, status, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -27,7 +27,7 @@ func (r *PostgresRepository) ListQueue(ctx context.Context, status string, limit
 	items := []domain.QueueItem{}
 	for rows.Next() {
 		var i domain.QueueItem
-		if err := rows.Scan(&i.SubmissionID, &i.ProductID, &i.ProductName, &i.Version, &i.Snapshot, &i.ProductStatus, &i.PriceMinor, &i.Currency, &i.ArtisanName, &i.WorkshopName); err != nil {
+		if err := rows.Scan(&i.SubmissionID, &i.ProductID, &i.ProductCode, &i.ProductName, &i.Version, &i.Snapshot, &i.ProductStatus, &i.PriceMinor, &i.Currency, &i.ArtisanName, &i.WorkshopName); err != nil {
 			return nil, 0, err
 		}
 		i.Media, err = loadQueueMedia(ctx, r.pool, i.ProductID)
@@ -61,14 +61,14 @@ func (r *PostgresRepository) Decide(ctx context.Context, actor string, in domain
 		return domain.QueueItem{}, err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
-	var productID, status, artisanID, workshopID, currency string
+	var productID, productCode, status, artisanID, workshopID, currency string
 	var price int64
 	var made bool
 	var submissionID *string
 	if in.Action == "ACTIVATE" || in.Action == "ARCHIVE" {
-		err = tx.QueryRow(ctx, `SELECT id,status,artisan_profile_id,workshop_id,price_minor,currency,made_to_order_eligible FROM products WHERE id=$1 FOR UPDATE`, in.ID).Scan(&productID, &status, &artisanID, &workshopID, &price, &currency, &made)
+		err = tx.QueryRow(ctx, `SELECT id,COALESCE(product_code,''),status,artisan_profile_id,workshop_id,price_minor,currency,made_to_order_eligible FROM products WHERE id=$1 FOR UPDATE`, in.ID).Scan(&productID, &productCode, &status, &artisanID, &workshopID, &price, &currency, &made)
 	} else {
-		err = tx.QueryRow(ctx, `SELECT p.id,p.status,p.artisan_profile_id,p.workshop_id,p.price_minor,p.currency,p.made_to_order_eligible,s.id FROM product_submissions s JOIN products p ON p.id=s.product_id WHERE s.id=$1 FOR UPDATE OF p`, in.ID).Scan(&productID, &status, &artisanID, &workshopID, &price, &currency, &made, &submissionID)
+		err = tx.QueryRow(ctx, `SELECT p.id,COALESCE(p.product_code,''),p.status,p.artisan_profile_id,p.workshop_id,p.price_minor,p.currency,p.made_to_order_eligible,s.id FROM product_submissions s JOIN products p ON p.id=s.product_id WHERE s.id=$1 FOR UPDATE OF p`, in.ID).Scan(&productID, &productCode, &status, &artisanID, &workshopID, &price, &currency, &made, &submissionID)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.QueueItem{}, domain.ErrNotFound
@@ -122,7 +122,7 @@ func (r *PostgresRepository) Decide(ctx context.Context, actor string, in domain
 			next = "APPROVED"
 		}
 	}
-	if _, err = tx.Exec(ctx, `UPDATE products SET status=$2,published_at=CASE WHEN $2='ACTIVE' THEN COALESCE(published_at,CURRENT_TIMESTAMP) WHEN $2='ARCHIVED' THEN NULL ELSE published_at END,updated_at=CURRENT_TIMESTAMP WHERE id=$1`, productID, next); err != nil {
+	if err = tx.QueryRow(ctx, `UPDATE products SET status=$2,product_code=CASE WHEN $2='APPROVED' AND product_code IS NULL THEN 'AISHA-' || upper(substr(replace(id::text, '-', ''), 1, 10)) ELSE product_code END,published_at=CASE WHEN $2='ACTIVE' THEN COALESCE(published_at,CURRENT_TIMESTAMP) WHEN $2='ARCHIVED' THEN NULL ELSE published_at END,updated_at=CURRENT_TIMESTAMP WHERE id=$1 RETURNING COALESCE(product_code,'')`, productID, next).Scan(&productCode); err != nil {
 		return domain.QueueItem{}, err
 	}
 	if next == "ACTIVE" {
@@ -143,5 +143,5 @@ func (r *PostgresRepository) Decide(ctx context.Context, actor string, in domain
 	if err = tx.Commit(ctx); err != nil {
 		return domain.QueueItem{}, err
 	}
-	return domain.QueueItem{ProductID: productID, ProductStatus: next, PriceMinor: price, Currency: strings.TrimSpace(currency)}, nil
+	return domain.QueueItem{ProductID: productID, ProductCode: productCode, ProductStatus: next, PriceMinor: price, Currency: strings.TrimSpace(currency)}, nil
 }

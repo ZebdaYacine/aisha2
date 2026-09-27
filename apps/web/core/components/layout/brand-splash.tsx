@@ -11,7 +11,6 @@ const copy = {
   es: { eyebrow: "Una historia hecha a mano", lines: ["Arraigada en un lugar", "Formada por la memoria", "Llevada hacia adelante"], loading: "Abriendo la colección" },
 } as const;
 
-const SPLASH_COOLDOWN_MS = 2 * 60 * 1000;
 const SPLASH_SEEN_KEY = "aisha:splash-seen-at";
 
 export function BrandSplash({ locale }: { locale: Locale }) {
@@ -26,7 +25,7 @@ export function BrandSplash({ locale }: { locale: Locale }) {
 
     try {
       const seenAt = Number(window.localStorage.getItem(SPLASH_SEEN_KEY));
-      show = !seenAt || Date.now() - seenAt >= SPLASH_COOLDOWN_MS;
+      show = !seenAt;
     } catch {
       // Continue with the splash when storage is unavailable.
     }

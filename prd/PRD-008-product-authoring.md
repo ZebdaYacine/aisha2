@@ -21,6 +21,8 @@ Product content can become untrustworthy when ownership is inferred from fronten
 
 - Tie every product to exactly one owned workshop.
 - Support localized, culturally rich product content and safe media upload.
+- Capture the planned workshop order quantity and total order price while retaining a trusted unit selling price.
+- Require one selected language (Arabic, English, French, or Spanish) before moderation submission, with up to four presentation media files. Public catalogue reads fall back to the submitted language when a visitor's language is unavailable.
 - Preserve immutable submitted versions and clear draft/review states.
 
 ### Non-goals
@@ -39,17 +41,19 @@ Product content can become untrustworthy when ownership is inferred from fronten
 | --- | --- | --- |
 | R1 | Create products only for an active workshop owned by the artisan; every product has exactly one workshop. | US-PROD-001 |
 | R2 | Capture localized names, descriptions, story, materials, method, use, dimensions, category, price, currency, origin, and eligibility flags. | US-PROD-001 |
+| R2a | Capture planned quantity and total order price in integer minor units; expose the order data to the artisan. | US-PROD-001 |
 | R3 | Allow owner-only draft editing and eligible moves between owned workshops. | US-PROD-002..003 |
 | R4 | Validate required fields and media before submission. | US-PROD-004 |
 | R5 | Store immutable submission snapshots and preserve prior versions after requested changes. | US-PROD-004, US-PROD-006 |
 | R6 | Keep draft and review media private with generated storage keys. | REQ-MEDIA-001 |
+| R6a | Allow at most four product media files and reject additional uploads transactionally. | REQ-MEDIA-001 |
 | R7 | Preserve history when a product is archived. | US-PROD-008 |
 | R8 | Present owned products in a responsive management table with first-column Details/Update/Archive actions and one New draft action. | US-PROD-001..008 |
 
 ## 6. Flow
 
 ```text
-GET owned workshops → select active workshop → draft → localized content/media
+GET owned workshops → select active workshop → category → quantity/total price → localized content/media
        → edit or move between owned active workshops → validate → PENDING_REVIEW → moderation
                                                                ↘ CHANGES_REQUESTED → edit → resubmit
        → owner archive → ARCHIVED (history retained; no public publication)
@@ -60,6 +64,8 @@ GET owned workshops → select active workshop → draft → localized content/m
 - Product creation and edits re-check ACTIVE artisan membership, workshop ownership, and active workshop status in the repository transaction. Workshop lifecycle operations are now implemented by PRD-07 and are shared by the product editor.
 - Product moves are allowed only between the same artisan’s active workshops and are blocked once inventory movement history exists.
 - Price uses integer minor units and currency code.
+- `planned_quantity` and `order_total_minor` are persisted with positive constraints; `price_minor` remains the unit selling price used by catalogue and checkout.
+- Product responses expose the stable `AISHA-XXXXXXXXXX` approval code once moderation has approved the draft so the artisan can provide it to the warehouse.
 - Submission snapshots include the workshop identity; later edits create a new snapshot version after requested changes.
 - Product media is sent as multipart form data to `/artisan/products/:id/media`; the API validates signatures and size, generates a `products/{productId}/{uuid}` key, writes to the configured private MinIO bucket (`MINIO_PRIVATE_BUCKET`, default `product-private`), persists metadata only after the object write succeeds, removes the object on metadata failure, and returns a 15-minute signed URL. SQLBoiler models do not leave repositories.
 - Artisan archive is owner-scoped, rejects products still in `PENDING_REVIEW`, clears `published_at`, and records an immutable audit/outbox event. The artisan workspace exposes that history-preserving action as Archive rather than destructive Delete. Admin activation and moderation decisions remain in PRD-09.
@@ -76,6 +82,7 @@ GET owned workshops → select active workshop → draft → localized content/m
 
 - Maximum upload sizes and certification rules remain configuration decisions under PRD-20.
 - Admin activation and notification delivery remain PRD-09 concerns.
+- The warehouse approval code is only a human-facing lookup key; ownership and product identity are still resolved server-side.
 - Artisan onboarding provisions a default workshop before product creation is enabled; suspended or closed memberships cannot create, move, edit, submit, or publish products.
 - Archived products retain their product, submission, inventory, and order-line history; workshop deletion remains blocked when protected history exists.
 

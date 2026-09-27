@@ -19,7 +19,7 @@ describe("brand splash", () => {
     await waitFor(() => expect(screen.getByRole("status", { name: "Opening the collection" })).toBeInTheDocument());
   });
 
-  it("stays hidden during the two-minute cooldown", () => {
+  it("stays hidden after the first visit", () => {
     window.localStorage.setItem("aisha:splash-seen-at", String(Date.now() - 60_000));
 
     render(<BrandSplash locale="en" />);

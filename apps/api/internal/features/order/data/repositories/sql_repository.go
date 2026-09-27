@@ -361,18 +361,22 @@ func (r *PostgresRepository) RecordReturn(ctx context.Context, actor, id, reason
 	if status != "SHIPPED" && status != "DELIVERED" {
 		return domain.Return{}, domain.ErrInvalidTransition
 	}
-	var existing domain.Return
-	err = tx.QueryRow(ctx, `SELECT id,order_id,status,reason,created_at FROM order_returns WHERE order_id=$1 ORDER BY created_at DESC LIMIT 1`, id).Scan(&existing.ID, &existing.OrderID, &existing.Status, &existing.Reason, &existing.CreatedAt)
-	if err == nil {
+	var out domain.Return
+	err = tx.QueryRow(ctx, `INSERT INTO order_returns(order_id,actor_user_id,reason) VALUES($1,$2,$3) ON CONFLICT(order_id) DO NOTHING RETURNING id,order_id,status,reason,created_at`, id, actor, reason).Scan(&out.ID, &out.OrderID, &out.Status, &out.Reason, &out.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		if err = tx.QueryRow(ctx, `SELECT id,order_id,status,reason,created_at FROM order_returns WHERE order_id=$1`, id).Scan(&out.ID, &out.OrderID, &out.Status, &out.Reason, &out.CreatedAt); err != nil {
+			return domain.Return{}, err
+		}
 		_ = tx.Rollback(ctx)
-		return existing, nil
+		return out, nil
 	}
-	if !errors.Is(err, pgx.ErrNoRows) {
+	if err != nil {
 		return domain.Return{}, err
 	}
-	var out domain.Return
-	err = tx.QueryRow(ctx, `INSERT INTO order_returns(order_id,actor_user_id,reason) VALUES($1,$2,$3) RETURNING id,order_id,status,reason,created_at`, id, actor, reason).Scan(&out.ID, &out.OrderID, &out.Status, &out.Reason, &out.CreatedAt)
-	if err != nil {
+	if _, err = tx.Exec(ctx, `INSERT INTO inventory_movements(product_id,movement_type,quantity_delta,reference_key,reason,actor_user_id,stock_bucket)
+        SELECT product_id,'RETURN',quantity,'return:' || $1::text || ':' || id::text,'returned stock quarantined',$2,'QUARANTINED'
+        FROM order_items WHERE order_id=$3
+        ON CONFLICT(reference_key) DO NOTHING`, out.ID, actor, id); err != nil {
 		return domain.Return{}, err
 	}
 	if _, err = tx.Exec(ctx, `UPDATE orders SET status='RETURNED',updated_at=CURRENT_TIMESTAMP WHERE id=$1`, id); err != nil {

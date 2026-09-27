@@ -20,6 +20,7 @@ var (
 
 type ReceptionInput struct {
 	ProductID        string
+	ProductCode      string
 	ReceivedQuantity int64
 	ReferenceKey     string
 	SupplierName     string
@@ -72,9 +73,11 @@ type Inspection struct {
 type Reception struct {
 	ID               string      `json:"id"`
 	ProductID        string      `json:"productId"`
+	ProductCode      string      `json:"productCode"`
 	ProductName      string      `json:"productName"`
 	ArtisanProfileID string      `json:"artisanProfileId"`
 	ArtisanName      string      `json:"artisanName"`
+	ArtisanPhone     string      `json:"artisanPhone,omitempty"`
 	WorkshopID       string      `json:"workshopId"`
 	WorkshopName     string      `json:"workshopName"`
 	SupplierName     string      `json:"supplierName"`
@@ -90,9 +93,25 @@ type Reception struct {
 	Evidence         []Evidence  `json:"evidence"`
 }
 
+type ValidatedProduct struct {
+	ProductID         string `json:"-"`
+	ProductCode       string `json:"productCode"`
+	ProductName       string `json:"productName"`
+	ProductStatus     string `json:"productStatus"`
+	ArtisanProfileID  string `json:"artisanProfileId"`
+	ArtisanName       string `json:"artisanName"`
+	ArtisanPhone      string `json:"artisanPhone"`
+	WorkshopID        string `json:"workshopId"`
+	WorkshopName      string `json:"workshopName"`
+	PriceMinor        int64  `json:"priceMinor"`
+	Currency          string `json:"currency"`
+	AvailableQuantity int64  `json:"availableQuantity"`
+}
+
 type Repository interface {
 	CreateReception(context.Context, string, ReceptionInput) (Reception, error)
 	ListReceptions(context.Context, string, string, int, int) ([]Reception, int, error)
+	ListValidatedProducts(context.Context, string, string, string, string, int, int) ([]ValidatedProduct, int, error)
 	Inspect(context.Context, string, string, InspectionInput) (Inspection, error)
 	AddEvidence(context.Context, string, string, EvidenceInput) (Evidence, error)
 	ListEvidence(context.Context, string) ([]Evidence, error)

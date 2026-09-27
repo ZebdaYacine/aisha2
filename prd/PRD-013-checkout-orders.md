@@ -61,8 +61,11 @@ Eligible cancel/return → validated transition → release/refund/inventory dec
 - Migration `000014_moderation_orders` adds orders, immutable line/address snapshots, stock reservations, payment attempts, returns, and shipment events.
 - `POST /checkout`, buyer order reads, seller item reads, cancellation, and authorized return recording are connected through the authenticated API and Next.js BFF routes.
 - Buyer order detail reads persisted shipment events, cancellation is available for eligible pending/paid orders, and repeated cancellation/return operations are safe.
+- Checkout validates UUID identifiers and idempotency-key bounds before opening a transaction. The BFF forwards the JSON content type so backend request binding is preserved.
+- Return recording is protected by a unique order constraint and records returned quantities in the quarantined inventory bucket; concurrent duplicate return requests return the existing return.
 - Application services own transaction boundaries and state transitions.
 - Seller visibility is item-scoped; seller status never grants full buyer-order access.
+- Checkout summaries calculate from the cart line price metadata populated by product-detail and catalogue add-to-cart actions, so a product added from the storefront is shown with its provisional subtotal rather than zero.
 
 ## 8. Success metrics
 

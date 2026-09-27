@@ -23,6 +23,9 @@ export type ProductDraft = {
   categoryId: string;
   productType: "ARTISAN_SPECIFIC" | "STANDARD_TRADITIONAL";
   status: string;
+  productCode?: string;
+  plannedQuantity: number;
+  orderTotalMinor: number;
   priceMinor: number;
   currency: string;
   materials: string;

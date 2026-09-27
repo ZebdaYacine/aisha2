@@ -19,6 +19,7 @@ type Item struct {
 	ProductName  string    `json:"productName"`
 	ArtisanName  string    `json:"artisanName"`
 	WorkshopName string    `json:"workshopName"`
+	Image        string    `json:"image,omitempty"`
 	Quantity     int       `json:"quantity"`
 	PriceMinor   int64     `json:"priceMinor"`
 	Currency     string    `json:"currency"`

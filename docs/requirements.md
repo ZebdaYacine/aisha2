@@ -181,12 +181,14 @@ Each product must support:
 - Category.
 - Images and optional short video.
 - Price in integer minor units.
+- Planned workshop order quantity and total order price in integer minor units.
 - Currency.
 - Country and region of origin.
 - Eco-friendly and fair-trade indicators when verified.
 - Made-to-order eligibility.
 - Moderation status.
 - Publication status.
+- Product submission supports one selected language (Arabic, English, French, or Spanish) and up to four presentation media files. Catalogue reads fall back to that selected translation when the visitor's language is unavailable.
 
 ## REQ-PROD-002 - Product Categories
 
@@ -230,6 +232,7 @@ Rules:
 - Rejection and change requests require a reason.
 - Suspension prevents new purchases.
 - Historical order snapshots remain unchanged.
+- Approval generates a stable warehouse-facing product code; accepted warehouse stock may activate the approved product atomically when all publication gates pass.
 
 ## REQ-WH-001 - Reception
 
@@ -263,6 +266,8 @@ accepted + rejected + quarantined + damaged = inspected quantity
 ```
 
 Only accepted quantity can become available for sale.
+
+For an approved product, a successful inspection with accepted quantity reevaluates the publication gates in the same transaction and publishes the product only when they pass.
 
 ## REQ-INV-001 - Stock Ledger
 

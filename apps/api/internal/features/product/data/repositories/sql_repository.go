@@ -23,7 +23,7 @@ type rowQuerier interface {
 	Query(context.Context, string, ...any) (pgx.Rows, error)
 }
 
-const productColumns = `p.id,p.artisan_profile_id,p.category_id,p.product_type,p.status,p.price_minor,p.currency,
+const productColumns = `p.id,p.artisan_profile_id,p.category_id,p.product_type,COALESCE(p.product_code,''),p.status,p.planned_quantity,p.order_total_minor,p.price_minor,p.currency,
 COALESCE(p.materials,''),COALESCE(p.production_method,''),COALESCE(p.intended_use,''),COALESCE(p.dimensions,''),
 p.weight_grams,COALESCE(p.country_of_origin,''),COALESCE(p.region_of_origin,''),p.eco_friendly_verified,
 p.fair_trade_verified,p.made_to_order_eligible,
@@ -63,7 +63,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, input do
 		return domain.Product{}, err
 	}
 	var id string
-	err = tx.QueryRow(ctx, `INSERT INTO products(artisan_profile_id,workshop_id,category_id,product_type,status,price_minor,currency,materials,production_method,intended_use,dimensions,weight_grams,country_of_origin,region_of_origin,eco_friendly_verified,fair_trade_verified,made_to_order_eligible) SELECT a.id,$2,$3,$4,'DRAFT',$5,$6,NULLIF($7,''),NULLIF($8,''),NULLIF($9,''),NULLIF($10,''),$11,NULLIF($12,''),NULLIF($13,''),$14,$15,$16 FROM artisan_profiles a WHERE a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') RETURNING id`, userID, input.WorkshopID, input.CategoryID, input.ProductType, input.PriceMinor, input.Currency, input.Materials, input.ProductionMethod, input.IntendedUse, input.Dimensions, input.WeightGrams, input.CountryOfOrigin, input.RegionOfOrigin, input.EcoFriendlyVerified, input.FairTradeVerified, input.MadeToOrderEligible).Scan(&id)
+	err = tx.QueryRow(ctx, `INSERT INTO products(artisan_profile_id,workshop_id,category_id,product_type,status,planned_quantity,order_total_minor,price_minor,currency,materials,production_method,intended_use,dimensions,weight_grams,country_of_origin,region_of_origin,eco_friendly_verified,fair_trade_verified,made_to_order_eligible) SELECT a.id,$2,$3,$4,'DRAFT',$5,$6,$7,$8,NULLIF($9,''),NULLIF($10,''),NULLIF($11,''),NULLIF($12,''),$13,NULLIF($14,''),NULLIF($15,''),$16,$17,$18 FROM artisan_profiles a WHERE a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') RETURNING id`, userID, input.WorkshopID, input.CategoryID, input.ProductType, input.PlannedQuantity, input.OrderTotalMinor, input.PriceMinor, input.Currency, input.Materials, input.ProductionMethod, input.IntendedUse, input.Dimensions, input.WeightGrams, input.CountryOfOrigin, input.RegionOfOrigin, input.EcoFriendlyVerified, input.FairTradeVerified, input.MadeToOrderEligible).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Product{}, domain.ErrArtisanNotApproved
 	}
@@ -151,7 +151,7 @@ func (r *PostgresRepository) Update(ctx context.Context, userID, id string, inpu
 			return domain.Product{}, domain.ErrWorkshopProtectedHistory
 		}
 	}
-	_, err = tx.Exec(ctx, `UPDATE products SET workshop_id=$3,category_id=$4,product_type=$5,price_minor=$6,currency=$7,materials=NULLIF($8,''),production_method=NULLIF($9,''),intended_use=NULLIF($10,''),dimensions=NULLIF($11,''),weight_grams=$12,country_of_origin=NULLIF($13,''),region_of_origin=NULLIF($14,''),eco_friendly_verified=$15,fair_trade_verified=$16,made_to_order_eligible=$17,updated_at=CURRENT_TIMESTAMP WHERE id=$2 AND artisan_profile_id=(SELECT id FROM artisan_profiles WHERE user_id=$1)`, userID, id, input.WorkshopID, input.CategoryID, input.ProductType, input.PriceMinor, input.Currency, input.Materials, input.ProductionMethod, input.IntendedUse, input.Dimensions, input.WeightGrams, input.CountryOfOrigin, input.RegionOfOrigin, input.EcoFriendlyVerified, input.FairTradeVerified, input.MadeToOrderEligible)
+	_, err = tx.Exec(ctx, `UPDATE products SET workshop_id=$3,category_id=$4,product_type=$5,planned_quantity=$6,order_total_minor=$7,price_minor=$8,currency=$9,materials=NULLIF($10,''),production_method=NULLIF($11,''),intended_use=NULLIF($12,''),dimensions=NULLIF($13,''),weight_grams=$14,country_of_origin=NULLIF($15,''),region_of_origin=NULLIF($16,''),eco_friendly_verified=$17,fair_trade_verified=$18,made_to_order_eligible=$19,updated_at=CURRENT_TIMESTAMP WHERE id=$2 AND artisan_profile_id=(SELECT id FROM artisan_profiles WHERE user_id=$1)`, userID, id, input.WorkshopID, input.CategoryID, input.ProductType, input.PlannedQuantity, input.OrderTotalMinor, input.PriceMinor, input.Currency, input.Materials, input.ProductionMethod, input.IntendedUse, input.Dimensions, input.WeightGrams, input.CountryOfOrigin, input.RegionOfOrigin, input.EcoFriendlyVerified, input.FairTradeVerified, input.MadeToOrderEligible)
 	if err != nil {
 		return domain.Product{}, fmt.Errorf("update product: %w", err)
 	}
@@ -245,13 +245,34 @@ func (r *PostgresRepository) Archive(ctx context.Context, userID, id string) (do
 }
 
 func (r *PostgresRepository) AddMedia(ctx context.Context, userID, productID string, media domain.Media) (domain.Media, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Media{}, fmt.Errorf("begin product media insert: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var lockedProductID string
+	if err = tx.QueryRow(ctx, `SELECT id FROM products WHERE id=$1 FOR UPDATE`, productID).Scan(&lockedProductID); errors.Is(err, pgx.ErrNoRows) {
+		return domain.Media{}, domain.ErrNotFound
+	} else if err != nil {
+		return domain.Media{}, err
+	}
+	var mediaCount int
+	if err = tx.QueryRow(ctx, `SELECT COUNT(*) FROM product_media WHERE product_id=$1`, productID).Scan(&mediaCount); err != nil {
+		return domain.Media{}, err
+	}
+	if mediaCount >= 4 {
+		return domain.Media{}, domain.ErrMediaLimit
+	}
 	var result domain.Media
-	err := r.pool.QueryRow(ctx, `INSERT INTO product_media(product_id,media_kind,object_key,original_filename,media_type,size_bytes,checksum_sha256,alt_text,visibility) SELECT p.id,$3,$4,NULLIF($5,''),$6,$7,$8,NULLIF($9,''),'PRIVATE' FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id AND w.status='ACTIVE' WHERE p.id=$2 AND a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') AND p.status IN ('DRAFT','CHANGES_REQUESTED') RETURNING id,product_id,media_kind,object_key,COALESCE(original_filename,''),media_type,size_bytes,COALESCE(alt_text,''),sort_order,visibility`, userID, productID, media.MediaKind, media.ObjectKey, media.OriginalFilename, media.MediaType, media.SizeBytes, media.Checksum, media.AltText).Scan(&result.ID, &result.ProductID, &result.MediaKind, &result.ObjectKey, &result.OriginalFilename, &result.MediaType, &result.SizeBytes, &result.AltText, &result.SortOrder, &result.Visibility)
+	err = tx.QueryRow(ctx, `INSERT INTO product_media(product_id,media_kind,object_key,original_filename,media_type,size_bytes,checksum_sha256,alt_text,visibility) SELECT p.id,$3,$4,NULLIF($5,''),$6,$7,$8,NULLIF($9,''),'PRIVATE' FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id AND w.status='ACTIVE' WHERE p.id=$2 AND a.user_id=$1 AND a.status='APPROVED' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE') AND p.status IN ('DRAFT','CHANGES_REQUESTED') RETURNING id,product_id,media_kind,object_key,COALESCE(original_filename,''),media_type,size_bytes,COALESCE(alt_text,''),sort_order,visibility`, userID, productID, media.MediaKind, media.ObjectKey, media.OriginalFilename, media.MediaType, media.SizeBytes, media.Checksum, media.AltText).Scan(&result.ID, &result.ProductID, &result.MediaKind, &result.ObjectKey, &result.OriginalFilename, &result.MediaType, &result.SizeBytes, &result.AltText, &result.SortOrder, &result.Visibility)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Media{}, domain.ErrNotEditable
 	}
 	if err != nil {
 		return domain.Media{}, fmt.Errorf("insert product media: %w", err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.Media{}, fmt.Errorf("commit product media insert: %w", err)
 	}
 	return result, nil
 }
@@ -272,7 +293,7 @@ func loadProduct(ctx context.Context, q rowQuerier, where string, args ...any) (
 	var item domain.Product
 	var translations []byte
 	var weight pgtype.Int4
-	err := q.QueryRow(ctx, `SELECT `+productColumns+` FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id LEFT JOIN workshops w ON w.id=p.workshop_id `+where, args...).Scan(&item.ID, &item.ArtisanID, &item.CategoryID, &item.ProductType, &item.Status, &item.PriceMinor, &item.Currency, &item.Materials, &item.ProductionMethod, &item.IntendedUse, &item.Dimensions, &weight, &item.CountryOfOrigin, &item.RegionOfOrigin, &item.EcoFriendlyVerified, &item.FairTradeVerified, &item.MadeToOrderEligible, &item.WorkshopID, &item.WorkshopName, &item.WorkshopStatus, &translations)
+	err := q.QueryRow(ctx, `SELECT `+productColumns+` FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id LEFT JOIN workshops w ON w.id=p.workshop_id `+where, args...).Scan(&item.ID, &item.ArtisanID, &item.CategoryID, &item.ProductType, &item.ProductCode, &item.Status, &item.PlannedQuantity, &item.OrderTotalMinor, &item.PriceMinor, &item.Currency, &item.Materials, &item.ProductionMethod, &item.IntendedUse, &item.Dimensions, &weight, &item.CountryOfOrigin, &item.RegionOfOrigin, &item.EcoFriendlyVerified, &item.FairTradeVerified, &item.MadeToOrderEligible, &item.WorkshopID, &item.WorkshopName, &item.WorkshopStatus, &translations)
 	if err != nil {
 		return domain.Product{}, err
 	}

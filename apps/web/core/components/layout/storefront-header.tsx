@@ -13,7 +13,7 @@ import { useCart } from "@/features/cart/viewmodel/cart-context";
 import { GlobalSearch } from "./global-search";
 import type { Artisan, Category, Product } from "@/features/catalogue/types";
 import { useOptionalAuth } from "@/features/auth/viewmodel/auth-context";
-import { landingPathForUser, userInitials } from "@/features/auth/types";
+import { hasCapability, landingPathForUser, userInitials } from "@/features/auth/types";
 
 const navItems = [
   ["new", "/products?sort=newest"],
@@ -38,6 +38,14 @@ export function StorefrontHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const copy = storeCopy(locale);
   const cartCount = new Intl.NumberFormat(locale).format(count);
+  const accountPath =
+    auth?.user?.artisanEnabled &&
+    hasCapability(auth.user, "artisan.account.read") &&
+    pathname.startsWith(`/${locale}/artisan`)
+      ? `/${locale}/account`
+      : auth?.user
+        ? landingPathForUser(auth.user, locale)
+        : `/${locale}/login`;
   return (
     <>
       <div className="bg-foreground py-2 text-center text-[0.6875rem] tracking-[0.12em] text-background">
@@ -101,7 +109,7 @@ export function StorefrontHeader({
             </div>
             <Link
               className="flex min-h-11 min-w-11 items-center justify-center"
-              href={auth?.user ? landingPathForUser(auth.user, locale) : `/${locale}/login`}
+              href={accountPath}
               aria-label={messages.navigation.account}
             >
               {auth?.user ? (

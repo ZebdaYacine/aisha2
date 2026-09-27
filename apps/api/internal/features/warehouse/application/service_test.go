@@ -22,6 +22,9 @@ func (warehouseRepository) CreateReception(context.Context, string, domain.Recep
 func (warehouseRepository) ListReceptions(context.Context, string, string, int, int) ([]domain.Reception, int, error) {
 	return nil, 0, nil
 }
+func (warehouseRepository) ListValidatedProducts(context.Context, string, string, string, string, int, int) ([]domain.ValidatedProduct, int, error) {
+	return nil, 0, nil
+}
 func (warehouseRepository) Inspect(context.Context, string, string, domain.InspectionInput) (domain.Inspection, error) {
 	return domain.Inspection{}, nil
 }
@@ -42,6 +45,13 @@ func TestCreateReceptionRejectsInvalidInput(t *testing.T) {
 func TestListReceptionsRejectsUnknownStatus(t *testing.T) {
 	s := NewService(warehouseRepository{}, warehouseAuthorizer{}, nil, "", 0)
 	if _, _, err := s.ListReceptions(context.Background(), auth.Principal{UserID: "user"}, "UNKNOWN", 1, 20); err != domain.ErrValidation {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestListValidatedProductsRequiresArtisanPhone(t *testing.T) {
+	s := NewService(warehouseRepository{}, warehouseAuthorizer{}, nil, "", 0)
+	if _, _, err := s.ListValidatedProducts(context.Background(), auth.Principal{UserID: "user"}, "", "", "", 1, 20); err != domain.ErrValidation {
 		t.Fatalf("err=%v", err)
 	}
 }

@@ -42,3 +42,29 @@ func TestCheckoutRejectsDuplicateLinesAndMissingIdempotencyKey(t *testing.T) {
 		t.Fatalf("key err=%v", err)
 	}
 }
+
+func TestCheckoutValidatesAddressAndProductIdentifiersBeforeRepository(t *testing.T) {
+	s := NewService(orderRepo{}, orderAuth{})
+	p := auth.Principal{UserID: "u"}
+	items := []domain.CartItem{{ProductID: "00000000-0000-0000-0000-000000000001", Quantity: 1}}
+	if _, err := s.Checkout(context.Background(), p, "not-a-uuid", items, "checkout-1"); err != domain.ErrValidation {
+		t.Fatalf("address err=%v", err)
+	}
+	if _, err := s.Checkout(context.Background(), p, "00000000-0000-0000-0000-000000000002", []domain.CartItem{{ProductID: "not-a-uuid", Quantity: 1}}, "checkout-1"); err != domain.ErrValidation {
+		t.Fatalf("product err=%v", err)
+	}
+}
+
+func TestOrderIdentifiersAreValidatedBeforeRepository(t *testing.T) {
+	s := NewService(orderRepo{}, orderAuth{})
+	p := auth.Principal{UserID: "u"}
+	if _, err := s.GetMine(context.Background(), p, "not-a-uuid"); err != domain.ErrValidation {
+		t.Fatalf("get err=%v", err)
+	}
+	if _, err := s.Cancel(context.Background(), p, "not-a-uuid"); err != domain.ErrValidation {
+		t.Fatalf("cancel err=%v", err)
+	}
+	if _, err := s.RecordReturn(context.Background(), p, "not-a-uuid", "damaged"); err != domain.ErrValidation {
+		t.Fatalf("return err=%v", err)
+	}
+}

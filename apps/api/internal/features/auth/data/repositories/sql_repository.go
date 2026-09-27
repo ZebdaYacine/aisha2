@@ -54,12 +54,15 @@ func (r *PostgresRepository) CreateUser(ctx context.Context, email, passwordHash
 func (r *PostgresRepository) UserByEmail(ctx context.Context, email string) (User, error) {
 	return r.user(ctx, `WHERE lower(u.email)=lower($1)`, email)
 }
+func (r *PostgresRepository) UserByIdentifier(ctx context.Context, identifier string) (User, error) {
+	return r.user(ctx, `WHERE lower(u.email)=lower($1) OR regexp_replace(COALESCE(u.phone,''),'[^0-9]','','g')=regexp_replace($1,'[^0-9]','','g')`, identifier)
+}
 func (r *PostgresRepository) UserByID(ctx context.Context, id string) (User, error) {
 	return r.user(ctx, `WHERE u.id=$1`, id)
 }
 func (r *PostgresRepository) user(ctx context.Context, where, arg string) (User, error) {
 	var user User
-	err := r.pool.QueryRow(ctx, `SELECT u.id,u.email,u.password_hash,u.display_name,u.status,u.created_at,COALESCE(array_agg(r.code) FILTER(WHERE r.code IS NOT NULL),'{}') FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id `+where+` GROUP BY u.id`, arg).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.DisplayName, &user.Status, &user.CreatedAt, &user.Roles)
+	err := r.pool.QueryRow(ctx, `SELECT u.id,u.email,COALESCE(u.phone,''),u.password_hash,u.display_name,u.status,u.created_at,COALESCE(array_agg(r.code) FILTER(WHERE r.code IS NOT NULL),'{}') FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id `+where+` GROUP BY u.id`, arg).Scan(&user.ID, &user.Email, &user.Phone, &user.PasswordHash, &user.DisplayName, &user.Status, &user.CreatedAt, &user.Roles)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrInvalidCredentials
 	}

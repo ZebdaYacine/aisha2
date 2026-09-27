@@ -19,6 +19,7 @@ type ProductStatus =
 type Item = {
   submissionId: string;
   productId: string;
+  productCode?: string;
   productName: string;
   productStatus: ProductStatus;
   priceMinor: number;
@@ -186,7 +187,10 @@ export function ProductModeration() {
               <tbody className="divide-y divide-border">
                 {items.map((item) => (
                   <tr key={item.submissionId || item.productId}>
-                    <td className="px-4 py-4">{item.productName || "Unnamed product"}</td>
+                    <td className="px-4 py-4">
+                      <span>{item.productName || "Unnamed product"}</span>
+                      {item.productCode && <p className="text-xs text-muted-foreground">{item.productCode}</p>}
+                    </td>
                     <td className="px-4 py-4">
                       {item.artisanName}
                       <p className="text-xs text-muted-foreground">
@@ -277,6 +281,10 @@ export function ProductModeration() {
                 <dt className="text-muted-foreground">Artisan</dt>
                 <dd>{selected.artisanName}</dd>
               </div>
+              {selected.productCode && <div>
+                <dt className="text-muted-foreground">Warehouse product code</dt>
+                <dd>{selected.productCode}</dd>
+              </div>}
               <div>
                 <dt className="text-muted-foreground">Workshop</dt>
                 <dd>{selected.workshopName}</dd>

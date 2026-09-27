@@ -27,7 +27,7 @@ paths:
         default: {$ref: '#/components/responses/Error'}
   /api/v1/auth/login:
     post:
-      summary: Authenticate with email and password
+      summary: Authenticate with email or phone and password
       operationId: login
       x-casbin-permission: public
       requestBody:
@@ -457,21 +457,21 @@ paths:
       summary: Read the authenticated customer's persisted cart
       security: [{bearerAuth: []}]
       x-casbin-permission: /api/v1/cart:read
-      responses: {'200': {description: Cart items}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+      responses: {'200': {description: Cart items, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/CartItem'}}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}}
   /api/v1/cart/items:
     post:
       summary: Add a product to the authenticated customer's cart
       security: [{bearerAuth: []}]
       x-casbin-permission: /api/v1/cart:write
       requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CartItemRequest'}}}}
-      responses: {'201': {description: Updated cart}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+      responses: {'201': {description: Updated cart, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/CartItem'}}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}}
   /api/v1/cart/merge:
     post:
       summary: Merge an anonymous cart into the authenticated customer's cart
       security: [{bearerAuth: []}]
       x-casbin-permission: /api/v1/cart:write
       requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CartMergeRequest'}}}}
-      responses: {'200': {description: Merged cart}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+      responses: {'200': {description: Merged cart, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/CartItem'}}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}}
   /api/v1/cart/items/{productId}:
     parameters: [{name: productId, in: path, required: true, schema: {type: string, format: uuid}}]
     patch:
@@ -479,30 +479,30 @@ paths:
       security: [{bearerAuth: []}]
       x-casbin-permission: /api/v1/cart:write
       requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CartItemRequest'}}}}
-      responses: {'200': {description: Updated cart}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+      responses: {'200': {description: Updated cart, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/CartItem'}}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}}
     delete:
       summary: Remove an authenticated cart item
       security: [{bearerAuth: []}]
       x-casbin-permission: /api/v1/cart:write
-      responses: {'200': {description: Updated cart}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+      responses: {'200': {description: Updated cart, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/CartItem'}}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}}
   /api/v1/wishlist:
     get:
       summary: Read the authenticated customer's wishlist
       security: [{bearerAuth: []}]
       x-casbin-permission: /api/v1/wishlist:read
-      responses: {'200': {description: Wishlist items}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+      responses: {'200': {description: Wishlist items, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/WishlistItem'}}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}}
   /api/v1/wishlist/items/{productId}:
     parameters: [{name: productId, in: path, required: true, schema: {type: string, format: uuid}}]
     post:
       summary: Save a product to the authenticated customer's wishlist
       security: [{bearerAuth: []}]
       x-casbin-permission: /api/v1/wishlist:write
-      responses: {'201': {description: Updated wishlist}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+      responses: {'201': {description: Updated wishlist, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/WishlistItem'}}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}}
     delete:
       summary: Remove a product from the authenticated customer's wishlist
       security: [{bearerAuth: []}]
       x-casbin-permission: /api/v1/wishlist:write
-      responses: {'200': {description: Updated wishlist}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+      responses: {'200': {description: Updated wishlist, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/WishlistItem'}}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}}
   /api/v1/orders:
     get:
       summary: List orders owned by the authenticated customer
@@ -632,6 +632,13 @@ paths:
       x-casbin-permission: /api/v1/warehouse/receptions:write
       requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/WarehouseReceptionRequest'}}}}
       responses: {'201': {description: Reception recorded, content: {application/json: {schema: {$ref: '#/components/schemas/WarehouseReception'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/ConflictError'}}
+  /api/v1/warehouse/products:
+    get:
+      summary: Search moderator-validated products for warehouse reception
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/warehouse/receptions:read
+      parameters: [{name: artisanPhone, in: query, schema: {type: string, maxLength: 40}}, {name: workshopId, in: query, schema: {type: string, format: uuid}}, {name: query, in: query, schema: {type: string, maxLength: 160}}, {name: page, in: query, schema: {type: integer, minimum: 1}}, {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100}}]
+      responses: {'200': {description: Paginated validated products, content: {application/json: {schema: {$ref: '#/components/schemas/WarehouseValidatedProductPage'}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}}
   /api/v1/warehouse/receptions/{id}/inspect:
     post:
       summary: Inspect a received warehouse batch
@@ -761,9 +768,9 @@ components:
         displayName: {type: string, minLength: 2}
     LoginRequest:
       type: object
-      required: [email, password]
+      required: [identifier, password]
       properties:
-        email: {type: string, format: email}
+        identifier: {type: string, description: Email address or phone number}
         password: {type: string, format: password}
     RefreshRequest:
       type: object
@@ -832,11 +839,38 @@ components:
       properties:
         productId: {type: string, format: uuid}
         quantity: {type: integer, minimum: 1, maximum: 100}
+    CartItem:
+      type: object
+      required: [productId, productName, artisanName, workshopName, quantity, priceMinor, currency, availableQuantity, active, updatedAt]
+      properties:
+        productId: {type: string, format: uuid}
+        productName: {type: string}
+        artisanName: {type: string}
+        workshopName: {type: string}
+        image: {type: string}
+        quantity: {type: integer}
+        priceMinor: {type: integer, format: int64}
+        currency: {type: string}
+        availableQuantity: {type: integer, format: int64}
+        active: {type: boolean}
+        warning: {type: string}
+        updatedAt: {type: string, format: date-time}
     CartMergeRequest:
       type: object
       required: [items]
       properties:
         items: {type: array, maxItems: 100, items: {$ref: '#/components/schemas/CartItemRequest'}}
+    WishlistItem:
+      type: object
+      required: [productId, productName, priceMinor, currency, active, createdAt]
+      properties:
+        productId: {type: string, format: uuid}
+        productName: {type: string}
+        priceMinor: {type: integer, format: int64}
+        currency: {type: string}
+        image: {type: string}
+        active: {type: boolean}
+        createdAt: {type: string, format: date-time}
     PublicCategory:
       type: object
       required: [id, slug, name]
@@ -972,7 +1006,7 @@ components:
         mediaType: {type: string}
         sizeBytes: {type: integer, format: int64}
         sortOrder: {type: integer}
-        visibility: {type: string, enum: [PRIVATE]}
+        visibility: {type: string, enum: [PRIVATE, PUBLIC]}
         createdAt: {type: string, format: date-time}
         url: {type: string, format: uri}
     PrivateUpload:
@@ -1075,9 +1109,10 @@ components:
         total: {type: integer}
     WarehouseReceptionRequest:
       type: object
-      required: [productId, receivedQuantity, referenceKey]
+      required: [productCode, receivedQuantity, referenceKey]
       properties:
-        productId: {type: string, format: uuid}
+        productId: {type: string, format: uuid, deprecated: true, description: Legacy compatibility only; warehouse clients should use productCode.}
+        productCode: {type: string, pattern: '^AISHA-[A-Z0-9]{10}$'}
         receivedQuantity: {type: integer, format: int64, minimum: 1}
         referenceKey: {type: string, minLength: 1, maxLength: 160}
         supplierName: {type: string, maxLength: 200}
@@ -1124,9 +1159,11 @@ components:
       properties:
         id: {type: string, format: uuid}
         productId: {type: string, format: uuid}
+        productCode: {type: string, pattern: '^AISHA-[A-Z0-9]{10}$'}
         productName: {type: string}
         artisanProfileId: {type: string, format: uuid}
         artisanName: {type: string}
+        artisanPhone: {type: string}
         workshopId: {type: string, format: uuid}
         workshopName: {type: string}
         supplierName: {type: string}
@@ -1140,6 +1177,28 @@ components:
         inspectedAt: {type: string, format: date-time}
         inspection: {$ref: '#/components/schemas/WarehouseInspection'}
         evidence: {type: array, items: {$ref: '#/components/schemas/WarehouseEvidence'}}
+    WarehouseValidatedProduct:
+      type: object
+      required: [productCode, productName, productStatus, artisanProfileId, artisanName, artisanPhone, workshopId, workshopName, priceMinor, currency]
+      properties:
+        productCode: {type: string, pattern: '^AISHA-[A-Z0-9]{10}$'}
+        productName: {type: string}
+        productStatus: {type: string, enum: [APPROVED, ACTIVE, SUSPENDED]}
+        artisanProfileId: {type: string, format: uuid}
+        artisanName: {type: string}
+        artisanPhone: {type: string}
+        workshopId: {type: string, format: uuid}
+        workshopName: {type: string}
+        priceMinor: {type: integer, format: int64}
+        currency: {type: string}
+    WarehouseValidatedProductPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/WarehouseValidatedProduct'}}
+        page: {type: integer}
+        pageSize: {type: integer}
+        total: {type: integer}
     WarehouseReceptionPage:
       type: object
       required: [items, page, pageSize, total]
@@ -1209,11 +1268,13 @@ components:
         productCount: {type: integer, minimum: 0}
     ProductRequest:
       type: object
-      required: [workshopId, categoryId, productType, priceMinor, currency]
+      required: [workshopId, categoryId, productType, plannedQuantity, orderTotalMinor, priceMinor, currency]
       properties:
         workshopId: {type: string, format: uuid}
         categoryId: {type: string, format: uuid}
         productType: {type: string, enum: [ARTISAN_SPECIFIC, STANDARD_TRADITIONAL]}
+        plannedQuantity: {type: integer, minimum: 1}
+        orderTotalMinor: {type: integer, format: int64, minimum: 1}
         priceMinor: {type: integer, format: int64, minimum: 1}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         materials: {type: string, maxLength: 2000}
@@ -1226,7 +1287,7 @@ components:
         ecoFriendlyVerified: {type: boolean}
         fairTradeVerified: {type: boolean}
         madeToOrderEligible: {type: boolean}
-        translations: {type: array, maxItems: 4, items: {$ref: '#/components/schemas/ProductTranslation'}}
+        translations: {type: array, minItems: 1, maxItems: 1, items: {$ref: '#/components/schemas/ProductTranslation'}}
     ProductMedia:
       type: object
       required: [id, mediaKind, originalFilename, mediaType, sizeBytes, visibility]
@@ -1238,13 +1299,13 @@ components:
         sizeBytes: {type: integer, format: int64}
         altText: {type: string}
         sortOrder: {type: integer}
-        visibility: {type: string, enum: [PRIVATE]}
+        visibility: {type: string, enum: [PRIVATE, PUBLIC]}
         url: {type: string, format: uri}
     OwnedProduct:
       allOf:
         - $ref: '#/components/schemas/ProductRequest'
         - type: object
-          required: [id, artisanId, workshopId, workshopName, workshopStatus, status, media]
+          required: [id, artisanId, workshopId, workshopName, workshopStatus, status, plannedQuantity, orderTotalMinor, media]
           properties:
             workshopId: {type: string, format: uuid}
             workshopName: {type: string}
@@ -1252,7 +1313,8 @@ components:
             id: {type: string, format: uuid}
             artisanId: {type: string, format: uuid}
             status: {type: string, enum: [DRAFT, PENDING_REVIEW, CHANGES_REQUESTED, APPROVED, ACTIVE, SUSPENDED, ARCHIVED]}
-            media: {type: array, items: {$ref: '#/components/schemas/ProductMedia'}}
+            productCode: {type: string, pattern: '^AISHA-[A-Z0-9]{10}$'}
+            media: {type: array, maxItems: 4, items: {$ref: '#/components/schemas/ProductMedia'}}
     CheckoutRequest:
       type: object
       required: [addressId, items]
@@ -1337,7 +1399,7 @@ components:
         reason: {type: string, maxLength: 1000, description: "Required for REQUEST_CHANGES, REJECT, and SUSPEND"}
     ModerationItem:
       type: object
-      properties: {submissionId: {type: string, format: uuid}, productId: {type: string, format: uuid}, productName: {type: string}, version: {type: integer}, snapshot: {type: object}, productStatus: {type: string}, priceMinor: {type: integer, format: int64}, currency: {type: string}, artisanName: {type: string}, workshopName: {type: string}, media: {type: array, items: {$ref: '#/components/schemas/ModerationMedia'}}}
+      properties: {submissionId: {type: string, format: uuid}, productId: {type: string, format: uuid}, productCode: {type: string, pattern: '^AISHA-[A-Z0-9]{10}$'}, productName: {type: string}, version: {type: integer}, snapshot: {type: object}, productStatus: {type: string}, priceMinor: {type: integer, format: int64}, currency: {type: string}, artisanName: {type: string}, workshopName: {type: string}, media: {type: array, items: {$ref: '#/components/schemas/ModerationMedia'}}}
     ModerationMedia:
       type: object
       properties: {id: {type: string, format: uuid}, mediaKind: {type: string}, originalFilename: {type: string}, mediaType: {type: string}, sizeBytes: {type: integer, format: int64}, altText: {type: string}, visibility: {type: string}, url: {type: string, format: uri}}

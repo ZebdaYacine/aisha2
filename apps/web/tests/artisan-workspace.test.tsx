@@ -48,6 +48,8 @@ describe("artisan management tables", () => {
     expect(screen.getByRole("button", { name: "New draft" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "New draft" }));
     expect(screen.getByRole("dialog", { name: "New draft" })).toBeInTheDocument();
+    fireEvent.focus(screen.getByRole("combobox", { name: "Workshop" }));
+    await waitFor(() => expect(screen.getByRole("option", { name: "Amina Studio" })).toBeInTheDocument());
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "New draft" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Details" }));

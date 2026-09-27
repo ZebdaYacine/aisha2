@@ -18,7 +18,8 @@ import { landingPathForUser, userFromAuthResponse } from "@/features/auth/types"
 
 type Mode = "login" | "register" | "forgot";
 type Values = {
-  email: string;
+  email?: string;
+  identifier?: string;
   password?: string;
   fullName?: string;
   confirmPassword?: string;
@@ -40,13 +41,28 @@ export function AuthForm({
   const messages = formCopy(locale);
   const schema = z
     .object({
-      email: z.email(messages.email),
+      email: z.string().optional(),
+      identifier: z.string().optional(),
       password: z.string().optional(),
       fullName: z.string().optional(),
       confirmPassword: z.string().optional(),
       terms: z.boolean().optional(),
     })
     .superRefine((value, context) => {
+      if (mode === "login") {
+        if (!value.identifier?.trim())
+          context.addIssue({
+            code: "custom",
+            path: ["identifier"],
+            message: messages.required,
+          });
+      } else if (!value.email || !z.email(messages.email).safeParse(value.email).success) {
+        context.addIssue({
+          code: "custom",
+          path: ["email"],
+          message: messages.email,
+        });
+      }
       if (mode !== "forgot" && (!value.password || value.password.length < 12))
         context.addIssue({
           code: "custom",
@@ -87,6 +103,7 @@ export function AuthForm({
     shouldFocusError: false,
     defaultValues: {
       email: "",
+      identifier: "",
       password: "",
       fullName: "",
       confirmPassword: "",
@@ -100,7 +117,10 @@ export function AuthForm({
   const onValid = async (values: Values) => {
     setSummary(undefined);
     try {
-      const result = await (submit ?? ((input) => submitJSON(`/api/auth/${mode === "forgot" ? "forgot-password" : mode}`, input)))(values);
+      const payload = mode === "login"
+        ? { identifier: values.identifier?.trim(), password: values.password }
+        : values;
+      const result = await (submit ?? ((input) => submitJSON(`/api/auth/${mode === "forgot" ? "forgot-password" : mode}`, input)))(payload);
       if (result.ok) {
         if (mode !== "forgot") {
           let user = userFromAuthResponse(result.data);
@@ -152,17 +172,31 @@ export function AuthForm({
           />
         </Field>
       )}
-      <Field id="email" label={copy.email} error={errors.email?.message}>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          {...register("email")}
-          className="auth-input"
-          aria-invalid={!!errors.email}
-          aria-describedby={errors.email ? "email-error" : undefined}
-        />
-      </Field>
+      {mode === "login" ? (
+        <Field id="identifier" label={copy.emailOrPhone} error={errors.identifier?.message}>
+          <input
+            id="identifier"
+            type="text"
+            autoComplete="username"
+            {...register("identifier")}
+            className="auth-input"
+            aria-invalid={!!errors.identifier}
+            aria-describedby={errors.identifier ? "identifier-error" : undefined}
+          />
+        </Field>
+      ) : (
+        <Field id="email" label={copy.email} error={errors.email?.message}>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            {...register("email")}
+            className="auth-input"
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? "email-error" : undefined}
+          />
+        </Field>
+      )}
       {mode !== "forgot" && (
         <Field
           id="password"

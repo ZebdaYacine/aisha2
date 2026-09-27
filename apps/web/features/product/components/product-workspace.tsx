@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import type { Category } from "@/features/catalogue/types";
@@ -25,7 +25,12 @@ import {
   type ProductTranslation,
 } from "../api";
 
-const locales: ProductLocale[] = ["en", "fr", "ar", "es"];
+const languageOptions = [
+  { value: "en", label: "English" },
+  { value: "fr", label: "Français" },
+  { value: "ar", label: "العربية" },
+  { value: "es", label: "Español" },
+] satisfies Array<{ value: ProductLocale; label: string }>;
 const blankTranslation = (locale: ProductLocale): ProductTranslation => ({
   locale,
   name: "",
@@ -33,10 +38,12 @@ const blankTranslation = (locale: ProductLocale): ProductTranslation => ({
   story: "",
   culturalContext: "",
 });
-const blankProduct = (): ProductInput => ({
+const blankProduct = (language: ProductLocale): ProductInput => ({
   workshopId: "",
   categoryId: "",
   productType: "ARTISAN_SPECIFIC",
+  plannedQuantity: 1,
+  orderTotalMinor: 1,
   priceMinor: 1,
   currency: "EUR",
   materials: "",
@@ -49,7 +56,7 @@ const blankProduct = (): ProductInput => ({
   ecoFriendlyVerified: false,
   fairTradeVerified: false,
   madeToOrderEligible: false,
-  translations: locales.map(blankTranslation),
+  translations: [blankTranslation(language)],
   media: [],
 });
 const labels = {
@@ -66,7 +73,11 @@ const labels = {
     upload: "Upload media",
     uploading: "Uploading…",
     category: "Category",
-    price: "Price (minor units)",
+    price: "Unit price (minor units)",
+    quantity: "Order quantity",
+    orderTotal: "Total order price (minor units)",
+    approvalCode: "Warehouse approval code",
+    mediaLimit: "Up to 4 media files",
     currency: "Currency",
     type: "Product type",
     material: "Materials",
@@ -83,8 +94,7 @@ const labels = {
     empty: "No product drafts yet.",
     saved: "Draft saved.",
     submitted: "Product submitted for review.",
-    invalid:
-      "Complete all four language names and descriptions before submitting.",
+    invalid: "Complete the selected language name and description before submitting.",
     workshop: "Workshop",
     selectWorkshop: "Select a workshop",
     product: "Product",
@@ -108,7 +118,11 @@ const labels = {
     upload: "Importer un média",
     uploading: "Importation…",
     category: "Catégorie",
-    price: "Prix (unités mineures)",
+    price: "Prix unitaire (unités mineures)",
+    quantity: "Quantité de la commande",
+    orderTotal: "Prix total de la commande (unités mineures)",
+    approvalCode: "Code d’approbation entrepôt",
+    mediaLimit: "Jusqu’à 4 médias",
     currency: "Devise",
     type: "Type de produit",
     material: "Matières",
@@ -125,8 +139,7 @@ const labels = {
     empty: "Aucun brouillon de produit.",
     saved: "Brouillon enregistré.",
     submitted: "Produit soumis pour examen.",
-    invalid:
-      "Complétez les noms et descriptions dans les quatre langues avant l’envoi.",
+    invalid: "Complétez le nom et la description dans la langue sélectionnée avant l’envoi.",
     workshop: "Atelier",
     selectWorkshop: "Sélectionner un atelier",
     product: "Produit",
@@ -150,7 +163,11 @@ const labels = {
     upload: "رفع وسائط",
     uploading: "جارٍ الرفع…",
     category: "الفئة",
-    price: "السعر (الوحدات الصغرى)",
+    price: "السعر الوحدي (الوحدات الصغرى)",
+    quantity: "كمية الطلب",
+    orderTotal: "السعر الإجمالي للطلب (الوحدات الصغرى)",
+    approvalCode: "رمز موافقة المستودع",
+    mediaLimit: "حتى 4 وسائط",
     currency: "العملة",
     type: "نوع المنتج",
     material: "المواد",
@@ -167,7 +184,7 @@ const labels = {
     empty: "لا توجد مسودات منتجات.",
     saved: "تم حفظ المسودة.",
     submitted: "تم إرسال المنتج للمراجعة.",
-    invalid: "أكمل الأسماء والأوصاف باللغات الأربع قبل الإرسال.",
+    invalid: "أكمل الاسم والوصف باللغة المحددة قبل الإرسال.",
     workshop: "الورشة",
     selectWorkshop: "اختر ورشة",
     product: "المنتج",
@@ -191,7 +208,11 @@ const labels = {
     upload: "Subir medio",
     uploading: "Subiendo…",
     category: "Categoría",
-    price: "Precio (unidades menores)",
+    price: "Precio unitario (unidades menores)",
+    quantity: "Cantidad del pedido",
+    orderTotal: "Precio total del pedido (unidades menores)",
+    approvalCode: "Código de aprobación del almacén",
+    mediaLimit: "Hasta 4 medios",
     currency: "Moneda",
     type: "Tipo de producto",
     material: "Materiales",
@@ -209,7 +230,7 @@ const labels = {
     saved: "Borrador guardado.",
     submitted: "Producto enviado a revisión.",
     invalid:
-      "Completa los nombres y descripciones en los cuatro idiomas antes de enviarlo.",
+      "Completa el nombre y la descripción en el idioma seleccionado antes de enviarlo.",
     workshop: "Taller",
     selectWorkshop: "Selecciona un taller",
     product: "Producto",
@@ -231,7 +252,8 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
   const [detailsItem, setDetailsItem] = useState<ProductDraft>();
   const [pendingArchive, setPendingArchive] = useState<ProductDraft>();
   const [dialog, setDialog] = useState<"editor" | "details" | "archive" | null>(null);
-  const [form, setForm] = useState<ProductInput>(blankProduct);
+  const [editorLocale, setEditorLocale] = useState<ProductLocale>(locale);
+  const [form, setForm] = useState<ProductInput>(() => blankProduct(locale));
   const [busy, setBusy] = useState(false);
   const mediaInput = useRef<HTMLInputElement>(null);
 
@@ -240,6 +262,15 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
     setDialog(null);
     setDetailsItem(undefined);
     setPendingArchive(undefined);
+  };
+
+  const refreshWorkshops = async () => {
+    try {
+      const response = await listOwnedWorkshops();
+      setWorkshops(response.items);
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
   };
 
   useEffect(() => {
@@ -256,25 +287,25 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
       .catch((error: Error) => toast.error(error.message));
   }, []);
 
-  const translationMap = useMemo(
-    () => new Map(form.translations.map((item) => [item.locale, item])),
-    [form.translations],
-  );
   const select = (item?: ProductDraft) => {
     setSelected(item);
+    const language = item?.translations.find((translation) => translation.locale === locale)?.locale ?? item?.translations[0]?.locale ?? locale;
+    setEditorLocale(language);
     setForm(
       item
         ? {
             ...item,
-            translations: locales.map(
-              (language) =>
-                item.translations.find(
-                  (translation) => translation.locale === language,
-                ) ?? blankTranslation(language),
-            ),
+            plannedQuantity: item.plannedQuantity || 1,
+            orderTotalMinor: item.orderTotalMinor || item.priceMinor,
+            translations: [item.translations.find((translation) => translation.locale === language) ?? blankTranslation(language)],
           }
-        : blankProduct(),
+        : blankProduct(locale),
     );
+  };
+  const openEditor = (item?: ProductDraft) => {
+    select(item);
+    void refreshWorkshops();
+    setDialog("editor");
   };
   const change = <K extends keyof ProductInput>(
     key: K,
@@ -287,10 +318,15 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
   ) =>
     setForm((current) => ({
       ...current,
-      translations: current.translations.map((item) =>
-        item.locale === language ? { ...item, [key]: value } : item,
-      ),
+      translations: [{ ...(current.translations[0] ?? blankTranslation(language)), locale: language, [key]: value }],
     }));
+  const changeLanguage = (language: ProductLocale) => {
+    setEditorLocale(language);
+    setForm((current) => ({
+      ...current,
+      translations: [{ ...(current.translations[0] ?? blankTranslation(language)), locale: language }],
+    }));
+  };
   const save = async () => {
     setBusy(true);
     try {
@@ -356,6 +392,10 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
   };
   const upload = async (file: File) => {
     if (!selected) return;
+    if (selected.media.length >= 4) {
+      toast.error(text.mediaLimit);
+      return;
+    }
     setBusy(true);
     try {
       const media = await uploadProductMedia(selected.id, file, file.name);
@@ -381,6 +421,8 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
     setSelected(next);
     setForm((current) => ({ ...current, media }));
   };
+  const activeTranslation = form.translations[0] ?? blankTranslation(editorLocale);
+  const activeLanguage = activeTranslation.locale;
 
   return (
     <>
@@ -392,19 +434,19 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
           </p>
           <h2 className="mt-2 font-serif text-3xl">{text.title}</h2>
         </div>
-        <Button type="button" variant="outline" onClick={() => { select(); setDialog("editor"); }}>
+        <Button type="button" variant="outline" onClick={() => openEditor()}>
           {text.create}
         </Button>
       </div>
       <div className="mt-6">
         <div className="overflow-x-auto rounded-lg border border-border xl:col-span-2">
-          {items.length ? <table className="w-full min-w-[900px] text-sm">
-            <thead className="bg-muted/40"><tr><th className="px-4 py-3 text-start font-medium">{text.details}</th><th className="px-4 py-3 text-start font-medium">{text.product}</th><th className="px-4 py-3 text-start font-medium">{text.workshop}</th><th className="px-4 py-3 text-start font-medium">{text.status}</th><th className="px-4 py-3 text-start font-medium">{text.tablePrice}</th><th className="px-4 py-3 text-start font-medium">{text.mediaCount}</th></tr></thead>
+          {items.length ? <table className="w-full min-w-[1080px] text-sm">
+            <thead className="bg-muted/40"><tr><th className="px-4 py-3 text-start font-medium">{text.details}</th><th className="px-4 py-3 text-start font-medium">{text.product}</th><th className="px-4 py-3 text-start font-medium">{text.workshop}</th><th className="px-4 py-3 text-start font-medium">{text.status}</th><th className="px-4 py-3 text-start font-medium">{text.tablePrice}</th><th className="px-4 py-3 text-start font-medium">{text.quantity}</th><th className="px-4 py-3 text-start font-medium">{text.orderTotal}</th><th className="px-4 py-3 text-start font-medium">{text.mediaCount}</th><th className="px-4 py-3 text-start font-medium">{text.approvalCode}</th></tr></thead>
             <tbody>{items.map((item) => {
               const name = item.translations.find((translation) => translation.locale === locale)?.name || item.translations[0]?.name || "—";
               return <tr className="border-t border-border align-top" key={item.id}>
-                <td className="px-4 py-3"><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="min-h-10 px-3" onClick={() => { setDetailsItem(item); setDialog("details"); }}>{text.details}</Button><Button type="button" variant="outline" className="min-h-10 px-3" onClick={() => { select(item); setDialog("editor"); }}>{text.update}</Button>{item.status !== "ARCHIVED" && <Button type="button" variant="destructive" className="min-h-10 px-3" disabled={busy} onClick={() => { setPendingArchive(item); setDialog("archive"); }}>{text.archive}</Button>}</div></td>
-                <td className="px-4 py-3 font-medium">{name}</td><td className="px-4 py-3">{item.workshopName || "—"}</td><td className="px-4 py-3"><StatusBadge status={item.status} /></td><td className="px-4 py-3">{item.priceMinor} {item.currency}</td><td className="px-4 py-3">{item.media.length}</td>
+                <td className="px-4 py-3"><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="min-h-10 px-3" onClick={() => { setDetailsItem(item); setDialog("details"); }}>{text.details}</Button><Button type="button" variant="outline" className="min-h-10 px-3" onClick={() => openEditor(item)}>{text.update}</Button>{item.status !== "ARCHIVED" && <Button type="button" variant="destructive" className="min-h-10 px-3" disabled={busy} onClick={() => { setPendingArchive(item); setDialog("archive"); }}>{text.archive}</Button>}</div></td>
+                <td className="px-4 py-3 font-medium">{name}</td><td className="px-4 py-3">{item.workshopName || "—"}</td><td className="px-4 py-3"><StatusBadge status={item.status} /></td><td className="px-4 py-3">{item.priceMinor} {item.currency}</td><td className="px-4 py-3">{item.plannedQuantity || 1}</td><td className="px-4 py-3">{item.orderTotalMinor || item.priceMinor} {item.currency}</td><td className="px-4 py-3">{item.media.length}/4</td><td className="px-4 py-3 font-mono text-xs">{item.productCode || "—"}</td>
               </tr>;
             })}</tbody>
           </table> : <p className="p-4 text-sm text-muted-foreground">{text.empty}</p>}
@@ -455,6 +497,28 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
                 }
               />
             </Field>
+            <Field label={text.quantity}>
+              <input
+                className="auth-input"
+                type="number"
+                min="1"
+                value={form.plannedQuantity}
+                onChange={(event) =>
+                  change("plannedQuantity", Number(event.target.value))
+                }
+              />
+            </Field>
+            <Field label={text.orderTotal}>
+              <input
+                className="auth-input"
+                type="number"
+                min="1"
+                value={form.orderTotalMinor}
+                onChange={(event) =>
+                  change("orderTotalMinor", Number(event.target.value))
+                }
+              />
+            </Field>
             <Field label={text.currency}>
               <input
                 className="auth-input"
@@ -483,69 +547,61 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
               </Field>
             ))}
           </div>
-          <div className="grid gap-5 md:grid-cols-2">
-            {locales.map((language) => {
-              const item =
-                translationMap.get(language) ?? blankTranslation(language);
-              return (
-                <fieldset
-                  className="space-y-3 border border-border p-4"
-                  key={language}
-                  dir={language === "ar" ? "rtl" : "ltr"}
-                >
-                  <legend className="px-2 text-sm font-medium">
-                    {text.locale}: {language}
-                  </legend>
-                  <Field label={text.name}>
-                    <input
-                      className="auth-input"
-                      value={item.name}
-                      onChange={(event) =>
-                        changeTranslation(language, "name", event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label={text.description}>
-                    <textarea
-                      className="auth-input min-h-24"
-                      value={item.description}
-                      onChange={(event) =>
-                        changeTranslation(
-                          language,
-                          "description",
-                          event.target.value,
-                        )
-                      }
-                    />
-                  </Field>
-                  <Field label={text.story}>
-                    <textarea
-                      className="auth-input min-h-20"
-                      value={item.story}
-                      onChange={(event) =>
-                        changeTranslation(language, "story", event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label={text.context}>
-                    <textarea
-                      className="auth-input min-h-20"
-                      value={item.culturalContext}
-                      onChange={(event) =>
-                        changeTranslation(
-                          language,
-                          "culturalContext",
-                          event.target.value,
-                        )
-                      }
-                    />
-                  </Field>
-                </fieldset>
-              );
-            })}
-          </div>
+          <Field label={text.locale}>
+            <Combobox
+              options={languageOptions}
+              value={activeLanguage}
+              onChange={(next) => changeLanguage(next as ProductLocale)}
+              ariaLabel={text.locale}
+            />
+          </Field>
+          <fieldset
+            className="space-y-3 border border-border p-4"
+            dir={activeLanguage === "ar" ? "rtl" : "ltr"}
+          >
+            <legend className="px-2 text-sm font-medium">
+              {text.locale}: {activeLanguage}
+            </legend>
+            <Field label={text.name}>
+              <input
+                className="auth-input"
+                value={activeTranslation.name}
+                onChange={(event) =>
+                  changeTranslation(activeLanguage, "name", event.target.value)
+                }
+              />
+            </Field>
+            <Field label={text.description}>
+              <textarea
+                className="auth-input min-h-24"
+                value={activeTranslation.description}
+                onChange={(event) =>
+                  changeTranslation(activeLanguage, "description", event.target.value)
+                }
+              />
+            </Field>
+            <Field label={text.story}>
+              <textarea
+                className="auth-input min-h-20"
+                value={activeTranslation.story}
+                onChange={(event) =>
+                  changeTranslation(activeLanguage, "story", event.target.value)
+                }
+              />
+            </Field>
+            <Field label={text.context}>
+              <textarea
+                className="auth-input min-h-20"
+                value={activeTranslation.culturalContext}
+                onChange={(event) =>
+                  changeTranslation(activeLanguage, "culturalContext", event.target.value)
+                }
+              />
+            </Field>
+          </fieldset>
           <div className="border border-border p-4">
             <h3 className="font-medium">{text.media}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{text.mediaLimit}</p>
             <div className="mt-4 flex flex-wrap gap-3">
               {form.media?.map((item) => (
                 <div
@@ -577,7 +633,7 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
               <Button
                 type="button"
                 variant="outline"
-                disabled={!selected || busy || selected.status === "ARCHIVED"}
+                disabled={!selected || busy || selected.status === "ARCHIVED" || selected.media.length >= 4}
                 onClick={() => mediaInput.current?.click()}
               >
                 {busy ? text.uploading : text.upload}

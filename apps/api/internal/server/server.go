@@ -136,7 +136,8 @@ func newServer(cfg config.Config, healthService *health.Service, authService *au
 			ArtisanDocuments: artisanDocumentsMine(artisanMediaHandler), UploadArtisanDocument: artisanDocumentUpload(artisanMediaHandler), ArtisanMedia: artisanMediaList(artisanMediaHandler), UploadArtisanMedia: artisanMediaUpload(artisanMediaHandler), ReplaceArtisanMedia: artisanMediaReplace(artisanMediaHandler), DeleteArtisanMedia: artisanMediaDelete(artisanMediaHandler),
 			Checkout: orderCheckout(orderHandler), ListOrders: orderList(orderHandler), GetOrder: orderGet(orderHandler), CancelOrder: orderCancel(orderHandler), SellerOrders: orderSeller(orderHandler),
 			WarehouseReceptions: warehouseList(warehouseHandler), WarehouseReceptionCreate: warehouseCreate(warehouseHandler), WarehouseInspect: warehouseInspect(warehouseHandler), WarehouseReceptionEvidence: warehouseUploadEvidence(warehouseHandler), WarehouseReceptionEvidenceList: warehouseListEvidence(warehouseHandler), Inventory: inventoryList(inventoryHandler), InventoryAdjust: inventoryAdjust(inventoryHandler),
-			Cart: cartList(cartHandler), CartAdd: cartAdd(cartHandler), CartSet: cartSet(cartHandler), CartRemove: cartRemove(cartHandler), CartMerge: cartMerge(cartHandler), Wishlist: wishlistList(wishlistHandler), WishlistAdd: wishlistAdd(wishlistHandler), WishlistRemove: wishlistRemove(wishlistHandler),
+			WarehouseProducts: warehouseProducts(warehouseHandler),
+			Cart:              cartList(cartHandler), CartAdd: cartAdd(cartHandler), CartSet: cartSet(cartHandler), CartRemove: cartRemove(cartHandler), CartMerge: cartMerge(cartHandler), Wishlist: wishlistList(wishlistHandler), WishlistAdd: wishlistAdd(wishlistHandler), WishlistRemove: wishlistRemove(wishlistHandler),
 		})
 		routes.RegisterAdmin(api, routes.AdminRoutes{
 			Authenticate: authHandler.RequirePrincipal, Authorize: casbin.Require,
@@ -204,6 +205,12 @@ func warehouseList(h *WarehouseHandler) fiber.Handler {
 		return nil
 	}
 	return h.List
+}
+func warehouseProducts(h *WarehouseHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Products
 }
 func warehouseCreate(h *WarehouseHandler) fiber.Handler {
 	if h == nil {

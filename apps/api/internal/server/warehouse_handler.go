@@ -17,7 +17,8 @@ type WarehouseHandler struct {
 }
 
 type receptionRequest struct {
-	ProductID        string `json:"productId" validate:"required,uuid"`
+	ProductID        string `json:"productId" validate:"omitempty,uuid"`
+	ProductCode      string `json:"productCode" validate:"omitempty,max=16"`
 	ReceivedQuantity int64  `json:"receivedQuantity" validate:"gt=0"`
 	ReferenceKey     string `json:"referenceKey" validate:"required,max=160"`
 	SupplierName     string `json:"supplierName" validate:"max=200"`
@@ -50,6 +51,19 @@ func (h *WarehouseHandler) List(c fiber.Ctx) error {
 	return c.JSON(PageDTO[warehouse.Reception]{Items: items, Page: max(page, 1), PageSize: min(max(size, 1), 100), Total: total})
 }
 
+func (h *WarehouseHandler) Products(c fiber.Ctx) error {
+	principal, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	page, size := queryPage(c)
+	items, total, err := h.service.ListValidatedProducts(c.Context(), principal, c.Query("artisanPhone"), c.Query("workshopId"), c.Query("query"), page, size)
+	if err != nil {
+		return warehouseAPIError(err)
+	}
+	return c.JSON(PageDTO[warehouse.ValidatedProduct]{Items: items, Page: max(page, 1), PageSize: min(max(size, 1), 100), Total: total})
+}
+
 func (h *WarehouseHandler) Create(c fiber.Ctx) error {
 	principal, err := customerPrincipal(c)
 	if err != nil {
@@ -62,7 +76,7 @@ func (h *WarehouseHandler) Create(c fiber.Ctx) error {
 	if err = h.validator.Validate(&request); err != nil {
 		return err
 	}
-	item, err := h.service.CreateReception(c.Context(), principal, warehouse.ReceptionInput{ProductID: request.ProductID, ReceivedQuantity: request.ReceivedQuantity, ReferenceKey: request.ReferenceKey, SupplierName: request.SupplierName, ParcelReference: request.ParcelReference, Notes: request.Notes})
+	item, err := h.service.CreateReception(c.Context(), principal, warehouse.ReceptionInput{ProductID: request.ProductID, ProductCode: request.ProductCode, ReceivedQuantity: request.ReceivedQuantity, ReferenceKey: request.ReferenceKey, SupplierName: request.SupplierName, ParcelReference: request.ParcelReference, Notes: request.Notes})
 	if err != nil {
 		return warehouseAPIError(err)
 	}

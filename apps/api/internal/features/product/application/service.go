@@ -202,7 +202,7 @@ func (s *Service) mediaURLOrEmpty(ctx context.Context, media domain.Media) domai
 }
 
 func validateDraft(input domain.Input) error {
-	if strings.TrimSpace(input.WorkshopID) == "" || strings.TrimSpace(input.CategoryID) == "" || (input.ProductType != "ARTISAN_SPECIFIC" && input.ProductType != "STANDARD_TRADITIONAL") || input.PriceMinor <= 0 || len(strings.TrimSpace(input.Currency)) != 3 {
+	if strings.TrimSpace(input.WorkshopID) == "" || strings.TrimSpace(input.CategoryID) == "" || (input.ProductType != "ARTISAN_SPECIFIC" && input.ProductType != "STANDARD_TRADITIONAL") || input.PlannedQuantity <= 0 || input.OrderTotalMinor <= 0 || input.PriceMinor <= 0 || len(strings.TrimSpace(input.Currency)) != 3 || len(input.Translations) != 1 {
 		return domain.ErrValidation
 	}
 	for _, translation := range input.Translations {
@@ -217,7 +217,7 @@ func validateSubmission(item domain.Product) error {
 	if item.Status != "DRAFT" && item.Status != "CHANGES_REQUESTED" {
 		return domain.ErrInvalidTransition
 	}
-	if item.PriceMinor <= 0 || len(item.Translations) != len(domain.SupportedLocales) || len(item.Media) == 0 {
+	if item.PriceMinor <= 0 || item.PlannedQuantity <= 0 || item.OrderTotalMinor <= 0 || len(item.Translations) != 1 || len(item.Media) == 0 || len(item.Media) > 4 {
 		return domain.ErrValidation
 	}
 	seen := map[string]bool{}
@@ -226,11 +226,6 @@ func validateSubmission(item domain.Product) error {
 			return domain.ErrValidation
 		}
 		seen[translation.Locale] = true
-	}
-	for _, locale := range domain.SupportedLocales {
-		if !seen[locale] {
-			return domain.ErrValidation
-		}
 	}
 	return nil
 }

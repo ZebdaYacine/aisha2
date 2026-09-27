@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/auth"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/order/domain"
+	"github.com/google/uuid"
 	"strings"
 )
 
@@ -36,12 +37,15 @@ func (s *Service) Checkout(ctx context.Context, p auth.Principal, address string
 	if err := s.authorizer.Authorize(ctx, p, "/api/v1/checkout", "write"); err != nil {
 		return domain.Order{}, err
 	}
-	if strings.TrimSpace(key) == "" || strings.TrimSpace(address) == "" || len(items) == 0 || len(items) > 50 {
+	key = strings.TrimSpace(key)
+	address = strings.TrimSpace(address)
+	if key == "" || len(key) > 160 || uuid.Validate(address) != nil || len(items) == 0 || len(items) > 50 {
 		return domain.Order{}, domain.ErrValidation
 	}
 	seen := map[string]bool{}
 	for _, i := range items {
-		if strings.TrimSpace(i.ProductID) == "" || i.Quantity < 1 || i.Quantity > 100 || seen[i.ProductID] {
+		i.ProductID = strings.TrimSpace(i.ProductID)
+		if uuid.Validate(i.ProductID) != nil || i.Quantity < 1 || i.Quantity > 100 || seen[i.ProductID] {
 			return domain.Order{}, domain.ErrValidation
 		}
 		seen[i.ProductID] = true
@@ -62,6 +66,9 @@ func (s *Service) GetMine(ctx context.Context, p auth.Principal, id string) (dom
 	if err := s.authorizer.Authorize(ctx, p, "/api/v1/orders", "read"); err != nil {
 		return domain.Order{}, err
 	}
+	if uuid.Validate(id) != nil {
+		return domain.Order{}, domain.ErrValidation
+	}
 	return s.repository.GetMine(ctx, p.UserID, id)
 }
 func (s *Service) ListSeller(ctx context.Context, p auth.Principal, page, size int) ([]domain.SellerItem, int, error) {
@@ -75,6 +82,9 @@ func (s *Service) Cancel(ctx context.Context, p auth.Principal, id string) (doma
 	if err := s.authorizer.Authorize(ctx, p, "/api/v1/orders", "write"); err != nil {
 		return domain.Order{}, err
 	}
+	if uuid.Validate(id) != nil {
+		return domain.Order{}, domain.ErrValidation
+	}
 	return s.repository.Cancel(ctx, p.UserID, id)
 }
 func (s *Service) RecordReturn(ctx context.Context, p auth.Principal, id, reason string) (domain.Return, error) {
@@ -82,6 +92,9 @@ func (s *Service) RecordReturn(ctx context.Context, p auth.Principal, id, reason
 		return domain.Return{}, err
 	}
 	if strings.TrimSpace(reason) == "" {
+		return domain.Return{}, domain.ErrValidation
+	}
+	if uuid.Validate(id) != nil {
 		return domain.Return{}, domain.ErrValidation
 	}
 	return s.repository.RecordReturn(ctx, p.UserID, id, strings.TrimSpace(reason))

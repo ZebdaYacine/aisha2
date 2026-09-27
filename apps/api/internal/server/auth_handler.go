@@ -49,7 +49,7 @@ func (h *AuthHandler) Login(c fiber.Ctx) error {
 	if err := h.bindAndValidate(c, &req); err != nil {
 		return err
 	}
-	user, tokens, err := h.service.Login(c.Context(), req.Email, req.Password)
+	user, tokens, err := h.service.Login(c.Context(), req.Identifier, req.Password)
 	if err != nil {
 		return authAPIError(err)
 	}

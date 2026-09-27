@@ -39,7 +39,7 @@ Seller onboarding is unsafe when it creates duplicate accounts, allows products 
 | --- | --- | --- |
 | R1 | Reuse the existing user account and resume an onboarding draft. | US-ART-001 |
 | R2 | Collect validated public, operational, and private artisan information. | US-ART-002 |
-| R3 | Require a valid first workshop before membership becomes `ACTIVE`. | US-ART-003..004 |
+| R3 | Require a valid first workshop before membership becomes `ACTIVE`; approval activates the submitted workshop as the default workshop. | US-ART-003..004 |
 | R4 | Allow an artisan to create, update, activate, deactivate, and delete only eligible owned workshops. | US-WS-001..005 |
 | R5 | Prevent cross-artisan reads and writes. | US-WS-006 |
 | R6 | Support optional verification states and private documents. | US-ART-005..006 |
@@ -51,14 +51,14 @@ Seller onboarding is unsafe when it creates duplicate accounts, allows products 
 ## 6. Flow
 
 ```text
-Customer → Become an Artisan → profile → first workshop → ACTIVE membership → artisan dashboard
+Customer → Become an Artisan → profile + first workshop → administrator approval → ACTIVE membership + default workshop → artisan dashboard
                                                      └─ optional verification/review
 ```
 
 ## 7. Technical notes
 
 - Migration `000015_artisan_memberships_verification` adds one membership and one verification state per artisan profile, backfilling existing approved profiles.
-- `POST /artisan/membership/activate` creates the ACTIVE membership, default workshop, verification row, role grant, audit event, and outbox event in one idempotent transaction.
+- Approval creates or reactivates the ACTIVE membership, promotes the submitted workshop to the active default workshop, and records verification, role, audit, and outbox state in one transaction. `POST /artisan/membership/activate` remains idempotent for legacy approved profiles that do not yet have a membership.
 - Workshop CRUD/status operations re-check membership status, ownership, default-workshop protection, and product/order history in the repository.
 - Public catalogue, product authoring, moderation activation, and checkout require an ACTIVE membership; suspension leaves customer capabilities intact.
 - Casbin permission is combined with ownership checks.

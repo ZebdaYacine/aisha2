@@ -12,7 +12,7 @@ interface CartValue {
   items: CartItem[];
   open: boolean;
   setOpen: (open: boolean) => void;
-  add: (slug: string, quantity?: number, metadata?: Pick<CartItem, "productName" | "artisanName" | "workshopName" | "priceMinor" | "currency">) => void;
+  add: (slug: string, quantity?: number, metadata?: Pick<CartItem, "productName" | "artisanName" | "workshopName" | "image" | "priceMinor" | "currency">) => void;
   update: (slug: string, quantity: number) => void;
   remove: (slug: string) => void;
   clear: () => void;
@@ -47,9 +47,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
         const latest = await fetch("/api/cart", { cache: "no-store" });
         if (!latest.ok || !active) return;
-        const body = (await latest.json()) as { items?: Array<{ productId: string; quantity: number; productName?: string; artisanName?: string; workshopName?: string; priceMinor?: number; currency?: string; active?: boolean; warning?: string }> } | Array<{ productId: string; quantity: number; productName?: string; artisanName?: string; workshopName?: string; priceMinor?: number; currency?: string; active?: boolean; warning?: string }>;
+        const body = (await latest.json()) as { items?: Array<{ productId: string; quantity: number; productName?: string; artisanName?: string; workshopName?: string; image?: string; priceMinor?: number; currency?: string; active?: boolean; warning?: string }> } | Array<{ productId: string; quantity: number; productName?: string; artisanName?: string; workshopName?: string; image?: string; priceMinor?: number; currency?: string; active?: boolean; warning?: string }>;
         const serverItems = Array.isArray(body) ? body : body.items ?? [];
-        setItems(serverItems.map((item) => ({ productSlug: item.productId, quantity: item.quantity, productName: item.productName, artisanName: item.artisanName, workshopName: item.workshopName, priceMinor: item.priceMinor, currency: item.currency, active: item.active, warning: item.warning })));
+        setItems(serverItems.map((item) => ({ productSlug: item.productId, quantity: item.quantity, productName: item.productName, artisanName: item.artisanName, workshopName: item.workshopName, image: item.image, priceMinor: item.priceMinor, currency: item.currency, active: item.active, warning: item.warning })));
       } catch {
         // Anonymous carts remain fully usable when the authenticated API is unavailable.
       }
@@ -72,8 +72,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           return found
             ? current.map((item) =>
                 item.productSlug === slug
-                  ? { ...item, quantity: item.quantity + quantity }
-                  : item,
+                  ? { ...item, ...metadata, quantity: item.quantity + quantity }
+                : item,
               )
             : [...current, { productSlug: slug, quantity, ...metadata }];
         });

@@ -22,11 +22,14 @@ func TestPostgresReceptionInspectionAndStockBuckets(t *testing.T) {
 	}
 	defer pool.Close()
 
-	var actorID, artisanUserID, artisanID, workshopID, categoryID, productID, receptionID string
+	var actorID, artisanUserID, artisanID, workshopID, categoryID, productID, receptionID, artisanPhone string
 	defer func() {
 		_, _ = pool.Exec(ctx, `DELETE FROM audit_events WHERE target_type='warehouse_reception' AND target_id=$1`, receptionID)
+		_, _ = pool.Exec(ctx, `DELETE FROM audit_events WHERE target_type='product' AND target_id=$1`, productID)
 		_, _ = pool.Exec(ctx, `DELETE FROM outbox_events WHERE aggregate_type='warehouse_reception' AND aggregate_id=$1`, receptionID)
+		_, _ = pool.Exec(ctx, `DELETE FROM outbox_events WHERE aggregate_type='product' AND aggregate_id=$1`, productID)
 		_, _ = pool.Exec(ctx, `DELETE FROM inventory_movements WHERE product_id=$1`, productID)
+		_, _ = pool.Exec(ctx, `DELETE FROM product_media WHERE product_id=$1`, productID)
 		_, _ = pool.Exec(ctx, `DELETE FROM warehouse_evidence WHERE reception_id=$1`, receptionID)
 		_, _ = pool.Exec(ctx, `DELETE FROM warehouse_inspections WHERE reception_id=$1`, receptionID)
 		_, _ = pool.Exec(ctx, `DELETE FROM warehouse_receptions WHERE id=$1`, receptionID)
@@ -44,6 +47,9 @@ func TestPostgresReceptionInspectionAndStockBuckets(t *testing.T) {
 	if err = pool.QueryRow(ctx, `INSERT INTO users(email,display_name) VALUES ('warehouse-repository-artisan-'||gen_random_uuid()::text,'Warehouse Artisan') RETURNING id`).Scan(&artisanUserID); err != nil {
 		t.Fatal(err)
 	}
+	if err = pool.QueryRow(ctx, `UPDATE users SET phone='055'||lpad((floor(random()*10000000))::bigint::text,7,'0') WHERE id=$1 RETURNING phone`, artisanUserID).Scan(&artisanPhone); err != nil {
+		t.Fatal(err)
+	}
 	if err = pool.QueryRow(ctx, `INSERT INTO artisan_profiles(user_id,public_display_name,status) VALUES ($1,'Warehouse Artisan','APPROVED') RETURNING id`, artisanUserID).Scan(&artisanID); err != nil {
 		t.Fatal(err)
 	}
@@ -56,11 +62,23 @@ func TestPostgresReceptionInspectionAndStockBuckets(t *testing.T) {
 	if err = pool.QueryRow(ctx, `INSERT INTO categories(slug,display_name) VALUES ('warehouse-repository-'||gen_random_uuid()::text,'Warehouse Category') RETURNING id`).Scan(&categoryID); err != nil {
 		t.Fatal(err)
 	}
-	if err = pool.QueryRow(ctx, `INSERT INTO products(artisan_profile_id,category_id,workshop_id,product_type,status,price_minor,currency) VALUES ($1,$2,$3,'ARTISAN_SPECIFIC','APPROVED',2500,'EUR') RETURNING id`, artisanID, categoryID, workshopID).Scan(&productID); err != nil {
+	if err = pool.QueryRow(ctx, `INSERT INTO products(artisan_profile_id,category_id,workshop_id,product_type,product_code,status,price_minor,currency) VALUES ($1,$2,$3,'ARTISAN_SPECIFIC','AISHA-'||upper(substr(replace(gen_random_uuid()::text,'-',''),1,10)),'APPROVED',2500,'EUR') RETURNING id`, artisanID, categoryID, workshopID).Scan(&productID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = pool.Exec(ctx, `INSERT INTO product_media(product_id,media_kind,object_key,original_filename,media_type,size_bytes,checksum_sha256,visibility) VALUES ($1,'IMAGE','warehouse-repository/'||$2||'/product.jpg','product.jpg','image/jpeg',100,'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','PRIVATE')`, productID, productID); err != nil {
 		t.Fatal(err)
 	}
 
 	repository := NewPostgresRepository(pool)
+	validated, total, err := repository.ListValidatedProducts(ctx, actorID, "+213 "+artisanPhone[1:4]+" "+artisanPhone[4:7]+" "+artisanPhone[7:], "", "", 10, 0)
+	if err != nil || total != 1 || len(validated) != 1 || validated[0].WorkshopID != workshopID {
+		t.Fatalf("validated products=%#v total=%d err=%v", validated, total, err)
+	}
+	filtered, total, err := repository.ListValidatedProducts(ctx, actorID, artisanPhone, workshopID, "", 10, 0)
+	if err != nil || total != 1 || len(filtered) != 1 || filtered[0].ProductID != productID {
+		t.Fatalf("filtered products=%#v total=%d err=%v", filtered, total, err)
+	}
+
 	reception, err := repository.CreateReception(ctx, actorID, domain.ReceptionInput{ProductID: productID, ReceivedQuantity: 5, ReferenceKey: "warehouse-repository:" + productID, SupplierName: "Warehouse Artisan"})
 	if err != nil {
 		t.Fatal(err)
@@ -115,5 +133,12 @@ func TestPostgresReceptionInspectionAndStockBuckets(t *testing.T) {
 	}
 	if available != 3 || rejected != 1 || quarantined != 1 {
 		t.Fatalf("stock buckets available=%d rejected=%d quarantined=%d", available, rejected, quarantined)
+	}
+	var productStatus, mediaVisibility string
+	if err = pool.QueryRow(ctx, `SELECT p.status,pm.visibility FROM products p JOIN product_media pm ON pm.product_id=p.id WHERE p.id=$1`, productID).Scan(&productStatus, &mediaVisibility); err != nil {
+		t.Fatal(err)
+	}
+	if productStatus != "ACTIVE" || mediaVisibility != "PUBLIC" {
+		t.Fatalf("expected accepted inspection to publish product, status=%s visibility=%s", productStatus, mediaVisibility)
 	}
 }

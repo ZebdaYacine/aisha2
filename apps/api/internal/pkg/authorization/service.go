@@ -40,6 +40,10 @@ var defaultPolicies = [][]string{
 	{"customer", "/api/v1/artisan-applications/me/submit", "write"},
 	{"customer", "/api/v1/artisan-applications/me/documents", "read"},
 	{"customer", "/api/v1/artisan-applications/me/documents", "write"},
+	// An approved artisan must be able to read the application that owns the
+	// existing workshop instead of being sent back to the application form.
+	{"artisan", "/api/v1/artisan-applications/me", "read"},
+	{"artisan", "/api/v1/artisan-applications/me/documents", "read"},
 	{"customer", "/api/v1/artisan/profile/media", "read"},
 	{"customer", "/api/v1/artisan/profile/media", "write"},
 	{"artisan", "/api/v1/artisan/profile", "write"},

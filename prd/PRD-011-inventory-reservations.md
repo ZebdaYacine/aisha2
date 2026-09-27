@@ -58,6 +58,7 @@ Accepted stock → available balance → checkout lock/reservation → payment s
 - PostgreSQL movement records are authoritative; balance tables are only read optimizations.
 - Use transactions and product row locks for reservations; checkout rechecks availability after the lock is acquired.
 - Expired holds are released transactionally at checkout entry and by the standalone reservation-expiry worker. Both paths use row locks and idempotent release movements.
+- Returned order items are recorded as `RETURN` movements in the `QUARANTINED` bucket, so a return never becomes sellable without a later inspection decision. Migration `000019_commerce_hardening` also makes return recording one-per-order and concurrency-safe.
 - Artisan inventory is filtered by owned workshop; warehouse agents and administrators have operational scope.
 - `POST /warehouse/inventory/:productId/adjust` appends an `ADJUSTMENT` movement and writes audit/outbox records in the same transaction.
 
@@ -70,8 +71,8 @@ Accepted stock → available balance → checkout lock/reservation → payment s
 ## 9. Risks & open questions
 
 - Reservation duration is currently the documented 30-minute pending-checkout hold; changing it remains a business decision.
-- Return, partial fulfilment, and split-shipment behavior must be defined before final ledger transitions.
-- Payment confirmation/fulfilment still need to call the `COMMITTED`/`SHIPPED` transitions once PRD-15/16 are implemented.
+- Partial fulfilment and split-shipment behavior must be defined before final ledger transitions.
+- Payment confirmation and fulfilment still need to call the `COMMITTED`/`SHIPPED` transitions once PRD-15/16 are implemented; those epics remain blocked on provider and shipping decisions.
 
 ## Source traceability
 

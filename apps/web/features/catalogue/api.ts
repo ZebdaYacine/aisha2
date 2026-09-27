@@ -52,8 +52,8 @@ type ProductDTO = {
   region: string;
   currency: string;
   priceMinor: number;
-  availability?: string;
   availableQuantity?: number;
+  availability?: string;
   media: string[];
 };
 type ArtisanDTO = {
@@ -116,6 +116,7 @@ const product = (item: ProductDTO): Product => ({
   method: local(item.productionMethod),
   priceMinor: item.priceMinor,
   currency: item.currency,
+  availableQuantity: item.availableQuantity,
   availability: availability(item.availability),
   images: item.media?.length
     ? item.media.map((key) => image([key], item.categorySlug))

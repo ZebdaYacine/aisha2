@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ type Service struct {
 }
 
 type Reception = domain.Reception
+type ValidatedProduct = domain.ValidatedProduct
 type Inspection = domain.Inspection
 type Evidence = domain.Evidence
 type ReceptionInput = domain.ReceptionInput
@@ -50,10 +52,22 @@ func (s *Service) CreateReception(ctx context.Context, principal auth.Principal,
 		return domain.Reception{}, err
 	}
 	input.ReferenceKey = strings.TrimSpace(input.ReferenceKey)
+	input.ProductCode = strings.ToUpper(strings.TrimSpace(input.ProductCode))
 	input.SupplierName = strings.TrimSpace(input.SupplierName)
 	input.ParcelReference = strings.TrimSpace(input.ParcelReference)
 	input.Notes = strings.TrimSpace(input.Notes)
-	if _, err := uuid.Parse(input.ProductID); err != nil || input.ReceivedQuantity <= 0 || input.ReferenceKey == "" || len(input.ReferenceKey) > 160 || len(input.SupplierName) > 200 || len(input.ParcelReference) > 200 || len(input.Notes) > 4000 {
+	if input.ProductID == "" && input.ProductCode == "" {
+		return domain.Reception{}, domain.ErrValidation
+	}
+	if input.ProductID != "" {
+		if _, err := uuid.Parse(input.ProductID); err != nil {
+			return domain.Reception{}, domain.ErrValidation
+		}
+	}
+	if input.ProductCode != "" && !regexp.MustCompile(`^AISHA-[A-Z0-9]{10}$`).MatchString(input.ProductCode) {
+		return domain.Reception{}, domain.ErrValidation
+	}
+	if input.ReceivedQuantity <= 0 || input.ReferenceKey == "" || len(input.ReferenceKey) > 160 || len(input.SupplierName) > 200 || len(input.ParcelReference) > 200 || len(input.Notes) > 4000 {
 		return domain.Reception{}, domain.ErrValidation
 	}
 	return s.repository.CreateReception(ctx, principal.UserID, input)
@@ -89,6 +103,33 @@ func (s *Service) ListReceptions(ctx context.Context, principal auth.Principal, 
 		}
 	}
 	return items, total, nil
+}
+
+func (s *Service) ListValidatedProducts(ctx context.Context, principal auth.Principal, artisanPhone, workshopID, query string, page, size int) ([]domain.ValidatedProduct, int, error) {
+	if err := s.authorizer.Authorize(ctx, principal, warehouseResource, "read"); err != nil {
+		return nil, 0, err
+	}
+	artisanPhone = strings.TrimSpace(artisanPhone)
+	workshopID = strings.TrimSpace(workshopID)
+	query = strings.TrimSpace(query)
+	if artisanPhone == "" || len(artisanPhone) > 40 || len(workshopID) > 64 || len(query) > 160 {
+		return nil, 0, domain.ErrValidation
+	}
+	if workshopID != "" {
+		if _, err := uuid.Parse(workshopID); err != nil {
+			return nil, 0, domain.ErrValidation
+		}
+	}
+	if page < 1 {
+		page = 1
+	}
+	if size < 1 {
+		size = 50
+	}
+	if size > 100 {
+		size = 100
+	}
+	return s.repository.ListValidatedProducts(ctx, principal.UserID, artisanPhone, workshopID, query, size, (page-1)*size)
 }
 
 func (s *Service) Inspect(ctx context.Context, principal auth.Principal, id string, input domain.InspectionInput) (domain.Inspection, error) {

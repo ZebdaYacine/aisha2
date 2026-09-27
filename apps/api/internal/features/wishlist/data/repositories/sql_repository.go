@@ -11,7 +11,7 @@ type PostgresRepository struct{ pool *pgxpool.Pool }
 
 func NewPostgresRepository(p *pgxpool.Pool) *PostgresRepository { return &PostgresRepository{pool: p} }
 
-const listQuery = `SELECT wi.product_id,COALESCE(pt.name,p.product_type),p.price_minor,p.currency,(p.status='ACTIVE' AND p.published_at IS NOT NULL AND a.status='APPROVED' AND w.status='ACTIVE' AND EXISTS(SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE')),wi.created_at FROM wishlist_items wi JOIN products p ON p.id=wi.product_id JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id LEFT JOIN product_translations pt ON pt.product_id=p.id AND pt.locale='en' WHERE wi.user_id=$1 ORDER BY wi.created_at DESC`
+const listQuery = `SELECT wi.product_id,COALESCE(pt.name,p.product_type),p.price_minor,p.currency,COALESCE((SELECT pm.object_key FROM product_media pm WHERE pm.product_id=p.id AND pm.visibility='PUBLIC' AND pm.media_kind='IMAGE' ORDER BY pm.sort_order,pm.created_at LIMIT 1),''),(p.status='ACTIVE' AND p.published_at IS NOT NULL AND a.status='APPROVED' AND w.status='ACTIVE' AND EXISTS(SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE')),wi.created_at FROM wishlist_items wi JOIN products p ON p.id=wi.product_id JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id LEFT JOIN product_translations pt ON pt.product_id=p.id AND pt.locale='en' WHERE wi.user_id=$1 ORDER BY wi.created_at DESC`
 
 func (r *PostgresRepository) List(ctx context.Context, userID string) ([]domain.Item, error) {
 	rows, err := r.pool.Query(ctx, listQuery, userID)
@@ -22,7 +22,7 @@ func (r *PostgresRepository) List(ctx context.Context, userID string) ([]domain.
 	out := []domain.Item{}
 	for rows.Next() {
 		var v domain.Item
-		if err := rows.Scan(&v.ProductID, &v.ProductName, &v.PriceMinor, &v.Currency, &v.Active, &v.CreatedAt); err != nil {
+		if err := rows.Scan(&v.ProductID, &v.ProductName, &v.PriceMinor, &v.Currency, &v.Image, &v.Active, &v.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, v)

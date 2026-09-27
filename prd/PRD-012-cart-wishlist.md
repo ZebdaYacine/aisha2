@@ -57,7 +57,9 @@ Browse → save wishlist item → authenticated wishlist → remove or open prod
 
 - Anonymous cart state is held in local storage; authenticated sessions persist through owner-scoped APIs and merge local items on login.
 - Client cart state is UX only; the cart API exposes current product price, currency, active state, and availability warnings, while checkout recalculates trusted totals.
-- Cart and wishlist responses use DTOs and owner-scoped queries. Repeated wishlist saves and cart removals are idempotent.
+- Cart and wishlist responses use DTOs and owner-scoped queries. Repeated wishlist saves and cart removals are idempotent. Add, set, and merge operations now reject inactive, unpublished, unapproved, or inactive-workshop products at the repository boundary.
+- Anonymous and authenticated cart lines retain display metadata (name, artisan/workshop, public image, price, and currency) so the storefront never renders an internal product identifier. Wishlist responses include the public image and saved date; `401` responses leave the control unchanged and provide localized sign-in feedback.
+- Cart and wishlist photos use compact thumbnails. Selecting a thumbnail opens a centered, dismissible image viewer with Escape/backdrop close behavior and cursor-position zoom; the same viewer is used for the product gallery's enlarged image.
 
 ## 8. Success metrics
 

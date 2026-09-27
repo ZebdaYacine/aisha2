@@ -12,8 +12,8 @@ type RegisterRequest struct {
 	DisplayName string `json:"displayName" validate:"required,min=2,max=100"`
 }
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email,max=254"`
-	Password string `json:"password" validate:"required,max=128"`
+	Identifier string `json:"identifier" validate:"required,max=254"`
+	Password   string `json:"password" validate:"required,max=128"`
 }
 type RefreshRequest struct {
 	RefreshToken string `json:"refreshToken" validate:"required"`

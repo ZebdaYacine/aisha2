@@ -27,7 +27,7 @@ func TestRequestValidatorAcceptsValidAuthenticationDTOs(t *testing.T) {
 	validator := NewRequestValidator()
 	requests := []any{
 		RegisterRequest{Email: "user@example.com", Password: "long-password-value", DisplayName: "Amina"},
-		LoginRequest{Email: "user@example.com", Password: "password"},
+		LoginRequest{Identifier: "user@example.com", Password: "password"},
 		RefreshRequest{RefreshToken: "token"},
 		LogoutRequest{RefreshToken: "token"},
 		ForgotPasswordRequest{Email: "user@example.com"},

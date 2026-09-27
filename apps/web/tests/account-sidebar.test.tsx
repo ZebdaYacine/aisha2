@@ -76,6 +76,22 @@ describe("combined account navigation", () => {
     expect(screen.getByRole("button", { name: copy.logout })).toBeInTheDocument();
   });
 
+  it("shows both persistent modes for an active artisan", async () => {
+    renderSidebar({
+      ...baseUser,
+      artisanStatus: "ACTIVE",
+      artisanEnabled: true,
+      capabilities: [...baseUser.capabilities, "artisan.account.read"],
+    });
+    const copy = storeCopy("en");
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: copy.customerArea })).toHaveAttribute("aria-current", "page");
+    });
+    expect(screen.getByRole("link", { name: copy.customerArea })).toHaveAttribute("href", "/en/account");
+    expect(screen.getByRole("link", { name: copy.artisanArea })).toHaveAttribute("href", "/en/artisan");
+  });
+
   it("keeps customer mode and disables seller navigation for a suspended artisan", async () => {
     renderSidebar({ ...baseUser, artisanStatus: "SUSPENDED", artisanEnabled: false });
     const copy = storeCopy("en");

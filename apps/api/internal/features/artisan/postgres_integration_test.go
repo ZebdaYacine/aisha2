@@ -29,6 +29,9 @@ func TestPostgresSubmissionAndApprovalAreAtomic(t *testing.T) {
 	defer func() {
 		_, _ = pool.Exec(ctx, `DELETE FROM artisan_documents WHERE artisan_profile_id IN (SELECT id FROM artisan_profiles WHERE user_id=$1)`, userID)
 		_, _ = pool.Exec(ctx, `DELETE FROM artisan_media WHERE artisan_profile_id IN (SELECT id FROM artisan_profiles WHERE user_id=$1)`, userID)
+		_, _ = pool.Exec(ctx, `DELETE FROM artisan_verifications WHERE artisan_membership_id IN (SELECT id FROM artisan_memberships WHERE user_id=$1)`, userID)
+		_, _ = pool.Exec(ctx, `DELETE FROM workshops WHERE artisan_profile_id IN (SELECT id FROM artisan_profiles WHERE user_id=$1)`, userID)
+		_, _ = pool.Exec(ctx, `DELETE FROM artisan_memberships WHERE user_id=$1`, userID)
 		_, _ = pool.Exec(ctx, `DELETE FROM artisan_profiles WHERE user_id=$1`, userID)
 		_, _ = pool.Exec(ctx, `DELETE FROM users WHERE id IN ($1,$2)`, userID, adminID)
 	}()
@@ -60,6 +63,13 @@ func TestPostgresSubmissionAndApprovalAreAtomic(t *testing.T) {
 	if approved.Status != "APPROVED" {
 		t.Fatalf("status=%q", approved.Status)
 	}
+	if approved.MembershipStatus != "ACTIVE" {
+		t.Fatalf("membership status=%q", approved.MembershipStatus)
+	}
+	workshops, err := repository.ListWorkshops(ctx, userID)
+	if err != nil || len(workshops) != 1 || !workshops[0].IsDefault || workshops[0].Name != "Integration Workshop" {
+		t.Fatalf("approved workshops=%#v err=%v", workshops, err)
+	}
 	var roles, audits, outbox int
 	if err = pool.QueryRow(ctx, `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=$1 AND r.code='artisan'`, userID).Scan(&roles); err != nil {
 		t.Fatal(err)
@@ -70,7 +80,7 @@ func TestPostgresSubmissionAndApprovalAreAtomic(t *testing.T) {
 	if err = pool.QueryRow(ctx, `SELECT count(*) FROM outbox_events WHERE aggregate_id=$1`, application.ID).Scan(&outbox); err != nil {
 		t.Fatal(err)
 	}
-	if roles != 1 || audits != 2 || outbox != 2 {
+	if roles != 1 || audits != 3 || outbox != 3 {
 		t.Fatalf("roles=%d audits=%d outbox=%d", roles, audits, outbox)
 	}
 }

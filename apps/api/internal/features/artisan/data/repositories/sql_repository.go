@@ -236,6 +236,19 @@ func (r *PostgresRepository) Decide(ctx context.Context, actor, id, decision, re
 		if err != nil {
 			return Application{}, err
 		}
+		var membershipID string
+		if err = tx.QueryRow(ctx, `INSERT INTO artisan_memberships(user_id,artisan_profile_id,status,activated_at,reason,suspended_at,closed_at) VALUES($1,$2,'ACTIVE',CURRENT_TIMESTAMP,NULL,NULL,NULL) ON CONFLICT (artisan_profile_id) DO UPDATE SET status='ACTIVE',activated_at=COALESCE(artisan_memberships.activated_at,CURRENT_TIMESTAMP),reason=NULL,suspended_at=NULL,closed_at=NULL,updated_at=CURRENT_TIMESTAMP RETURNING id`, userID, id).Scan(&membershipID); err != nil {
+			return Application{}, err
+		}
+		if err = ensureDefaultWorkshop(ctx, tx, id); err != nil {
+			return Application{}, err
+		}
+		if _, err = tx.Exec(ctx, `INSERT INTO artisan_verifications(artisan_membership_id) VALUES($1) ON CONFLICT (artisan_membership_id) DO NOTHING`, membershipID); err != nil {
+			return Application{}, err
+		}
+		if err = eventTarget(ctx, tx, "ARTISAN_MEMBERSHIP_ACTIVE", actor, "artisan_membership", "artisan_membership", membershipID, "Approved artisan application", "NOT_STARTED", "ACTIVE"); err != nil {
+			return Application{}, err
+		}
 	}
 	if err = event(ctx, tx, "ARTISAN_APPLICATION_"+decision, actor, id, reason, previous, decision); err != nil {
 		return Application{}, err
@@ -594,7 +607,34 @@ func (r *PostgresRepository) SetMembershipStatus(ctx context.Context, actor, id,
 	defer func() { _ = tx.Rollback(ctx) }()
 	var membershipID, profileID, previous string
 	if err = tx.QueryRow(ctx, `SELECT m.id,m.artisan_profile_id,m.status FROM artisan_memberships m WHERE m.id=$1 OR m.artisan_profile_id=$1 FOR UPDATE`, id).Scan(&membershipID, &profileID, &previous); errors.Is(err, pgx.ErrNoRows) {
-		return Application{}, domain.ErrNotFound
+		if status != "ACTIVE" {
+			return Application{}, domain.ErrNotFound
+		}
+		var userID string
+		if err = tx.QueryRow(ctx, `SELECT id,user_id FROM artisan_profiles WHERE id=$1 AND status='APPROVED' FOR UPDATE`, id).Scan(&profileID, &userID); errors.Is(err, pgx.ErrNoRows) {
+			return Application{}, domain.ErrNotFound
+		} else if err != nil {
+			return Application{}, err
+		}
+		if err = tx.QueryRow(ctx, `INSERT INTO artisan_memberships(user_id,artisan_profile_id,status,activated_at) VALUES($1,$2,'ACTIVE',CURRENT_TIMESTAMP) RETURNING id`, userID, profileID).Scan(&membershipID); err != nil {
+			return Application{}, err
+		}
+		if err = ensureDefaultWorkshop(ctx, tx, profileID); err != nil {
+			return Application{}, err
+		}
+		if _, err = tx.Exec(ctx, `INSERT INTO artisan_verifications(artisan_membership_id) VALUES($1) ON CONFLICT (artisan_membership_id) DO NOTHING`, membershipID); err != nil {
+			return Application{}, err
+		}
+		if _, err = tx.Exec(ctx, `INSERT INTO user_roles(user_id,role_id) SELECT $1,id FROM roles WHERE code='artisan' ON CONFLICT DO NOTHING`, userID); err != nil {
+			return Application{}, err
+		}
+		if err = eventTarget(ctx, tx, "ARTISAN_MEMBERSHIP_ACTIVE", actor, "artisan_membership", "artisan_membership", membershipID, reason, "NOT_STARTED", "ACTIVE"); err != nil {
+			return Application{}, err
+		}
+		if err = tx.Commit(ctx); err != nil {
+			return Application{}, err
+		}
+		return scanApplication(r.pool.QueryRow(ctx, applicationSelect+`WHERE a.id=$1`, profileID))
 	}
 	if err != nil {
 		return Application{}, err
@@ -605,6 +645,14 @@ func (r *PostgresRepository) SetMembershipStatus(ctx context.Context, actor, id,
 	if _, err = tx.Exec(ctx, `UPDATE artisan_memberships SET status=$2,reason=NULLIF($3,''),suspended_at=CASE WHEN $2='SUSPENDED' THEN CURRENT_TIMESTAMP ELSE suspended_at END,closed_at=CASE WHEN $2='CLOSED' THEN CURRENT_TIMESTAMP ELSE closed_at END,updated_at=CURRENT_TIMESTAMP WHERE artisan_profile_id=$1`, profileID, status, reason); err != nil {
 		return Application{}, err
 	}
+	if status == "ACTIVE" {
+		if err = ensureDefaultWorkshop(ctx, tx, profileID); err != nil {
+			return Application{}, err
+		}
+		if _, err = tx.Exec(ctx, `INSERT INTO artisan_verifications(artisan_membership_id) VALUES($1) ON CONFLICT (artisan_membership_id) DO NOTHING`, membershipID); err != nil {
+			return Application{}, err
+		}
+	}
 	if err = eventTarget(ctx, tx, "ARTISAN_MEMBERSHIP_"+status, actor, "artisan_membership", "artisan_membership", membershipID, reason, previous, status); err != nil {
 		return Application{}, err
 	}
@@ -612,6 +660,14 @@ func (r *PostgresRepository) SetMembershipStatus(ctx context.Context, actor, id,
 		return Application{}, err
 	}
 	return scanApplication(r.pool.QueryRow(ctx, applicationSelect+`WHERE a.id=$1`, profileID))
+}
+
+func ensureDefaultWorkshop(ctx context.Context, tx pgx.Tx, profileID string) error {
+	if _, err := tx.Exec(ctx, `UPDATE workshops SET status='ACTIVE',is_public=true,updated_at=CURRENT_TIMESTAMP WHERE artisan_profile_id=$1 AND is_default=true`, profileID); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO workshops(artisan_profile_id,name,wilaya,location_text,status,is_default,is_public) SELECT id,COALESCE(NULLIF(btrim(workshop_name),''),public_display_name),wilaya,location_text,'ACTIVE',true,true FROM artisan_profiles WHERE id=$1 AND NOT EXISTS (SELECT 1 FROM workshops WHERE artisan_profile_id=$1 AND is_default=true)`, profileID)
+	return err
 }
 func (r *PostgresRepository) MineVerification(ctx context.Context, userID string) (domain.Verification, error) {
 	var v domain.Verification

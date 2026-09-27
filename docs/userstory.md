@@ -53,7 +53,7 @@ Registered user acts as customer
 -> backend validates the draft, files, and workshop before final submission
 -> application enters review
 -> administrator approves the application
--> user creates the first mandatory workshop and activates membership
+-> backend activates membership and the submitted workshop becomes the default workshop
 -> user is redirected to artisan dashboard
 -> user retains all customer capabilities
 ```
@@ -579,8 +579,8 @@ Optional documents may be submitted during onboarding or later. A verification s
 #### Artisan enters
 
 - Workshop.
-- Names in supported languages.
-- Descriptions.
+- One selected content language (Arabic, English, French, or Spanish).
+- Name and description in the selected language.
 - Product story.
 - Materials.
 - Production method.
@@ -597,6 +597,9 @@ Optional documents may be submitted during onboarding or later. A verification s
 #### Acceptance criteria
 
 - Every product belongs to exactly one workshop.
+- The draft records the planned order quantity and total order price in integer minor units; the sell price remains a separate unit price.
+- Product content must include one selected supported language before submission.
+- The product can contain no more than four presentation media files.
 - The product owner is derived from workshop ownership.
 - Product is created as `DRAFT`.
 - Product remains invisible while `DRAFT`.
@@ -643,6 +646,7 @@ Optional documents may be submitted during onboarding or later. A verification s
 - Missing mandatory field.
 - Invalid price or currency.
 - Missing required media.
+- More than four product media files.
 - Inactive workshop.
 - Suspended artisan membership.
 - Ownership failure.
@@ -664,6 +668,7 @@ Optional documents may be submitted during onboarding or later. A verification s
 - Decision is audited.
 - Approval does not create stock.
 - Approval alone does not make the product sellable.
+- Approval generates a stable warehouse-facing product code that the artisan can share with the warehouse.
 
 ### US-PROD-006 - Respond to requested changes
 
@@ -720,6 +725,7 @@ A product becomes sellable only when:
 - Received quantity is not immediately sellable.
 - Product and workshop ownership context is preserved.
 - Duplicate reception requests are safely handled.
+- The warehouse agent can find a moderator-validated product by artisan phone, filter the matching workshops, select a workshop, and select its product code; the selected artisan and workshop context is shown before submission.
 
 ### US-WH-002 - Inspect batch
 
@@ -747,6 +753,7 @@ received quantity
 - Quantities cannot be negative.
 - Accepted stock becomes available only after the transaction succeeds.
 - Product activation rules are reevaluated after accepted stock changes.
+- When an approved product has accepted stock and all existing publication gates pass, the inspection transaction activates it and publishes its product media; otherwise it remains approved and unavailable.
 
 ### US-WH-003 - Correct inventory
 

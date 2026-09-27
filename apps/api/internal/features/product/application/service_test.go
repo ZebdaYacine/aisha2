@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/url"
 	"strings"
@@ -84,14 +85,13 @@ func (s *objectStoreStub) PresignedGet(context.Context, string, string, time.Dur
 
 func completeProduct() domain.Product {
 	return domain.Product{
-		ID:         "product-1",
-		Status:     "DRAFT",
-		PriceMinor: 12500,
+		ID:              "product-1",
+		Status:          "DRAFT",
+		PlannedQuantity: 10,
+		OrderTotalMinor: 125000,
+		PriceMinor:      12500,
 		Translations: []domain.Translation{
-			{Locale: "ar", Name: "منتج", Description: "وصف"},
-			{Locale: "fr", Name: "Produit", Description: "Description"},
 			{Locale: "en", Name: "Product", Description: "Description"},
-			{Locale: "es", Name: "Producto", Description: "Descripción"},
 		},
 		Media: []domain.Media{{ID: "media-1", ObjectKey: "products/product-1/image", MediaKind: "IMAGE"}},
 	}
@@ -126,7 +126,7 @@ func TestListWorkshopsAuthorizesAndReturnsOwnedWorkshops(t *testing.T) {
 	}
 }
 
-func TestSubmitRequiresEveryLocaleAndMedia(t *testing.T) {
+func TestSubmitRequiresOneLocaleAndMedia(t *testing.T) {
 	repository := &productRepositoryStub{item: completeProduct()}
 	repository.item.Media = nil
 	service := NewService(repository, productAuthorizerStub{}, nil, "private", 1024)
@@ -146,6 +146,17 @@ func TestSubmitRequiresEveryLocaleAndMedia(t *testing.T) {
 	}
 }
 
+func TestSubmitRejectsMultipleLocales(t *testing.T) {
+	repository := &productRepositoryStub{item: completeProduct()}
+	repository.item.Translations = append(repository.item.Translations, domain.Translation{Locale: "fr", Name: "Produit", Description: "Description"})
+	service := NewService(repository, productAuthorizerStub{}, nil, "private", 1024)
+
+	_, err := service.Submit(context.Background(), auth.Principal{UserID: "user-1"}, repository.item.ID)
+	if !errors.Is(err, domain.ErrValidation) || repository.submitCalled {
+		t.Fatalf("err=%v submitCalled=%v", err, repository.submitCalled)
+	}
+}
+
 func TestArchiveReturnsArchivedProduct(t *testing.T) {
 	repository := &productRepositoryStub{item: completeProduct()}
 	service := NewService(repository, productAuthorizerStub{}, nil, "private", 1024)
@@ -155,6 +166,19 @@ func TestArchiveReturnsArchivedProduct(t *testing.T) {
 	}
 	if item.Status != "ARCHIVED" {
 		t.Fatalf("status=%q", item.Status)
+	}
+}
+
+func TestSubmitRejectsMoreThanFourMedia(t *testing.T) {
+	repository := &productRepositoryStub{item: completeProduct()}
+	for len(repository.item.Media) < 5 {
+		repository.item.Media = append(repository.item.Media, domain.Media{ID: fmt.Sprintf("media-%d", len(repository.item.Media)+1)})
+	}
+	service := NewService(repository, productAuthorizerStub{}, nil, "private", 1024)
+
+	_, err := service.Submit(context.Background(), auth.Principal{UserID: "user-1"}, repository.item.ID)
+	if !errors.Is(err, domain.ErrValidation) || repository.submitCalled {
+		t.Fatalf("err=%v submitCalled=%v", err, repository.submitCalled)
 	}
 }
 

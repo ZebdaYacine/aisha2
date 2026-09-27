@@ -45,6 +45,7 @@ type AuthenticatedRoutes struct {
 	DeleteWorkshop                 fiber.Handler
 	Verification                   fiber.Handler
 	WarehouseReceptions            fiber.Handler
+	WarehouseProducts              fiber.Handler
 	WarehouseReceptionCreate       fiber.Handler
 	WarehouseReceptionEvidence     fiber.Handler
 	WarehouseReceptionEvidenceList fiber.Handler
@@ -105,6 +106,7 @@ func RegisterAuthenticated(api fiber.Router, r AuthenticatedRoutes) {
 	add(api, "GET", "/orders/:id", r.Authenticate, authorize(r, "/api/v1/orders", "read"), r.GetOrder)
 	add(api, "POST", "/orders/:id/cancel", r.Authenticate, authorize(r, "/api/v1/orders", "write"), r.CancelOrder)
 	add(api, "GET", "/warehouse/receptions", r.Authenticate, authorize(r, "/api/v1/warehouse/receptions", "read"), r.WarehouseReceptions)
+	add(api, "GET", "/warehouse/products", r.Authenticate, authorize(r, "/api/v1/warehouse/receptions", "read"), r.WarehouseProducts)
 	add(api, "POST", "/warehouse/receptions", r.Authenticate, authorize(r, "/api/v1/warehouse/receptions", "write"), r.WarehouseReceptionCreate)
 	add(api, "POST", "/warehouse/receptions/:id/inspect", r.Authenticate, authorize(r, "/api/v1/warehouse/receptions", "write"), r.WarehouseInspect)
 	add(api, "GET", "/warehouse/receptions/:id/evidence", r.Authenticate, authorize(r, "/api/v1/warehouse/receptions", "read"), r.WarehouseReceptionEvidenceList)

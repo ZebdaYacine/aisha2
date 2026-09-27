@@ -44,11 +44,13 @@ Approval alone does not prove that a product is in stock, sellable, or safe to e
 | R4 | Activate only when workshop, artisan membership, price, media, and accepted-stock gates pass. | US-PROD-007 |
 | R5 | Emit audit, outbox, and notification events for protected decisions. | US-PROD-005 |
 | R6 | Show product media in the moderation Details modal through authorized signed URLs without exposing internal product identifiers. | US-PROD-005 |
+| R7 | Generate a stable `AISHA-XXXXXXXXXX` warehouse product code when a moderator approves a product. | US-PROD-005 |
+| R8 | Keep an approved product unavailable until a warehouse inspection records accepted stock; the warehouse flow may then activate it atomically. | US-PROD-007 |
 
 ## 6. Flow
 
 ```text
-Submission → moderator queue → approve/request changes/reject → activation gates → public active product
+Submission → moderator queue → approve/request changes/reject → approval code → warehouse receive/inspect → activation gates → public active product
 ```
 
 ## 7. Technical notes
@@ -60,6 +62,8 @@ Submission → moderator queue → approve/request changes/reject → activation
 - Decisions append `audit_events` and `outbox_events` in the same transaction. The outbox event is the notification-delivery boundary; worker delivery remains a cross-cutting follow-up.
 - Repository integration coverage verifies queue filtering, approval, activation-gate rejection, media publication, and audit/outbox writes.
 - The moderator queue returns product names and media metadata; the Details modal renders image/video/file previews from short-lived signed URLs.
+- Warehouse inspection reevaluates the same activation gates in its transaction. If accepted stock is available for an approved product, the product moves to `ACTIVE`, its media becomes public, and audit/outbox events record the automatic activation; otherwise it remains `APPROVED`.
+- Approval assigns a stable, unique warehouse-facing product code derived from the product identity. Warehouse workflows use this code for human identification and do not require operators to enter an internal UUID.
 
 ## 8. Success metrics
 

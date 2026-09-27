@@ -18,6 +18,7 @@ func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 const listQuery = `SELECT ci.product_id,COALESCE(pt.name,p.product_type),COALESCE(a.public_display_name,''),COALESCE(w.name,''),ci.quantity,p.price_minor,p.currency,
  GREATEST(COALESCE((SELECT SUM(quantity_delta) FROM inventory_movements im WHERE im.product_id=p.id AND im.stock_bucket='AVAILABLE'),0),0),
  (p.status='ACTIVE' AND p.published_at IS NOT NULL AND a.status='APPROVED' AND w.status='ACTIVE' AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE')),
+ COALESCE((SELECT pm.object_key FROM product_media pm WHERE pm.product_id=p.id AND pm.visibility='PUBLIC' AND pm.media_kind='IMAGE' ORDER BY pm.sort_order,pm.created_at LIMIT 1),''),
  ci.updated_at
  FROM cart_items ci JOIN carts c ON c.id=ci.cart_id JOIN products p ON p.id=ci.product_id
  JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id
@@ -33,7 +34,7 @@ func (r *PostgresRepository) List(ctx context.Context, userID string) ([]domain.
 	out := []domain.Item{}
 	for rows.Next() {
 		var item domain.Item
-		if err := rows.Scan(&item.ProductID, &item.ProductName, &item.ArtisanName, &item.WorkshopName, &item.Quantity, &item.PriceMinor, &item.Currency, &item.Available, &item.Active, &item.UpdatedAt); err != nil {
+		if err := rows.Scan(&item.ProductID, &item.ProductName, &item.ArtisanName, &item.WorkshopName, &item.Quantity, &item.PriceMinor, &item.Currency, &item.Available, &item.Active, &item.Image, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		item.Warning = warning(item)
@@ -89,7 +90,14 @@ func (r *PostgresRepository) Add(ctx context.Context, userID string, in domain.I
 }
 
 func (r *PostgresRepository) Set(ctx context.Context, userID, productID string, quantity int) ([]domain.Item, error) {
-	result, err := r.mutate(ctx, userID, `INSERT INTO cart_items(cart_id,product_id,quantity) VALUES($1,$2,$3) ON CONFLICT(cart_id,product_id) DO UPDATE SET quantity=EXCLUDED.quantity,updated_at=CURRENT_TIMESTAMP`, productID, quantity)
+	result, err := r.mutate(ctx, userID, `INSERT INTO cart_items(cart_id,product_id,quantity)
+        SELECT $1,p.id,$3 FROM products p
+        JOIN artisan_profiles a ON a.id=p.artisan_profile_id
+        JOIN workshops w ON w.id=p.workshop_id
+        WHERE p.id=$2 AND p.status='ACTIVE' AND p.published_at IS NOT NULL
+          AND a.status='APPROVED' AND w.status='ACTIVE'
+          AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE')
+        ON CONFLICT(cart_id,product_id) DO UPDATE SET quantity=EXCLUDED.quantity,updated_at=CURRENT_TIMESTAMP`, productID, quantity)
 	return result, err
 }
 
@@ -122,8 +130,12 @@ func (r *PostgresRepository) mutate(ctx context.Context, userID, query, productI
 	if err != nil {
 		return nil, err
 	}
-	if _, err = tx.Exec(ctx, query, cartID, productID, quantity); err != nil {
+	result, err := tx.Exec(ctx, query, cartID, productID, quantity)
+	if err != nil {
 		return nil, err
+	}
+	if result.RowsAffected() == 0 {
+		return nil, domain.ErrUnavailable
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return nil, err
@@ -142,8 +154,19 @@ func (r *PostgresRepository) Merge(ctx context.Context, userID string, inputs []
 		return nil, err
 	}
 	for _, in := range inputs {
-		if _, err = tx.Exec(ctx, `INSERT INTO cart_items(cart_id,product_id,quantity) VALUES($1,$2,$3) ON CONFLICT(cart_id,product_id) DO UPDATE SET quantity=LEAST(100,cart_items.quantity+EXCLUDED.quantity),updated_at=CURRENT_TIMESTAMP`, cartID, in.ProductID, in.Quantity); err != nil {
-			return nil, err
+		result, execErr := tx.Exec(ctx, `INSERT INTO cart_items(cart_id,product_id,quantity)
+            SELECT $1,p.id,$3 FROM products p
+            JOIN artisan_profiles a ON a.id=p.artisan_profile_id
+            JOIN workshops w ON w.id=p.workshop_id
+            WHERE p.id=$2 AND p.status='ACTIVE' AND p.published_at IS NOT NULL
+              AND a.status='APPROVED' AND w.status='ACTIVE'
+              AND EXISTS (SELECT 1 FROM artisan_memberships m WHERE m.artisan_profile_id=a.id AND m.status='ACTIVE')
+            ON CONFLICT(cart_id,product_id) DO UPDATE SET quantity=LEAST(100,cart_items.quantity+EXCLUDED.quantity),updated_at=CURRENT_TIMESTAMP`, cartID, in.ProductID, in.Quantity)
+		if execErr != nil {
+			return nil, execErr
+		}
+		if result.RowsAffected() == 0 {
+			return nil, domain.ErrUnavailable
 		}
 	}
 	if err = tx.Commit(ctx); err != nil {

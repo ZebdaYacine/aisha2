@@ -120,14 +120,25 @@ export default async function ProductPage({
                       ? copy.madeToOrder
                       : product.availability === "out_of_stock"
                         ? copy.outOfStock
-                        : copy.availabilityPending}
+                  : copy.availabilityPending}
               </p>
+              {typeof product.availableQuantity === "number" && product.availability !== "made_to_order" && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {copy.available}: {product.availableQuantity}
+                </p>
+              )}
             </div>
             <div className="mt-7">
               <PurchaseControls
                 slug={product.slug}
                 availability={product.availability}
                 copy={copy}
+                productName={localized(product.name, locale)}
+                artisanName={artisan?.name}
+                workshopName={product.workshop}
+                image={product.images[0]}
+                priceMinor={product.priceMinor}
+                currency={product.currency}
               />
             </div>
             <div className="mt-7 space-y-3 text-sm text-muted-foreground">

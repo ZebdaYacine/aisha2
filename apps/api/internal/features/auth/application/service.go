@@ -58,8 +58,12 @@ func (s *Service) Register(ctx context.Context, email, password, name string) (U
 	tokens, err := s.newSession(ctx, user.ID, uuid.NewString())
 	return user, tokens, err
 }
-func (s *Service) Login(ctx context.Context, email, password string) (User, Tokens, error) {
-	user, err := s.repo.UserByEmail(ctx, normalizeEmail(email))
+func (s *Service) Login(ctx context.Context, identifier, password string) (User, Tokens, error) {
+	identifier = strings.TrimSpace(identifier)
+	if identifier == "" {
+		return User{}, Tokens{}, ErrInvalidCredentials
+	}
+	user, err := s.repo.UserByIdentifier(ctx, identifier)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)) != nil {
 		return User{}, Tokens{}, ErrInvalidCredentials
 	}

@@ -37,6 +37,8 @@ export function AccountSidebar({
     hasCapability(user, "artisan.account.read");
   const canApplyForArtisan =
     user?.artisanStatus === "NOT_STARTED" || user?.artisanStatus === "PENDING";
+  const showModeSwitcher =
+    user?.customerEnabled === true && (mode === "artisan" || canUseArtisanArea);
 
   const signOut = async () => {
     if (signingOut) return;
@@ -75,23 +77,30 @@ export function AccountSidebar({
             {copy.account}…
           </span>
         )}
-        {mode === "artisan" && (
-          <LocalizedLink
-            className="min-h-11 whitespace-nowrap border-t border-border px-3 py-3 font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:mt-2"
-            locale={locale}
-            href="/account"
-          >
-            {copy.customerArea}
-          </LocalizedLink>
-        )}
-        {mode === "customer" && canUseArtisanArea && (
-          <LocalizedLink
-            className="min-h-11 whitespace-nowrap border-t border-border px-3 py-3 font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:mt-2"
-            locale={locale}
-            href="/artisan"
-          >
-            {copy.artisanArea}
-          </LocalizedLink>
+        {showModeSwitcher && (
+          <div className="mt-2 border-y border-border py-3" role="group" aria-label={`${copy.account} mode`}>
+            <p className="px-3 pb-2 text-xs uppercase tracking-widest text-muted-foreground">{copy.account}</p>
+            <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-1">
+              <LocalizedLink
+                className={`min-h-11 whitespace-nowrap px-3 py-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "customer" ? "bg-foreground font-medium text-background hover:bg-foreground" : ""}`}
+                locale={locale}
+                href="/account"
+                aria-current={mode === "customer" ? "page" : undefined}
+              >
+                {copy.customerArea}
+              </LocalizedLink>
+              {canUseArtisanArea && (
+                <LocalizedLink
+                  className={`min-h-11 whitespace-nowrap px-3 py-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "artisan" ? "bg-foreground font-medium text-background hover:bg-foreground" : ""}`}
+                  locale={locale}
+                  href="/artisan"
+                  aria-current={mode === "artisan" ? "page" : undefined}
+                >
+                  {copy.artisanArea}
+                </LocalizedLink>
+              )}
+            </div>
+          </div>
         )}
         {mode === "customer" && !canUseArtisanArea && canApplyForArtisan && (
           <LocalizedLink
@@ -102,15 +111,6 @@ export function AccountSidebar({
             {user?.artisanStatus === "PENDING"
               ? copy.artisanPending
               : copy.becomeArtisan}
-          </LocalizedLink>
-        )}
-        {mode === "artisan" && canUseArtisanArea && (
-          <LocalizedLink
-            className="min-h-11 whitespace-nowrap px-3 py-3 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            locale={locale}
-            href="/artisan"
-          >
-            {copy.artisanArea}
           </LocalizedLink>
         )}
         {mode === "artisan" && canUseArtisanArea && (

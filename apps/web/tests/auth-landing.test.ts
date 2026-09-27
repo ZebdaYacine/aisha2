@@ -11,7 +11,7 @@ describe("authentication landing paths", () => {
           customerEnabled: true,
           artisanStatus: "NOT_STARTED",
           artisanEnabled: false,
-          capabilities: ["admin.artisan_applications.read"],
+          capabilities: ["admin.audit.read"],
         },
         "en",
       ),

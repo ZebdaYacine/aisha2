@@ -14,6 +14,7 @@ var (
 	ErrArtisanNotApproved       = errors.New("artisan is not approved")
 	ErrInvalidTransition        = errors.New("invalid product transition")
 	ErrMediaNotFound            = errors.New("product media not found")
+	ErrMediaLimit               = errors.New("product media limit reached")
 	ErrWorkshopNotOwned         = errors.New("workshop is not owned or active")
 	ErrWorkshopProtectedHistory = errors.New("product has protected workshop history")
 )
@@ -32,6 +33,8 @@ type Input struct {
 	WorkshopID          string
 	CategoryID          string
 	ProductType         string
+	PlannedQuantity     int64
+	OrderTotalMinor     int64
 	PriceMinor          int64
 	Currency            string
 	Materials           string
@@ -77,7 +80,10 @@ type Product struct {
 	WorkshopStatus      string        `json:"workshopStatus"`
 	CategoryID          string        `json:"categoryId"`
 	ProductType         string        `json:"productType"`
+	ProductCode         string        `json:"productCode,omitempty"`
 	Status              string        `json:"status"`
+	PlannedQuantity     int64         `json:"plannedQuantity"`
+	OrderTotalMinor     int64         `json:"orderTotalMinor"`
 	PriceMinor          int64         `json:"priceMinor"`
 	Currency            string        `json:"currency"`
 	Materials           string        `json:"materials"`

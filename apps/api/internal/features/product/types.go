@@ -17,6 +17,7 @@ var (
 	ErrArtisanNotApproved       = domain.ErrArtisanNotApproved
 	ErrInvalidTransition        = domain.ErrInvalidTransition
 	ErrMediaNotFound            = domain.ErrMediaNotFound
+	ErrMediaLimit               = domain.ErrMediaLimit
 	ErrWorkshopNotOwned         = domain.ErrWorkshopNotOwned
 	ErrWorkshopProtectedHistory = domain.ErrWorkshopProtectedHistory
 )
