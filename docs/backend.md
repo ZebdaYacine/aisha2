@@ -227,6 +227,7 @@ Suggested migration sequence:
 000013_notifications_outbox
 000014_audit_idempotency
 000018_cart_wishlist
+000023_notifications
 ```
 
 ## 9. API Endpoints
@@ -242,6 +243,24 @@ POST   /api/v1/auth/forgot-password
 POST   /api/v1/auth/reset-password
 GET    /api/v1/me
 ```
+
+### Notifications
+
+```text
+GET    /api/v1/notifications
+POST   /api/v1/notifications/{id}/read
+POST   /api/v1/notifications/read-all
+GET    /api/v1/notifications/ws-ticket
+GET    /api/v1/notifications/ws?ticket=<one-time-ticket>
+```
+
+The API worker claims pending outbox records with a lease, creates recipient-scoped
+notifications idempotently, retries failures with backoff, and publishes committed
+notifications to connected users over WebSocket. The browser receives a one-minute,
+one-time ticket through the authenticated BFF so HttpOnly access cookies stay private.
+Workflow events also fan out to the relevant operational peers: moderators and
+administrators for review queues, warehouse agents for stock transitions, and the
+customer/artisan/fulfilment participants of an order.
 
 ### Public Catalogue
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aisha-platform/aisha/apps/api/internal/features/auth/domain"
@@ -55,7 +56,17 @@ func (r *PostgresRepository) UserByEmail(ctx context.Context, email string) (Use
 	return r.user(ctx, `WHERE lower(u.email)=lower($1)`, email)
 }
 func (r *PostgresRepository) UserByIdentifier(ctx context.Context, identifier string) (User, error) {
-	return r.user(ctx, `WHERE lower(u.email)=lower($1) OR regexp_replace(COALESCE(u.phone,''),'[^0-9]','','g')=regexp_replace($1,'[^0-9]','','g')`, identifier)
+	identifier = strings.TrimSpace(identifier)
+	if strings.Contains(identifier, "@") {
+		return r.UserByEmail(ctx, identifier)
+	}
+	phone := normalizedPhone(identifier)
+	if phone == "" {
+		return User{}, ErrInvalidCredentials
+	}
+	storedPhone := `regexp_replace(COALESCE(u.phone,''),'[^0-9]','','g')`
+	canonicalStoredPhone := `CASE WHEN ` + storedPhone + ` LIKE '00213%' THEN '0'||substring(` + storedPhone + ` FROM 6) WHEN ` + storedPhone + ` LIKE '213%' THEN '0'||substring(` + storedPhone + ` FROM 4) ELSE ` + storedPhone + ` END`
+	return r.user(ctx, `WHERE `+canonicalStoredPhone+`=$1`, phone)
 }
 func (r *PostgresRepository) UserByID(ctx context.Context, id string) (User, error) {
 	return r.user(ctx, `WHERE u.id=$1`, id)
@@ -70,6 +81,24 @@ func (r *PostgresRepository) user(ctx context.Context, where, arg string) (User,
 		return User{}, fmt.Errorf("query user: %w", err)
 	}
 	return user, nil
+}
+
+func normalizedPhone(value string) string {
+	var digits strings.Builder
+	for _, character := range value {
+		if character >= '0' && character <= '9' {
+			digits.WriteRune(character)
+		}
+	}
+	phone := digits.String()
+	switch {
+	case strings.HasPrefix(phone, "00213"):
+		return "0" + phone[5:]
+	case strings.HasPrefix(phone, "213"):
+		return "0" + phone[3:]
+	default:
+		return phone
+	}
 }
 func (r *PostgresRepository) CreateSession(ctx context.Context, userID, tokenHash, familyID string, expires time.Time) (Session, error) {
 	var session Session

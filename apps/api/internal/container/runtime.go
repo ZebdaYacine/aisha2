@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/aisha-platform/aisha/apps/api/internal/config"
@@ -12,6 +13,7 @@ import (
 	"github.com/aisha-platform/aisha/apps/api/internal/features/catalogue"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/inventory"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/moderation"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/notification"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/order"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/product"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/user"
@@ -91,11 +93,15 @@ func NewRuntime(ctx context.Context, cfg config.Config) (*Runtime, error) {
 	workerCtx, cancelWorker := context.WithCancel(ctx)
 	reservationWorker := inventory.NewReservationExpiryWorker(pool, time.Minute)
 	go reservationWorker.Run(workerCtx)
+	notificationHub := notification.NewHub()
+	notificationService := notification.NewService(pool)
+	notificationWorker := notification.NewWorker(pool, notificationHub, time.Second, slog.Default())
+	go notificationWorker.Run(workerCtx)
 	cartService := cart.NewService(pool, authorizationService)
 	wishlistService := wishlist.NewService(pool, authorizationService)
 	features := Features{Auth: authService, Customer: customerService, Artisan: artisanService, Catalogue: catalogueService, Product: productService, Admin: adminService, Moderation: moderationService, Order: orderService, Warehouse: warehouseService, Inventory: inventoryService, Cart: cartService, Wishlist: wishlistService}
 	return &Runtime{
-		App:            httpapi.NewWithWorkflows(cfg, healthService, features.Auth, authorizationService, rateLimiter, features.Artisan, features.Customer, features.Product, artisanMediaService, features.Admin, features.Moderation, features.Order, features.Warehouse, features.Inventory, features.Cart, features.Wishlist, features.Catalogue),
+		App:            httpapi.NewWithWorkflows(cfg, healthService, features.Auth, authorizationService, rateLimiter, features.Artisan, features.Customer, features.Product, artisanMediaService, features.Admin, features.Moderation, features.Order, features.Warehouse, features.Inventory, features.Cart, features.Wishlist, notificationService, notificationHub, features.Catalogue),
 		infrastructure: infrastructure,
 		cleanup: func() {
 			cancelWorker()

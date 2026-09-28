@@ -530,6 +530,38 @@ paths:
       x-casbin-permission: /api/v1/orders:write
       parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
       responses: {'200': {description: Cancelled order, content: {application/json: {schema: {$ref: '#/components/schemas/Order'}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}, '409': {$ref: '#/components/responses/ConflictError'}}
+  /api/v1/notifications:
+    get:
+      summary: List the authenticated user's notifications
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/notifications:read
+      parameters: [{name: page, in: query, schema: {type: integer, minimum: 1}}, {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100}}]
+      responses: {'200': {description: Notification page, content: {application/json: {schema: {$ref: '#/components/schemas/NotificationPage'}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+  /api/v1/notifications/{id}/read:
+    post:
+      summary: Mark one notification as read
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/notifications:write
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'204': {description: Notification marked as read}, '401': {$ref: '#/components/responses/AuthenticationError'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/v1/notifications/read-all:
+    post:
+      summary: Mark all notifications as read
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/notifications:write
+      responses: {'204': {description: Notifications marked as read}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+  /api/v1/notifications/ws-ticket:
+    get:
+      summary: Issue a one-time ticket for the notification WebSocket
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/notifications:read
+      responses: {'200': {description: Short-lived one-time WebSocket ticket, content: {application/json: {schema: {$ref: '#/components/schemas/NotificationSocketTicket'}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}}
+  /api/v1/notifications/ws:
+    get:
+      summary: Subscribe to authenticated in-app notifications over WebSocket
+      description: Use the one-time ticket returned by /api/v1/notifications/ws-ticket as the ticket query parameter.
+      parameters: [{name: ticket, in: query, required: true, schema: {type: string}}]
+      responses: {'101': {description: WebSocket connection established}, '401': {$ref: '#/components/responses/AuthenticationError'}}
   /api/v1/admin/product-submissions:
     get:
       summary: List products awaiting moderator review
@@ -553,6 +585,13 @@ paths:
       parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
       requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ReturnRequest'}}}}
       responses: {'201': {description: Return recorded, content: {application/json: {schema: {$ref: '#/components/schemas/OrderReturn'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '409': {$ref: '#/components/responses/ConflictError'}}
+  /api/v1/admin/orders:
+    get:
+      summary: List customer orders for administration
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/orders:read
+      parameters: [{name: page, in: query, schema: {type: integer, minimum: 1}}, {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100}}]
+      responses: {'200': {description: Paginated customer orders, content: {application/json: {schema: {$ref: '#/components/schemas/AdminOrderPage'}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}}
   /api/v1/admin/users:
     get:
       summary: List users and roles for administration
@@ -560,6 +599,20 @@ paths:
       x-casbin-permission: /api/v1/admin/users:read
       parameters: [{name: role, in: query, schema: {type: string}}, {name: status, in: query, schema: {type: string}}, {name: page, in: query, schema: {type: integer, minimum: 1}}, {name: pageSize, in: query, schema: {type: integer, minimum: 1, maximum: 100}}]
       responses: {'200': {description: Paginated users}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}}
+    post:
+      summary: Create a customer, artisan, moderator, or warehouse worker account
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/users:write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AdminUserRequest'}}}}
+      responses: {'201': {description: User created, content: {application/json: {schema: {$ref: '#/components/schemas/User'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '409': {$ref: '#/components/responses/ConflictError'}}
+  /api/v1/admin/users/{id}:
+    patch:
+      summary: Update an account profile, roles, or password
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/users:write
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AdminUserRequest'}}}}
+      responses: {'200': {description: User updated, content: {application/json: {schema: {$ref: '#/components/schemas/User'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '404': {$ref: '#/components/responses/Error'}}
   /api/v1/admin/users/{id}/status:
     post:
       summary: Suspend, disable, or reactivate a user account
@@ -576,6 +629,32 @@ paths:
       parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
       requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/RolesRequest'}}}}
       responses: {'200': {description: Roles updated}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/v1/admin/categories:
+    get:
+      summary: List product categories for administration
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/categories:read
+      responses: {'200': {description: Category list, content: {application/json: {schema: {$ref: '#/components/schemas/AdminCategoryPage'}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}}
+    post:
+      summary: Create a translated product category
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/categories:write
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AdminCategoryRequest'}}}}
+      responses: {'201': {description: Category created, content: {application/json: {schema: {$ref: '#/components/schemas/AdminCategory'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '409': {$ref: '#/components/responses/ConflictError'}}
+  /api/v1/admin/categories/{id}:
+    patch:
+      summary: Update a translated product category
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/categories:write
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AdminCategoryRequest'}}}}
+      responses: {'200': {description: Category updated, content: {application/json: {schema: {$ref: '#/components/schemas/AdminCategory'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '404': {$ref: '#/components/responses/Error'}}
+    delete:
+      summary: Deactivate a product category
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/admin/categories:write
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'204': {description: Category deactivated}, '401': {$ref: '#/components/responses/AuthenticationError'}, '403': {$ref: '#/components/responses/ForbiddenError'}, '404': {$ref: '#/components/responses/Error'}}
   /api/v1/admin/workshops/{id}/status:
     post:
       summary: Suspend, archive, or reactivate an owned workshop as an administrator
@@ -1237,6 +1316,7 @@ components:
       required: [productId, productName, workshopId, workshopName, artisanId, artisanName, onHand, available, reserved, quarantined, damaged, rejected, shipped, updatedAt]
       properties:
         productId: {type: string, format: uuid}
+        productCode: {type: string, description: Stable warehouse code when one has been generated}
         productName: {type: string}
         workshopId: {type: string, format: uuid}
         workshopName: {type: string}
@@ -1268,7 +1348,7 @@ components:
         productCount: {type: integer, minimum: 0}
     ProductRequest:
       type: object
-      required: [workshopId, categoryId, productType, plannedQuantity, orderTotalMinor, priceMinor, currency]
+      required: [workshopId, categoryId, productType, plannedQuantity, orderTotalMinor, priceMinor, currency, translations]
       properties:
         workshopId: {type: string, format: uuid}
         categoryId: {type: string, format: uuid}
@@ -1417,6 +1497,88 @@ components:
       properties:
         status: {type: string, enum: [ACTIVE, SUSPENDED, DISABLED]}
         reason: {type: string, maxLength: 1000, description: "Required when suspending or disabling a user."}
+    AdminUserRequest:
+      type: object
+      required: [email, displayName, roles]
+      properties:
+        email: {type: string, format: email, maxLength: 254}
+        phone: {type: string, maxLength: 32}
+        displayName: {type: string, minLength: 2, maxLength: 120}
+        password: {type: string, format: password, minLength: 12, maxLength: 128, description: Required when creating an account; optional when updating}
+        roles: {type: array, minItems: 1, maxItems: 10, items: {type: string, enum: [customer, artisan, moderator, warehouse_agent, administrator]}}
+    AdminCategory:
+      type: object
+      required: [id, slug, displayName, translations, benefitRateBasisPoints, isActive, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        slug: {type: string}
+        displayName: {type: string}
+        translations: {type: object, additionalProperties: {type: string}, description: "Translations for ar, en, fr, and es"}
+        benefitRateBasisPoints: {type: integer, format: int64, minimum: 0, maximum: 10000, description: Benefit percentage multiplied by 100}
+        isActive: {type: boolean}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    AdminCategoryRequest:
+      type: object
+      required: [slug, displayName, translations]
+      properties:
+        slug: {type: string, minLength: 2, maxLength: 80}
+        displayName: {type: string, minLength: 2, maxLength: 160}
+        translations: {type: object, minProperties: 4, additionalProperties: {type: string, minLength: 2, maxLength: 160}, description: "Must include ar, en, fr, and es"}
+        benefitRateBasisPoints: {type: integer, format: int64, minimum: 0, maximum: 10000}
+        isActive: {type: boolean}
+    AdminCategoryPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/AdminCategory'}}
+        page: {type: integer}
+        pageSize: {type: integer}
+        total: {type: integer}
+    AdminOrder:
+      type: object
+      required: [orderNumber, customerName, customerEmail, status, currency, totalMinor, createdAt]
+      properties:
+        orderNumber: {type: string}
+        customerName: {type: string}
+        customerEmail: {type: string, format: email}
+        status: {type: string}
+        currency: {type: string}
+        totalMinor: {type: integer, format: int64}
+        createdAt: {type: string, format: date-time}
+    AdminOrderPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/AdminOrder'}}
+        page: {type: integer}
+        pageSize: {type: integer}
+        total: {type: integer}
+    Notification:
+      type: object
+      required: [id, eventType, titleKey, bodyKey, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        eventType: {type: string}
+        titleKey: {type: string}
+        bodyKey: {type: string}
+        payload: {type: object, additionalProperties: true}
+        readAt: {type: string, format: date-time, nullable: true}
+        createdAt: {type: string, format: date-time}
+    NotificationPage:
+      type: object
+      required: [items, page, pageSize, total, unreadCount]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Notification'}}
+        page: {type: integer}
+        pageSize: {type: integer}
+        total: {type: integer}
+        unreadCount: {type: integer}
+    NotificationSocketTicket:
+      type: object
+      required: [ticket]
+      properties:
+        ticket: {type: string}
     AdminWorkshopStatusRequest:
       type: object
       required: [status]
@@ -1477,6 +1639,7 @@ components:
       properties:
         id: {type: string, format: uuid}
         email: {type: string, format: email}
+        phone: {type: string}
         displayName: {type: string}
         status: {type: string}
         roles: {type: array, items: {type: string}}

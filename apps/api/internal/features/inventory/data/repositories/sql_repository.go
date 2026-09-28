@@ -20,6 +20,7 @@ func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 
 const balanceQuery = `
 SELECT p.id,
+       COALESCE(p.product_code,''),
        COALESCE((SELECT t.name FROM product_translations t WHERE t.product_id=p.id AND t.locale='en' LIMIT 1),(SELECT t.name FROM product_translations t WHERE t.product_id=p.id ORDER BY t.locale LIMIT 1),p.product_type),
        w.id,w.name,a.id,COALESCE(a.public_display_name,''),
        GREATEST(COALESCE(SUM(CASE WHEN im.stock_bucket='AVAILABLE' THEN im.quantity_delta ELSE 0 END),0),0)
@@ -35,13 +36,13 @@ FROM products p
 JOIN workshops w ON w.id=p.workshop_id
 JOIN artisan_profiles a ON a.id=p.artisan_profile_id
 LEFT JOIN inventory_movements im ON im.product_id=p.id
-WHERE ($1 OR a.user_id=$2) AND ($3='' OR w.id=$3)
+WHERE ($1 OR a.user_id=$2) AND ($3='' OR w.id=NULLIF($3,'')::uuid)
 GROUP BY p.id,p.product_type,p.updated_at,w.id,w.name,a.id,a.public_display_name
 ORDER BY COALESCE(MAX(im.created_at),p.updated_at) DESC,p.id`
 
 func (r *PostgresRepository) ListBalances(ctx context.Context, actor string, global bool, workshopID string, limit, offset int) ([]domain.Balance, int, error) {
 	var total int
-	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id WHERE ($1 OR a.user_id=$2) AND ($3='' OR w.id=$3)`, global, actor, workshopID).Scan(&total); err != nil {
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN workshops w ON w.id=p.workshop_id WHERE ($1 OR a.user_id=$2) AND ($3='' OR w.id=NULLIF($3,'')::uuid)`, global, actor, workshopID).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count inventory balances: %w", err)
 	}
 	rows, err := r.pool.Query(ctx, balanceQuery+` LIMIT $4 OFFSET $5`, global, actor, workshopID, limit, offset)
@@ -52,7 +53,7 @@ func (r *PostgresRepository) ListBalances(ctx context.Context, actor string, glo
 	items := make([]domain.Balance, 0)
 	for rows.Next() {
 		var item domain.Balance
-		if err := rows.Scan(&item.ProductID, &item.ProductName, &item.WorkshopID, &item.WorkshopName, &item.ArtisanID, &item.ArtisanName, &item.OnHand, &item.Available, &item.Reserved, &item.Quarantined, &item.Damaged, &item.Rejected, &item.Shipped, &item.UpdatedAt); err != nil {
+		if err := rows.Scan(&item.ProductID, &item.ProductCode, &item.ProductName, &item.WorkshopID, &item.WorkshopName, &item.ArtisanID, &item.ArtisanName, &item.OnHand, &item.Available, &item.Reserved, &item.Quarantined, &item.Damaged, &item.Rejected, &item.Shipped, &item.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		items = append(items, item)

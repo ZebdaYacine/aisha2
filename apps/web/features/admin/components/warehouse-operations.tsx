@@ -72,7 +72,6 @@ export function WarehouseOperations() {
   const [validatedProducts, setValidatedProducts] = useState<ValidatedProduct[]>([]);
   const [artisanPhone, setArtisanPhone] = useState("");
   const [workshopId, setWorkshopId] = useState("");
-  const [productQuery, setProductQuery] = useState("");
   const [productsLoading, setProductsLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -104,7 +103,6 @@ export function WarehouseOperations() {
     try {
       const query = new URLSearchParams({ artisanPhone: artisanPhone.trim(), page: "1", pageSize: "100" });
       if (nextWorkshopId) query.set("workshopId", nextWorkshopId);
-      if (productQuery.trim()) query.set("query", productQuery.trim());
       const response = await fetch(`/api/warehouse/products?${query}`, { cache: "no-store" });
       if (!response.ok) throw new Error();
       const data = (await response.json()) as { items?: ValidatedProduct[] };
@@ -118,12 +116,11 @@ export function WarehouseOperations() {
     } finally {
       setProductsLoading(false);
     }
-  }, [artisanPhone, productQuery, workshopId]);
+  }, [artisanPhone, workshopId]);
 
   const workshops = Array.from(new Map(validatedProducts.map((item) => [item.workshopId, item.workshopName])).entries()).map(([value, label]) => ({ value, label }));
   const workshopProducts = validatedProducts.filter((item) => !workshopId || item.workshopId === workshopId);
   const productOptions = workshopProducts
-    .filter((item) => !productQuery.trim() || `${item.productCode} ${item.productName}`.toLocaleLowerCase().includes(productQuery.trim().toLocaleLowerCase()))
     .map((item) => ({ value: item.productCode, label: `${item.productCode} · ${item.productName} · ${item.availableQuantity} available` }));
   const selectedProduct = validatedProducts.find((item) => item.productCode === createForm.productCode);
   const inspectionTotal =
@@ -194,7 +191,6 @@ export function WarehouseOperations() {
       setValidatedProducts([]);
       setArtisanPhone("");
       setWorkshopId("");
-      setProductQuery("");
       selectItem(reception);
       toast.success("Reception recorded — complete the inspection to publish stock");
       await load(1, status);
@@ -205,35 +201,37 @@ export function WarehouseOperations() {
     }
   };
 
-  const uploadEvidence = async () => {
-    if (!selected || !evidence) return;
+  const uploadEvidence = async (): Promise<Evidence | null> => {
+    if (!selected || !evidence) return null;
     const form = new FormData();
     form.set("file", evidence);
-    setSaving(true);
-    try {
-      const response = await fetch(`/api/warehouse/receptions/${selected.id}/evidence`, {
-        method: "POST",
-        body: form,
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.error?.message ?? "Unable to upload evidence");
-      }
-      const item = (await response.json()) as Evidence;
-      setSelected({ ...selected, evidence: [...selected.evidence, item] });
-      setEvidence(null);
-      toast.success("Evidence uploaded");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to upload evidence");
-    } finally {
-      setSaving(false);
+    const response = await fetch(`/api/warehouse/receptions/${selected.id}/evidence`, {
+      method: "POST",
+      body: form,
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error?.message ?? "Unable to upload evidence");
     }
+    return (await response.json()) as Evidence;
   };
 
   const inspect = async () => {
     if (!selected) return;
     setSaving(true);
     try {
+      let selectedForInspection = selected;
+      if (evidence) {
+        const uploaded = await uploadEvidence();
+        if (uploaded) {
+          selectedForInspection = { ...selected, evidence: [...selected.evidence, uploaded] };
+          setSelected(selectedForInspection);
+          setEvidence(null);
+        }
+      }
+      if (selectedForInspection.evidence.length === 0) {
+        throw new Error("Select an evidence file before submitting the inspection");
+      }
       const response = await fetch(`/api/warehouse/receptions/${selected.id}/inspect`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -300,16 +298,16 @@ export function WarehouseOperations() {
               </label>
               <label className="block text-sm">
                 <span className="mb-2 block">Product code or name</span>
-                <input className="auth-input w-full" value={productQuery} placeholder="Filter products" onChange={(event) => setProductQuery(event.target.value)} />
+                <Combobox className="w-full" options={productOptions} value={createForm.productCode} onChange={(next) => {
+                  const product = validatedProducts.find((item) => item.productCode === next);
+                  setCreateForm({ ...createForm, productCode: next, supplierName: product?.artisanName ?? createForm.supplierName });
+                }} placeholder="Select an approved product" emptyMessage="Select a workshop first" ariaLabel="Product code or name" disabled={!productOptions.length} />
               </label>
             </div>
-            <label className="mt-4 block text-sm">
-              <span className="mb-2 block">Validated product</span>
-              <Combobox className="w-full" options={productOptions} value={createForm.productCode} onChange={(next) => {
-                const product = validatedProducts.find((item) => item.productCode === next);
-                setCreateForm({ ...createForm, productCode: next, supplierName: product?.artisanName ?? createForm.supplierName });
-              }} placeholder="Select an approved product" emptyMessage="No validated products match" ariaLabel="Validated product" disabled={!productOptions.length} />
-            </label>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <span>{workshopProducts.length} approved product(s) in this workshop</span>
+              {productsLoading && <span>Refreshing…</span>}
+            </div>
             {selectedProduct && <p className="mt-3 text-xs text-muted-foreground">{selectedProduct.artisanName} · {selectedProduct.artisanPhone} · {selectedProduct.workshopName} · <span className="font-medium text-foreground">{selectedProduct.productCode}</span> · {selectedProduct.availableQuantity} available</p>}
           </div>
           {[
@@ -424,7 +422,7 @@ export function WarehouseOperations() {
             <div className="mt-6 border-t border-border pt-5">
               <h3 className="font-medium">Evidence</h3>
               <div className="mt-3 flex flex-wrap gap-2">{selected.evidence.map((file) => file.url ? <a className="underline" key={file.id} href={file.url} target="_blank" rel="noreferrer">{file.originalFilename || file.mediaType}</a> : <span key={file.id}>{file.originalFilename}</span>)}</div>
-              {selected.status === "RECEIVED_PENDING_INSPECTION" && <div className="mt-4 flex flex-wrap items-center gap-3"><input type="file" accept="image/*,application/pdf,video/mp4" onChange={(event) => setEvidence(event.target.files?.[0] ?? null)} /><Button type="button" variant="outline" disabled={!evidence || saving} onClick={() => void uploadEvidence()}>Upload evidence</Button></div>}
+              {selected.status === "RECEIVED_PENDING_INSPECTION" && <div className="mt-4 flex flex-wrap items-center gap-3"><input aria-label="Inspection evidence" type="file" accept="image/*,application/pdf,video/mp4" onChange={(event) => setEvidence(event.target.files?.[0] ?? null)} />{evidence && <span className="text-xs text-muted-foreground">{evidence.name} will be uploaded with the inspection</span>}</div>}
             </div>
             {selected.status === "RECEIVED_PENDING_INSPECTION" ? (
               <div className="mt-6 border-t border-border pt-5">
@@ -434,7 +432,7 @@ export function WarehouseOperations() {
                   <label className="block text-sm md:col-span-2"><span className="mb-2 block">Inspection reason (minimum 3 characters)</span><textarea className="auth-input min-h-24 w-full" required minLength={3} value={inspection.reason} onChange={(event) => setInspection({ ...inspection, reason: event.target.value })} /></label>
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">The four outcomes must total {selected.receivedQuantity}. At least one evidence file and a reason of at least 3 characters are required before committing.</p>
-                <Button className="mt-4" type="button" disabled={saving || selected.evidence.length === 0 || inspectionTotal !== selected.receivedQuantity || inspection.reason.trim().length < 3} onClick={() => void inspect()}>Commit inspection</Button>
+                <Button className="mt-4" type="button" disabled={saving || (selected.evidence.length === 0 && !evidence) || inspectionTotal !== selected.receivedQuantity || inspection.reason.trim().length < 3} onClick={() => void inspect()}>{saving ? "Submitting…" : "Submit inspection"}</Button>
               </div>
             ) : selected.inspection ? <div className="mt-6 border-t border-border pt-5"><h3 className="font-medium">Inspection outcome</h3><p className="mt-3 text-sm">Accepted {selected.inspection.acceptedQuantity} · Rejected {selected.inspection.rejectedQuantity} · Quarantined {selected.inspection.quarantinedQuantity} · Damaged {selected.inspection.damagedQuantity}</p><p className="mt-2 text-sm text-muted-foreground">{selected.inspection.reason}</p></div> : null}
           </div>

@@ -60,6 +60,11 @@ type AuthenticatedRoutes struct {
 	Wishlist                       fiber.Handler
 	WishlistAdd                    fiber.Handler
 	WishlistRemove                 fiber.Handler
+	Notifications                  fiber.Handler
+	NotificationRead               fiber.Handler
+	NotificationsReadAll           fiber.Handler
+	NotificationSocketTicket       fiber.Handler
+	NotificationSocket             fiber.Handler
 }
 
 func RegisterAuthenticated(api fiber.Router, r AuthenticatedRoutes) {
@@ -121,6 +126,11 @@ func RegisterAuthenticated(api fiber.Router, r AuthenticatedRoutes) {
 	add(api, "GET", "/wishlist", r.Authenticate, authorize(r, "/api/v1/wishlist", "read"), r.Wishlist)
 	add(api, "POST", "/wishlist/items/:productId", r.Authenticate, authorize(r, "/api/v1/wishlist", "write"), r.WishlistAdd)
 	add(api, "DELETE", "/wishlist/items/:productId", r.Authenticate, authorize(r, "/api/v1/wishlist", "write"), r.WishlistRemove)
+	add(api, "GET", "/notifications", r.Authenticate, authorize(r, "/api/v1/notifications", "read"), r.Notifications)
+	add(api, "POST", "/notifications/:id/read", r.Authenticate, authorize(r, "/api/v1/notifications", "write"), r.NotificationRead)
+	add(api, "POST", "/notifications/read-all", r.Authenticate, authorize(r, "/api/v1/notifications", "write"), r.NotificationsReadAll)
+	add(api, "GET", "/notifications/ws-ticket", r.Authenticate, authorize(r, "/api/v1/notifications", "read"), r.NotificationSocketTicket)
+	add(api, "GET", "/notifications/ws", r.NotificationSocket)
 }
 
 func authorize(r AuthenticatedRoutes, resource, action string) fiber.Handler {

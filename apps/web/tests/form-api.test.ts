@@ -24,7 +24,7 @@ describe("form API mapping", () => {
         }),
       ) as unknown as typeof fetch;
     await expect(
-      submitJSON("/api/auth/login", { email: "bad" }),
+      submitJSON("/api/auth/login", { identifier: "bad" }),
     ).resolves.toEqual({
       ok: false,
       status: 400,
@@ -40,7 +40,7 @@ describe("form API mapping", () => {
         response(429, { error: { code: "RATE_LIMITED" } }),
       ) as unknown as typeof fetch;
     await expect(
-      submitJSON("/api/auth/login", { email: "a@b.com" }),
+      submitJSON("/api/auth/login", { identifier: "a@b.com" }),
     ).resolves.toEqual({ ok: false, status: 429, code: "RATE_LIMITED" });
   });
 
@@ -50,7 +50,7 @@ describe("form API mapping", () => {
       .fn()
       .mockResolvedValue(response(200, { user })) as unknown as typeof fetch;
     await expect(
-      submitJSON("/api/auth/login", { email: user.email }),
+      submitJSON("/api/auth/login", { identifier: user.email }),
     ).resolves.toEqual({ ok: true, data: { user } });
   });
 });

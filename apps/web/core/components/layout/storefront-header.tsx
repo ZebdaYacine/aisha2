@@ -14,6 +14,7 @@ import { GlobalSearch } from "./global-search";
 import type { Artisan, Category, Product } from "@/features/catalogue/types";
 import { useOptionalAuth } from "@/features/auth/viewmodel/auth-context";
 import { hasCapability, landingPathForUser, userInitials } from "@/features/auth/types";
+import { NotificationCenter } from "@/features/notification/components/notification-center";
 
 const navItems = [
   ["new", "/products?sort=newest"],
@@ -124,6 +125,7 @@ export function StorefrontHeader({
                 <UserRound aria-hidden="true" size={19} strokeWidth={1.5} />
               )}
             </Link>
+            <NotificationCenter locale={locale} />
             <button
               type="button"
               onClick={() => setCartOpen(true)}

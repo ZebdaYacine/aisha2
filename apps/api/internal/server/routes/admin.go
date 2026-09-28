@@ -10,6 +10,8 @@ type AdminRoutes struct {
 	ApplicationDocuments fiber.Handler
 	ApplicationMedia     fiber.Handler
 	ListUsers            fiber.Handler
+	CreateUser           fiber.Handler
+	UpdateUser           fiber.Handler
 	UpdateUserRoles      fiber.Handler
 	UserStatus           fiber.Handler
 	AuditEvents          fiber.Handler
@@ -24,6 +26,11 @@ type AdminRoutes struct {
 	ProductMedia         fiber.Handler
 	DeleteUserMedia      fiber.Handler
 	DeleteProductMedia   fiber.Handler
+	Categories           fiber.Handler
+	CreateCategory       fiber.Handler
+	UpdateCategory       fiber.Handler
+	DeleteCategory       fiber.Handler
+	Orders               fiber.Handler
 }
 
 func RegisterAdmin(api fiber.Router, r AdminRoutes) {
@@ -35,6 +42,8 @@ func RegisterAdmin(api fiber.Router, r AdminRoutes) {
 	add(api, "GET", "/admin/artisan-applications/:id/documents", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/artisan-applications/*/documents", "read"), r.ApplicationDocuments)
 	add(api, "GET", "/admin/artisan-applications/:id/media", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/artisan-applications/*/media", "read"), r.ApplicationMedia)
 	add(api, "GET", "/admin/users", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/users", "read"), r.ListUsers)
+	add(api, "POST", "/admin/users", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/users", "write"), r.CreateUser)
+	add(api, "PATCH", "/admin/users/:id", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/users", "write"), r.UpdateUser)
 	add(api, "PATCH", "/admin/users/:id/roles", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/users", "write"), r.UpdateUserRoles)
 	add(api, "POST", "/admin/users/:id/status", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/users", "write"), r.UserStatus)
 	add(api, "GET", "/admin/audit-events", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/audit-events", "read"), r.AuditEvents)
@@ -49,6 +58,11 @@ func RegisterAdmin(api fiber.Router, r AdminRoutes) {
 	add(api, "GET", "/admin/media/products", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/media", "read"), r.ProductMedia)
 	add(api, "DELETE", "/admin/media/users/:id", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/media", "write"), r.DeleteUserMedia)
 	add(api, "DELETE", "/admin/media/products/:id", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/media", "write"), r.DeleteProductMedia)
+	add(api, "GET", "/admin/categories", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/categories", "read"), r.Categories)
+	add(api, "POST", "/admin/categories", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/categories", "write"), r.CreateCategory)
+	add(api, "PATCH", "/admin/categories/:id", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/categories", "write"), r.UpdateCategory)
+	add(api, "DELETE", "/admin/categories/:id", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/categories", "write"), r.DeleteCategory)
+	add(api, "GET", "/admin/orders", r.Authenticate, authorizeAdmin(r, "/api/v1/admin/orders", "read"), r.Orders)
 }
 
 func authorizeAdmin(r AdminRoutes, resource, action string) fiber.Handler {

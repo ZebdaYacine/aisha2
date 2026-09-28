@@ -9,6 +9,7 @@ import (
 	"github.com/aisha-platform/aisha/apps/api/internal/features/catalogue"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/inventory"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/moderation"
+	"github.com/aisha-platform/aisha/apps/api/internal/features/notification"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/order"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/product"
 	"github.com/aisha-platform/aisha/apps/api/internal/features/user"
@@ -22,18 +23,18 @@ import (
 )
 
 func New(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, catalogueServices ...*catalogue.Service) *fiber.App {
-	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, nil, nil, nil, nil, nil, nil, nil, nil, nil, catalogueServices...)
+	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, catalogueServices...)
 }
 
 func NewWithProduct(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, catalogueServices ...*catalogue.Service) *fiber.App {
-	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, productService, artisanMediaService, adminService, nil, nil, nil, nil, nil, nil, catalogueServices...)
+	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, productService, artisanMediaService, adminService, nil, nil, nil, nil, nil, nil, nil, nil, catalogueServices...)
 }
 
-func NewWithWorkflows(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, moderationService *moderation.Service, orderService *order.Service, warehouseService *warehouse.Service, inventoryService *inventory.Service, cartService *cart.Service, wishlistService *wishlist.Service, catalogueServices ...*catalogue.Service) *fiber.App {
-	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, productService, artisanMediaService, adminService, moderationService, orderService, warehouseService, inventoryService, cartService, wishlistService, catalogueServices...)
+func NewWithWorkflows(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, moderationService *moderation.Service, orderService *order.Service, warehouseService *warehouse.Service, inventoryService *inventory.Service, cartService *cart.Service, wishlistService *wishlist.Service, notificationService *notification.Service, notificationHub *notification.Hub, catalogueServices ...*catalogue.Service) *fiber.App {
+	return newServer(cfg, healthService, authService, authorizationService, rateLimiter, artisanService, customerService, productService, artisanMediaService, adminService, moderationService, orderService, warehouseService, inventoryService, cartService, wishlistService, notificationService, notificationHub, catalogueServices...)
 }
 
-func newServer(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, moderationService *moderation.Service, orderService *order.Service, warehouseService *warehouse.Service, inventoryService *inventory.Service, cartService *cart.Service, wishlistService *wishlist.Service, catalogueServices ...*catalogue.Service) *fiber.App {
+func newServer(cfg config.Config, healthService *health.Service, authService *auth.Service, authorizationService *authorization.Service, rateLimiter RateLimiter, artisanService *artisan.Service, customerService *customer.Service, productService *product.Service, artisanMediaService *artisan.MediaService, adminService *admin.Service, moderationService *moderation.Service, orderService *order.Service, warehouseService *warehouse.Service, inventoryService *inventory.Service, cartService *cart.Service, wishlistService *wishlist.Service, notificationService *notification.Service, notificationHub *notification.Hub, catalogueServices ...*catalogue.Service) *fiber.App {
 	bodyLimit := cfg.UploadMaxBytes + 2*1024*1024
 	if bodyLimit <= 2*1024*1024 {
 		bodyLimit = 52 * 1024 * 1024
@@ -123,6 +124,10 @@ func newServer(cfg config.Config, healthService *health.Service, authService *au
 		if wishlistService != nil {
 			wishlistHandler = NewWishlistHandler(wishlistService)
 		}
+		var notificationHandler *NotificationHandler
+		if notificationService != nil && notificationHub != nil {
+			notificationHandler = NewNotificationHandler(notificationService, notificationHub, cfg.AllowedOrigins)
+		}
 		routes.RegisterAuthenticated(api, routes.AuthenticatedRoutes{
 			Authenticate: authHandler.RequirePrincipal, Authorize: casbin.Require, Me: authHandler.Me,
 			Profile: customerProfile(customerHandler), UpdateProfile: customerUpdateProfile(customerHandler), ChangePassword: authChangePassword(authHandler),
@@ -138,14 +143,16 @@ func newServer(cfg config.Config, healthService *health.Service, authService *au
 			WarehouseReceptions: warehouseList(warehouseHandler), WarehouseReceptionCreate: warehouseCreate(warehouseHandler), WarehouseInspect: warehouseInspect(warehouseHandler), WarehouseReceptionEvidence: warehouseUploadEvidence(warehouseHandler), WarehouseReceptionEvidenceList: warehouseListEvidence(warehouseHandler), Inventory: inventoryList(inventoryHandler), InventoryAdjust: inventoryAdjust(inventoryHandler),
 			WarehouseProducts: warehouseProducts(warehouseHandler),
 			Cart:              cartList(cartHandler), CartAdd: cartAdd(cartHandler), CartSet: cartSet(cartHandler), CartRemove: cartRemove(cartHandler), CartMerge: cartMerge(cartHandler), Wishlist: wishlistList(wishlistHandler), WishlistAdd: wishlistAdd(wishlistHandler), WishlistRemove: wishlistRemove(wishlistHandler),
+			Notifications: notificationList(notificationHandler), NotificationRead: notificationRead(notificationHandler), NotificationsReadAll: notificationReadAll(notificationHandler), NotificationSocketTicket: notificationSocketTicket(notificationHandler), NotificationSocket: notificationSocket(notificationHandler),
 		})
 		routes.RegisterAdmin(api, routes.AdminRoutes{
 			Authenticate: authHandler.RequirePrincipal, Authorize: casbin.Require,
 			ListApplications: artisanList(artisanHandler), DecideApplication: artisanDecide(artisanHandler),
 			ApplicationDocuments: artisanDocuments(artisanHandler), ApplicationMedia: artisanApplicationMedia(artisanHandler),
-			ListUsers: adminUsers(adminHandler), UpdateUserRoles: adminRoles(adminHandler), UserStatus: adminUserStatus(adminHandler), AuditEvents: adminAudit(adminHandler),
+			ListUsers: adminUsers(adminHandler), CreateUser: adminCreateUser(adminHandler), UpdateUser: adminUpdateUser(adminHandler), UpdateUserRoles: adminRoles(adminHandler), UserStatus: adminUserStatus(adminHandler), AuditEvents: adminAudit(adminHandler),
 			ProductSubmissions: moderationQueue(moderationHandler), ProductDecision: moderationDecision(moderationHandler), RecordReturn: orderReturn(orderHandler), MembershipStatus: artisanMembershipStatus(artisanHandler), WorkshopStatus: artisanAdminWorkshopStatus(artisanHandler), ListVerifications: artisanVerifications(artisanHandler), DecideVerification: artisanDecideVerification(artisanHandler),
 			UserMedia: adminUserMedia(adminHandler), ProductMedia: adminProductMedia(adminHandler), DeleteUserMedia: adminDeleteUserMedia(adminHandler), DeleteProductMedia: adminDeleteProductMedia(adminHandler),
+			Categories: adminCategories(adminHandler), CreateCategory: adminCreateCategory(adminHandler), UpdateCategory: adminUpdateCategory(adminHandler), DeleteCategory: adminDeleteCategory(adminHandler), Orders: adminOrders(adminHandler),
 		})
 	}
 	return app
@@ -487,6 +494,27 @@ func adminUsers(h *AdminHandler) fiber.Handler {
 	}
 	return h.Users
 }
+
+func adminCreateUser(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.CreateUser
+}
+
+func adminUpdateUser(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.UpdateUser
+}
+
+func adminOrders(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Orders
+}
 func adminRoles(h *AdminHandler) fiber.Handler {
 	if h == nil {
 		return nil
@@ -504,6 +532,66 @@ func adminAudit(h *AdminHandler) fiber.Handler {
 		return nil
 	}
 	return h.Audit
+}
+
+func adminCategories(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Categories
+}
+func adminCreateCategory(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.CreateCategory
+}
+func adminUpdateCategory(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.UpdateCategory
+}
+func adminDeleteCategory(h *AdminHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.DeleteCategory
+}
+
+func notificationList(h *NotificationHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.List
+}
+
+func notificationRead(h *NotificationHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.MarkRead
+}
+
+func notificationReadAll(h *NotificationHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.MarkAllRead
+}
+
+func notificationSocketTicket(h *NotificationHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.SocketTicket
+}
+
+func notificationSocket(h *NotificationHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.WebSocket
 }
 
 func authChangePassword(h *AuthHandler) fiber.Handler {

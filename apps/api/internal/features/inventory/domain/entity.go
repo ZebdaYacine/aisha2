@@ -17,6 +17,7 @@ var (
 
 type Balance struct {
 	ProductID    string    `json:"productId"`
+	ProductCode  string    `json:"productCode"`
 	ProductName  string    `json:"productName"`
 	WorkshopID   string    `json:"workshopId"`
 	WorkshopName string    `json:"workshopName"`

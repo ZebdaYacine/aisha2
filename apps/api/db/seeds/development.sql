@@ -5,7 +5,7 @@ BEGIN;
 -- Development only: make every seed run a clean, deterministic reset.
 -- The migration metadata table is intentionally not included.
 TRUNCATE TABLE
-    audit_events, outbox_events, idempotency_keys,
+    audit_events, outbox_events, notifications, idempotency_keys,
     addresses, password_reset_tokens,
     inventory_movements,
     product_media, product_translations, product_submissions, products,

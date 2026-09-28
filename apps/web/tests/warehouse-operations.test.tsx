@@ -73,10 +73,10 @@ describe("warehouse operations", () => {
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Workshop" })).not.toBeDisabled());
     fireEvent.focus(screen.getByRole("combobox", { name: "Workshop" }));
     fireEvent.click(screen.getByText("Amina Atelier"));
-    fireEvent.focus(screen.getByRole("combobox", { name: "Validated product" }));
+    fireEvent.focus(screen.getByRole("combobox", { name: "Product code or name" }));
     fireEvent.click(screen.getByText(/AISHA-ABC1234567 · Copper bowl/));
     expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent?.includes("0550123456") === true)).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Validated product" })).toHaveValue("AISHA-ABC1234567 · Copper bowl · 0 available");
+    expect(screen.getByRole("combobox", { name: "Product code or name" })).toHaveValue("AISHA-ABC1234567 · Copper bowl · 0 available");
     expect(screen.getByLabelText("Supplier or artisan")).toHaveValue("Amina");
   });
 
@@ -120,7 +120,7 @@ describe("warehouse operations", () => {
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Workshop" })).not.toBeDisabled());
     fireEvent.focus(screen.getByRole("combobox", { name: "Workshop" }));
     fireEvent.click(screen.getByText("Amina Atelier"));
-    fireEvent.focus(screen.getByRole("combobox", { name: "Validated product" }));
+    fireEvent.focus(screen.getByRole("combobox", { name: "Product code or name" }));
     fireEvent.click(screen.getByText(/AISHA-ABC1234567 · Copper bowl/));
     fireEvent.change(screen.getByLabelText("Reception reference"), { target: { value: "parcel-2" } });
     fireEvent.change(screen.getByLabelText("Received quantity"), { target: { value: "5" } });

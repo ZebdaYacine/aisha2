@@ -9,6 +9,7 @@ import (
 
 	"github.com/aisha-platform/aisha/apps/api/internal/features/admin/domain"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -118,7 +119,7 @@ func recordMediaDeletion(ctx context.Context, tx pgx.Tx, actorID, targetType, me
 }
 
 func (r *PostgresRepository) ListUsers(ctx context.Context, role, status string, limit, offset int) ([]domain.User, int, error) {
-	rows, err := r.pool.Query(ctx, `SELECT u.id,COALESCE(u.email,''),COALESCE(u.display_name,''),u.status,u.created_at,COALESCE(array_agg(r.code) FILTER(WHERE r.code IS NOT NULL),'{}'),count(*) OVER() FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id WHERE ($1='' OR u.status=$1) AND ($2='' OR EXISTS(SELECT 1 FROM user_roles ur2 JOIN roles r2 ON r2.id=ur2.role_id WHERE ur2.user_id=u.id AND r2.code=$2)) GROUP BY u.id ORDER BY u.created_at DESC LIMIT $3 OFFSET $4`, status, role, limit, offset)
+	rows, err := r.pool.Query(ctx, `SELECT u.id,COALESCE(u.email,''),COALESCE(u.phone,''),COALESCE(u.display_name,''),u.status,u.created_at,COALESCE(array_agg(r.code) FILTER(WHERE r.code IS NOT NULL),'{}'),count(*) OVER() FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id WHERE ($1='' OR u.status=$1) AND ($2='' OR (($2='worker' AND EXISTS(SELECT 1 FROM user_roles ur2 JOIN roles r2 ON r2.id=ur2.role_id WHERE ur2.user_id=u.id AND r2.code IN ('moderator','warehouse_agent'))) OR ($2='user' AND EXISTS(SELECT 1 FROM user_roles ur3 JOIN roles r3 ON r3.id=ur3.role_id WHERE ur3.user_id=u.id AND r3.code IN ('customer','artisan'))) OR ($2 NOT IN ('worker','user') AND EXISTS(SELECT 1 FROM user_roles ur4 JOIN roles r4 ON r4.id=ur4.role_id WHERE ur4.user_id=u.id AND r4.code=$2)))) GROUP BY u.id ORDER BY u.created_at DESC LIMIT $3 OFFSET $4`, status, role, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -127,12 +128,246 @@ func (r *PostgresRepository) ListUsers(ctx context.Context, role, status string,
 	total := 0
 	for rows.Next() {
 		var item domain.User
-		if err = rows.Scan(&item.ID, &item.Email, &item.DisplayName, &item.Status, &item.CreatedAt, &item.Roles, &total); err != nil {
+		if err = rows.Scan(&item.ID, &item.Email, &item.Phone, &item.DisplayName, &item.Status, &item.CreatedAt, &item.Roles, &total); err != nil {
 			return nil, 0, err
 		}
 		items = append(items, item)
 	}
 	return items, total, rows.Err()
+}
+
+func (r *PostgresRepository) CreateUser(ctx context.Context, actor string, input domain.UserInput, assignedBy string) (domain.User, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.User{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var id string
+	if err = tx.QueryRow(ctx, `INSERT INTO users(email,phone,password_hash,display_name) VALUES($1,NULLIF($2,''),$3,$4) RETURNING id`, strings.ToLower(strings.TrimSpace(input.Email)), strings.TrimSpace(input.Phone), input.Password, strings.TrimSpace(input.DisplayName)).Scan(&id); err != nil {
+		if isUniqueViolation(err) {
+			return domain.User{}, domain.ErrValidation
+		}
+		return domain.User{}, fmt.Errorf("create admin user: %w", err)
+	}
+	if err = replaceUserRoles(ctx, tx, id, assignedBy, input.Roles); err != nil {
+		return domain.User{}, err
+	}
+	if err = recordUserAudit(ctx, tx, actor, id, "ADMIN_USER_CREATED"); err != nil {
+		return domain.User{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.User{}, err
+	}
+	return r.adminUser(ctx, id)
+}
+
+func (r *PostgresRepository) UpdateUser(ctx context.Context, actor, userID string, input domain.UserInput) (domain.User, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.User{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	result, err := tx.Exec(ctx, `UPDATE users SET email=$2,phone=NULLIF($3,''),display_name=$4,password_hash=CASE WHEN $5='' THEN password_hash ELSE $5 END,updated_at=CURRENT_TIMESTAMP WHERE id=$1`, userID, strings.ToLower(strings.TrimSpace(input.Email)), strings.TrimSpace(input.Phone), strings.TrimSpace(input.DisplayName), input.Password)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return domain.User{}, domain.ErrValidation
+		}
+		return domain.User{}, err
+	}
+	if result.RowsAffected() != 1 {
+		return domain.User{}, domain.ErrNotFound
+	}
+	if err = replaceUserRoles(ctx, tx, userID, actor, input.Roles); err != nil {
+		return domain.User{}, err
+	}
+	if err = recordUserAudit(ctx, tx, actor, userID, "ADMIN_USER_UPDATED"); err != nil {
+		return domain.User{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.User{}, err
+	}
+	return r.adminUser(ctx, userID)
+}
+
+func replaceUserRoles(ctx context.Context, tx pgx.Tx, userID, assignedBy string, roles []string) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM user_roles WHERE user_id=$1`, userID); err != nil {
+		return err
+	}
+	for _, role := range roles {
+		result, err := tx.Exec(ctx, `INSERT INTO user_roles(user_id,role_id,assigned_by_user_id) SELECT $1,id,$2 FROM roles WHERE code=$3`, userID, assignedBy, strings.TrimSpace(role))
+		if err != nil {
+			return err
+		}
+		if result.RowsAffected() != 1 {
+			return domain.ErrValidation
+		}
+	}
+	return nil
+}
+
+func recordUserAudit(ctx context.Context, tx pgx.Tx, actor, userID, event string) error {
+	_, err := tx.Exec(ctx, `INSERT INTO audit_events(event_type,actor_user_id,target_type,target_id,reason) VALUES($1,$2,'user',$3,'Administrative user change')`, event, actor, userID)
+	return err
+}
+
+func (r *PostgresRepository) adminUser(ctx context.Context, id string) (domain.User, error) {
+	var item domain.User
+	err := r.pool.QueryRow(ctx, `SELECT u.id,COALESCE(u.email,''),COALESCE(u.phone,''),COALESCE(u.display_name,''),u.status,u.created_at,COALESCE(array_agg(r.code) FILTER(WHERE r.code IS NOT NULL),'{}') FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id WHERE u.id=$1 GROUP BY u.id`, id).Scan(&item.ID, &item.Email, &item.Phone, &item.DisplayName, &item.Status, &item.CreatedAt, &item.Roles)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.User{}, domain.ErrNotFound
+	}
+	return item, err
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
+func (r *PostgresRepository) ListCategories(ctx context.Context, limit, offset int) ([]domain.Category, int, error) {
+	rows, err := r.pool.Query(ctx, `SELECT c.id,c.slug,c.display_name,c.benefit_rate_basis_points,c.is_active,c.created_at,c.updated_at,COALESCE(jsonb_object_agg(ct.locale,ct.name) FILTER (WHERE ct.locale IS NOT NULL),'{}'::jsonb),count(*) OVER() FROM categories c LEFT JOIN category_translations ct ON ct.category_id=c.id GROUP BY c.id ORDER BY c.sort_order,c.slug LIMIT $1 OFFSET $2`, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list admin categories: %w", err)
+	}
+	defer rows.Close()
+	items := []domain.Category{}
+	total := 0
+	for rows.Next() {
+		var item domain.Category
+		var translations []byte
+		if err := rows.Scan(&item.ID, &item.Slug, &item.DisplayName, &item.BenefitRateBasisPoints, &item.IsActive, &item.CreatedAt, &item.UpdatedAt, &translations, &total); err != nil {
+			return nil, 0, err
+		}
+		if err := json.Unmarshal(translations, &item.Translations); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	return items, total, rows.Err()
+}
+
+func (r *PostgresRepository) ListOrders(ctx context.Context, limit, offset int) ([]domain.Order, int, error) {
+	rows, err := r.pool.Query(ctx, `SELECT o.id,o.order_number,COALESCE(u.display_name,''),COALESCE(u.email,''),o.status,o.currency,o.total_minor,o.created_at,count(*) OVER() FROM orders o JOIN users u ON u.id=o.user_id ORDER BY o.created_at DESC,o.id LIMIT $1 OFFSET $2`, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list admin orders: %w", err)
+	}
+	defer rows.Close()
+	items := []domain.Order{}
+	total := 0
+	for rows.Next() {
+		var item domain.Order
+		if err := rows.Scan(&item.ID, &item.OrderNumber, &item.CustomerName, &item.CustomerEmail, &item.Status, &item.Currency, &item.TotalMinor, &item.CreatedAt, &total); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	return items, total, rows.Err()
+}
+
+func (r *PostgresRepository) CreateCategory(ctx context.Context, actor string, input domain.CategoryInput) (domain.Category, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Category{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var id string
+	if err = tx.QueryRow(ctx, `INSERT INTO categories(slug,display_name,benefit_rate_basis_points,is_active) VALUES($1,$2,$3,$4) RETURNING id`, strings.TrimSpace(input.Slug), strings.TrimSpace(input.DisplayName), input.BenefitRateBasisPoints, input.IsActive).Scan(&id); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return domain.Category{}, domain.ErrValidation
+		}
+		return domain.Category{}, err
+	}
+	if err = saveCategoryTranslations(ctx, tx, id, input.Translations); err != nil {
+		return domain.Category{}, err
+	}
+	if err = recordCategoryAudit(ctx, tx, actor, id, "CATEGORY_CREATED"); err != nil {
+		return domain.Category{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.Category{}, err
+	}
+	return r.category(ctx, id)
+}
+
+func (r *PostgresRepository) UpdateCategory(ctx context.Context, actor, id string, input domain.CategoryInput) (domain.Category, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Category{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var exists bool
+	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM categories WHERE id=$1)`, id).Scan(&exists); err != nil {
+		return domain.Category{}, err
+	}
+	if !exists {
+		return domain.Category{}, domain.ErrNotFound
+	}
+	if _, err = tx.Exec(ctx, `UPDATE categories SET slug=$2,display_name=$3,benefit_rate_basis_points=$4,is_active=$5,updated_at=CURRENT_TIMESTAMP WHERE id=$1`, id, strings.TrimSpace(input.Slug), strings.TrimSpace(input.DisplayName), input.BenefitRateBasisPoints, input.IsActive); err != nil {
+		return domain.Category{}, err
+	}
+	if err = saveCategoryTranslations(ctx, tx, id, input.Translations); err != nil {
+		return domain.Category{}, err
+	}
+	if err = recordCategoryAudit(ctx, tx, actor, id, "CATEGORY_UPDATED"); err != nil {
+		return domain.Category{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.Category{}, err
+	}
+	return r.category(ctx, id)
+}
+
+func (r *PostgresRepository) DeleteCategory(ctx context.Context, actor, id string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	result, err := tx.Exec(ctx, `UPDATE categories SET is_active=false,updated_at=CURRENT_TIMESTAMP WHERE id=$1`, id)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() != 1 {
+		return domain.ErrNotFound
+	}
+	if err = recordCategoryAudit(ctx, tx, actor, id, "CATEGORY_DEACTIVATED"); err != nil {
+		return err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func saveCategoryTranslations(ctx context.Context, tx pgx.Tx, id string, translations map[string]string) error {
+	for _, locale := range []string{"ar", "en", "fr", "es"} {
+		if _, err := tx.Exec(ctx, `INSERT INTO category_translations(category_id,locale,name) VALUES($1,$2,$3) ON CONFLICT(category_id,locale) DO UPDATE SET name=EXCLUDED.name,updated_at=CURRENT_TIMESTAMP`, id, locale, strings.TrimSpace(translations[locale])); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func recordCategoryAudit(ctx context.Context, tx pgx.Tx, actor, id, event string) error {
+	_, err := tx.Exec(ctx, `INSERT INTO audit_events(event_type,actor_user_id,target_type,target_id,reason) VALUES($1,$2,'category',$3,'Administrative category change')`, event, actor, id)
+	return err
+}
+
+func (r *PostgresRepository) category(ctx context.Context, id string) (domain.Category, error) {
+	var item domain.Category
+	var translations []byte
+	err := r.pool.QueryRow(ctx, `SELECT c.id,c.slug,c.display_name,c.benefit_rate_basis_points,c.is_active,c.created_at,c.updated_at,COALESCE((SELECT jsonb_object_agg(ct.locale,ct.name) FROM category_translations ct WHERE ct.category_id=c.id),'{}'::jsonb) FROM categories c WHERE c.id=$1`, id).Scan(&item.ID, &item.Slug, &item.DisplayName, &item.BenefitRateBasisPoints, &item.IsActive, &item.CreatedAt, &item.UpdatedAt, &translations)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Category{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.Category{}, err
+	}
+	if err = json.Unmarshal(translations, &item.Translations); err != nil {
+		return domain.Category{}, err
+	}
+	return item, nil
 }
 
 func (r *PostgresRepository) SetRoles(ctx context.Context, actorID, userID string, roles []string) (domain.User, error) {

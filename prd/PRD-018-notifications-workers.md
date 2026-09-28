@@ -7,7 +7,7 @@
 | **Priority** | High |
 | **Status** | 🟡 Partial |
 | **Surfaces** | Account notifications, artisan workspace, worker runtime |
-| **API** | Notification read/list endpoints; worker and outbox consumers |
+| **API** | `GET /api/v1/notifications`, `POST /api/v1/notifications/{id}/read`, `POST /api/v1/notifications/read-all`, `GET /api/v1/notifications/ws-ticket`, `GET /api/v1/notifications/ws` |
 
 ## 1. Summary
 
@@ -43,11 +43,12 @@ Direct notification sends can be lost when a transaction fails or duplicated whe
 | R3 | Make event consumption and notification creation idempotent. | US-NOTIF-002..003 |
 | R4 | Restrict content to authorized recipients and redact private data. | Security rules |
 | R5 | Provide worker health, retry, backoff, and failed-event visibility. | Deployment requirements |
+| R6 | Deliver new in-app notifications to connected users over an authenticated WebSocket. | US-NOTIF-001..003 |
 
 ## 6. Flow
 
 ```text
-Domain transaction → outbox event → worker claim → render localized notification → deliver/store → retry or dead-letter
+Domain transaction → outbox event → worker claim → render notification → persist idempotently → publish over WebSocket → retry on failure
 ```
 
 ## 7. Technical notes
@@ -55,6 +56,9 @@ Domain transaction → outbox event → worker claim → render localized notifi
 - Worker uses the same application/domain rules as the API.
 - Reservation expiry belongs in the worker or feature-owned job, not a handler.
 - Notification templates use translation keys and stable event types.
+- The browser obtains a short-lived, one-time WebSocket ticket through the authenticated API; access and refresh cookies are never exposed to JavaScript.
+- Notification rows are recipient-scoped and deduplicated by the originating outbox event. The worker claims with `FOR UPDATE SKIP LOCKED`, applies exponential retry backoff, and publishes only after persistence succeeds.
+- Workflow events fan out to their operational peers: artisan applications and product submissions reach moderators/administrators, warehouse transitions reach warehouse agents/administrators, and order events reach customer, artisan, warehouse, and administrative recipients as applicable.
 
 ## 8. Success metrics
 

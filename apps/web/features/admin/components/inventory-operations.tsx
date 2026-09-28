@@ -13,6 +13,7 @@ import type { Locale } from "@/core/lib/i18n";
 
 type Balance = {
   productId: string;
+  productCode: string;
   productName: string;
   workshopId: string;
   workshopName: string;
@@ -60,6 +61,10 @@ export function InventoryOperations({ locale = "en" }: { locale?: Locale }) {
 
   useEffect(() => { void load(); }, [load]);
 
+  const workshopOptions = Array.from(
+    new Map(items.map((item) => [item.workshopId, item.workshopName])).entries(),
+  ).map(([value, label]) => ({ value, label }));
+
   const adjust = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selected) return;
@@ -94,8 +99,8 @@ export function InventoryOperations({ locale = "en" }: { locale?: Locale }) {
       </div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <label className="block text-sm">
-          <span className="mb-2 block">Workshop ID</span>
-          <Combobox className="min-w-72" allowCustom options={[]} value={workshopId} onChange={(value) => { setWorkshopId(value); setPage(1); }} ariaLabel="Workshop ID" placeholder="All workshops or paste an ID" />
+          <span className="mb-2 block">Workshop</span>
+          <Combobox className="min-w-72" options={[{ value: "", label: "All workshops" }, ...workshopOptions]} value={workshopId} onChange={(value) => { setWorkshopId(value); setPage(1); }} ariaLabel="Workshop" placeholder="All workshops" emptyMessage="No workshops found" disabled={loading && !workshopOptions.length} />
         </label>
         <span className="text-sm text-muted-foreground">{total} product balance(s)</span>
       </div>
@@ -105,7 +110,7 @@ export function InventoryOperations({ locale = "en" }: { locale?: Locale }) {
             <thead className="border-b border-border bg-muted/40"><tr>{["Product", "Workshop", "Available", "Reserved", "On hand", "Exceptions", "Updated", "Details"].map((label) => <th key={label} className="px-4 py-3 font-medium">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-border">
               {items.map((item) => <tr key={item.productId}>
-                <td className="px-4 py-4">{item.productName}<br /><span className="text-xs text-muted-foreground">{item.productId}</span></td>
+                <td className="px-4 py-4">{item.productName}<br /><span className="text-xs text-muted-foreground">{item.productCode || "Approved product"}</span></td>
                 <td className="px-4 py-4">{item.workshopName}<br /><span className="text-xs text-muted-foreground">{item.artisanName}</span></td>
                 <td className="px-4 py-4"><StatusBadge status={item.available > 0 ? "AVAILABLE" : "OUT_OF_STOCK"} /><div className="mt-1 text-lg">{item.available}</div></td>
                 <td className="px-4 py-4">{item.reserved}</td><td className="px-4 py-4">{item.onHand}</td>

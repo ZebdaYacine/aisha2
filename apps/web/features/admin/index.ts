@@ -7,3 +7,5 @@ export { ProductModeration } from "./components/product-moderation";
 export { WarehouseOperations } from "./components/warehouse-operations";
 export { InventoryOperations } from "./components/inventory-operations";
 export { AdminMediaOperations } from "./components/admin-media-operations";
+export { CategoryManagement } from "./components/category-management";
+export { AdminOrderOperations } from "./components/admin-order-operations";

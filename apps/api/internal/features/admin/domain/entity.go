@@ -16,10 +16,49 @@ var (
 type User struct {
 	ID          string    `json:"id"`
 	Email       string    `json:"email"`
+	Phone       string    `json:"phone,omitempty"`
 	DisplayName string    `json:"displayName"`
 	Status      string    `json:"status"`
 	Roles       []string  `json:"roles"`
 	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type UserInput struct {
+	Email       string
+	Phone       string
+	DisplayName string
+	Password    string
+	Roles       []string
+}
+
+type Category struct {
+	ID                     string            `json:"id"`
+	Slug                   string            `json:"slug"`
+	DisplayName            string            `json:"displayName"`
+	Translations           map[string]string `json:"translations"`
+	BenefitRateBasisPoints int64             `json:"benefitRateBasisPoints"`
+	IsActive               bool              `json:"isActive"`
+	CreatedAt              time.Time         `json:"createdAt"`
+	UpdatedAt              time.Time         `json:"updatedAt"`
+}
+
+type CategoryInput struct {
+	Slug                   string
+	DisplayName            string
+	Translations           map[string]string
+	BenefitRateBasisPoints int64
+	IsActive               bool
+}
+
+type Order struct {
+	ID            string    `json:"-"`
+	OrderNumber   string    `json:"orderNumber"`
+	CustomerName  string    `json:"customerName"`
+	CustomerEmail string    `json:"customerEmail"`
+	Status        string    `json:"status"`
+	Currency      string    `json:"currency"`
+	TotalMinor    int64     `json:"totalMinor"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type AuditEvent struct {
@@ -84,6 +123,22 @@ type Repository interface {
 	SetRoles(context.Context, string, string, []string) (User, error)
 	SetUserStatus(context.Context, string, string, string, string) (User, error)
 	AuditEvents(context.Context, AuditFilter, int, int) ([]AuditEvent, int, error)
+}
+
+type UserManagementRepository interface {
+	CreateUser(context.Context, string, UserInput, string) (User, error)
+	UpdateUser(context.Context, string, string, UserInput) (User, error)
+}
+
+type CategoryRepository interface {
+	ListCategories(context.Context, int, int) ([]Category, int, error)
+	CreateCategory(context.Context, string, CategoryInput) (Category, error)
+	UpdateCategory(context.Context, string, string, CategoryInput) (Category, error)
+	DeleteCategory(context.Context, string, string) error
+}
+
+type OrderRepository interface {
+	ListOrders(context.Context, int, int) ([]Order, int, error)
 }
 
 type Authorizer interface {

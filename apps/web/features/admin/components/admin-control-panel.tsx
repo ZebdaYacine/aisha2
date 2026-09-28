@@ -17,6 +17,7 @@ import { useAuth } from "@/features/auth/viewmodel/auth-context";
 type User = {
   id: string;
   email: string;
+  phone?: string;
   displayName: string;
   status: string;
   roles: string[];
@@ -66,6 +67,13 @@ type Labels = {
   search: string;
   noAudit: string;
   loggingOut: string;
+  createUser: string;
+  editUser: string;
+  displayName: string;
+  phone: string;
+  password: string;
+  saveAccount: string;
+  cancel: string;
 };
 
 const pageSize = 10;
@@ -116,6 +124,13 @@ const labels: Record<Locale, Labels> = {
     search: "Search audit",
     noAudit: "No audit events match these filters.",
     loggingOut: "Signing out…",
+    createUser: "Create account",
+    editUser: "Edit account",
+    displayName: "Display name",
+    phone: "Phone",
+    password: "Password",
+    saveAccount: "Save account",
+    cancel: "Cancel",
   },
   fr: {
     dashboard: "Tableau de bord d’administration",
@@ -152,6 +167,13 @@ const labels: Record<Locale, Labels> = {
     search: "Rechercher dans l’audit",
     noAudit: "Aucun événement ne correspond à ces filtres.",
     loggingOut: "Déconnexion…",
+    createUser: "Créer un compte",
+    editUser: "Modifier le compte",
+    displayName: "Nom affiché",
+    phone: "Téléphone",
+    password: "Mot de passe",
+    saveAccount: "Enregistrer le compte",
+    cancel: "Annuler",
   },
   ar: {
     dashboard: "لوحة تحكم الإدارة",
@@ -188,6 +210,13 @@ const labels: Record<Locale, Labels> = {
     search: "بحث التدقيق",
     noAudit: "لا توجد أحداث تدقيق مطابقة.",
     loggingOut: "جارٍ تسجيل الخروج…",
+    createUser: "إنشاء حساب",
+    editUser: "تعديل الحساب",
+    displayName: "الاسم الظاهر",
+    phone: "الهاتف",
+    password: "كلمة المرور",
+    saveAccount: "حفظ الحساب",
+    cancel: "إلغاء",
   },
   es: {
     dashboard: "Panel de administración",
@@ -224,17 +253,24 @@ const labels: Record<Locale, Labels> = {
     search: "Buscar auditoría",
     noAudit: "No hay eventos que coincidan con estos filtros.",
     loggingOut: "Cerrando sesión…",
+    createUser: "Crear cuenta",
+    editUser: "Editar cuenta",
+    displayName: "Nombre visible",
+    phone: "Teléfono",
+    password: "Contraseña",
+    saveAccount: "Guardar cuenta",
+    cancel: "Cancelar",
   },
 };
 
 export function AdminControlPanel({
   locale,
   showChrome = true,
-  section = "overview",
+  section = "users",
 }: {
   locale: Locale;
   showChrome?: boolean;
-  section?: "overview" | "users" | "audit";
+  section?: "users" | "workers" | "audit";
 }) {
   const text = labels[locale];
   const router = useRouter();
@@ -249,10 +285,13 @@ export function AdminControlPanel({
   const [auditPage, setAuditPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedAudit, setSelectedAudit] = useState<AuditEvent | null>(null);
+  const [accountEditorOpen, setAccountEditorOpen] = useState(false);
+  const [accountForm, setAccountForm] = useState({ email: "", phone: "", displayName: "", password: "", roles: ["customer"] });
   useEscapeKey(() => {
     if (selectedAudit) setSelectedAudit(null);
     else if (selectedUser) setSelectedUser(null);
-  }, selectedAudit !== null || selectedUser !== null);
+    else if (accountEditorOpen) setAccountEditorOpen(false);
+  }, Boolean(accountEditorOpen || selectedAudit || selectedUser));
   const [roles, setRoles] = useState<Record<string, string[]>>({});
   const [statuses, setStatuses] = useState<Record<string, string>>({});
   const [reasons, setReasons] = useState<Record<string, string>>({});
@@ -268,7 +307,7 @@ export function AdminControlPanel({
     setLoadingUsers(true);
     try {
       const response = await fetch(
-        `/api/admin/users?page=${page}&pageSize=${pageSize}`,
+        `/api/admin/users?page=${page}&pageSize=${pageSize}${section === "workers" ? "&role=worker" : section === "users" ? "&role=user" : ""}`,
         { cache: "no-store" },
       );
       if (!response.ok) throw new Error();
@@ -283,7 +322,7 @@ export function AdminControlPanel({
     } finally {
       setLoadingUsers(false);
     }
-  }, []);
+  }, [section]);
 
   const loadAudit = useCallback(
     async (
@@ -342,6 +381,17 @@ export function AdminControlPanel({
   const selectedRoles = selectedUser
     ? (roles[selectedUser.id] ?? selectedUser.roles)
     : [];
+  const openAccountEditor = (item?: User) => {
+    setSelectedUser(item ?? null);
+    setAccountForm({
+      email: item?.email ?? "",
+      phone: item?.phone ?? "",
+      displayName: item?.displayName ?? "",
+      password: "",
+      roles: item?.roles?.length ? item.roles : ["customer"],
+    });
+    setAccountEditorOpen(true);
+  };
   const visibleStats = useMemo(
     () => [
       { label: text.totalUsers, value: userTotal },
@@ -410,6 +460,28 @@ export function AdminControlPanel({
       setSelectedUser(updated);
       toast.success(text.statusSaved);
       await loadAudit({ targetType, eventType });
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const saveAccount = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy("account");
+    try {
+      const response = await fetch(selectedUser ? `/api/admin/users/${encodeURIComponent(selectedUser.id)}` : "/api/admin/users", {
+        method: selectedUser ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(accountForm),
+      });
+      const body = await response.json().catch(() => undefined);
+      if (!response.ok) throw new Error(body?.error?.message ?? text.load);
+      setAccountEditorOpen(false);
+      setSelectedUser(null);
+      await loadUsers(selectedUser ? userPage : 1);
+      toast.success(text.saveAccount);
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -520,6 +592,7 @@ export function AdminControlPanel({
                     {text.users}
                   </h2>
                 </div>
+                {canManageUsers && <Button type="button" onClick={() => openAccountEditor()}>{text.createUser}</Button>}
                 <span className="text-sm text-muted-foreground">
                   {pageLabel}
                 </span>
@@ -557,7 +630,16 @@ export function AdminControlPanel({
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={() => setSelectedUser(item)}
+                            onClick={() => {
+                              setSelectedUser(item);
+                              setAccountForm({
+                                email: item.email,
+                                phone: item.phone ?? "",
+                                displayName: item.displayName,
+                                password: "",
+                                roles: item.roles,
+                              });
+                            }}
                           >
                             {text.details}
                           </Button>
@@ -637,12 +719,6 @@ export function AdminControlPanel({
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-muted-foreground">ID</dt>
-                          <dd className="mt-1 break-all text-xs">
-                            {selectedUser.id}
-                          </dd>
-                        </div>
-                        <div>
                           <dt className="text-muted-foreground">
                             {text.created}
                           </dt>
@@ -652,6 +728,7 @@ export function AdminControlPanel({
                         </div>
                       </dl>
                       {canManageUsers && <div className="mt-6 space-y-4">
+                        <Button type="button" variant="outline" onClick={() => openAccountEditor(selectedUser)}>{text.editUser}</Button>
                         <label className="block text-sm">
                           <span className="mb-2 block">{text.roles}</span>
                           <MultiCombobox
@@ -723,10 +800,28 @@ export function AdminControlPanel({
                 </div>
               </aside>
             )}
+            {accountEditorOpen && canManageUsers && (
+              <aside className="fixed inset-0 z-[60] overflow-x-auto overflow-y-auto bg-foreground/50 p-4" role="dialog" aria-modal="true" aria-labelledby="admin-account-editor-title">
+                <form onSubmit={saveAccount} className="mx-auto mt-8 max-h-[calc(100svh-4rem)] w-full max-w-xl overflow-y-auto border border-border bg-background p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div><p className="text-xs uppercase tracking-widest text-primary">{text.users}</p><h2 id="admin-account-editor-title" className="mt-2 font-serif text-2xl">{selectedUser ? text.editUser : text.createUser}</h2></div>
+                    <Button type="button" variant="ghost" onClick={() => setAccountEditorOpen(false)}>{text.cancel}</Button>
+                  </div>
+                  <div className="mt-6 space-y-4">
+                    <label className="block text-sm"><span className="mb-2 block">{text.displayName}</span><input className="auth-input w-full" required value={accountForm.displayName} onChange={(event) => setAccountForm({ ...accountForm, displayName: event.target.value })} /></label>
+                    <label className="block text-sm"><span className="mb-2 block">{text.email}</span><input className="auth-input w-full" required type="email" value={accountForm.email} onChange={(event) => setAccountForm({ ...accountForm, email: event.target.value })} /></label>
+                    <label className="block text-sm"><span className="mb-2 block">{text.phone}</span><input className="auth-input w-full" value={accountForm.phone} onChange={(event) => setAccountForm({ ...accountForm, phone: event.target.value })} /></label>
+                    <label className="block text-sm"><span className="mb-2 block">{text.password}</span><input className="auth-input w-full" minLength={selectedUser ? undefined : 12} type="password" required={!selectedUser} value={accountForm.password} onChange={(event) => setAccountForm({ ...accountForm, password: event.target.value })} placeholder={selectedUser ? "Leave blank to keep current password" : undefined} /></label>
+                    <label className="block text-sm"><span className="mb-2 block">{text.roles}</span><MultiCombobox options={roleOptions} value={accountForm.roles} onChange={(roles) => setAccountForm({ ...accountForm, roles })} ariaLabel={text.roles} placeholder={text.roles} /></label>
+                  </div>
+                  <div className="mt-6 flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setAccountEditorOpen(false)}>{text.cancel}</Button><Button type="submit" disabled={busy === "account"}>{busy === "account" ? "Saving…" : text.saveAccount}</Button></div>
+                </form>
+              </aside>
+            )}
           </div>
         </>
       )}
-      {section !== "users" && canReadAudit && (
+      {section === "audit" && canReadAudit && (
         <section
           className="border-t border-border pt-8"
           aria-labelledby="admin-audit-title"
@@ -783,7 +878,7 @@ export function AdminControlPanel({
                   </p>
                   {event.reason && <p>{event.reason}</p>}
                 </div>
-                {section !== "overview" && (
+                {section === "audit" && (
                   <Button
                     type="button"
                     variant="outline"
@@ -800,7 +895,7 @@ export function AdminControlPanel({
               </p>
             )}
           </div>
-          {section !== "overview" && (
+          {section === "audit" && (
             <div className="mt-4 flex items-center justify-between gap-3">
               <Button
                 type="button"

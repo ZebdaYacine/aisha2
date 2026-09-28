@@ -22,6 +22,20 @@ type userStatusRequest struct {
 	Status string `json:"status" validate:"required,oneof=ACTIVE SUSPENDED DISABLED"`
 	Reason string `json:"reason" validate:"max=1000"`
 }
+type userRequest struct {
+	Email       string   `json:"email" validate:"required,email,max=254"`
+	Phone       string   `json:"phone" validate:"max=32"`
+	DisplayName string   `json:"displayName" validate:"required,min=2,max=120"`
+	Password    string   `json:"password" validate:"max=128"`
+	Roles       []string `json:"roles" validate:"required,min=1,max=10,dive,min=1,max=64"`
+}
+type categoryRequest struct {
+	Slug                   string            `json:"slug" validate:"required,min=2,max=80"`
+	DisplayName            string            `json:"displayName" validate:"required,min=2,max=160"`
+	Translations           map[string]string `json:"translations" validate:"required"`
+	BenefitRateBasisPoints int64             `json:"benefitRateBasisPoints" validate:"gte=0,lte=10000"`
+	IsActive               bool              `json:"isActive"`
+}
 
 func NewAdminHandler(service *admin.Service, validator *RequestValidator) *AdminHandler {
 	return &AdminHandler{service: service, validator: validator}
@@ -59,6 +73,44 @@ func (h *AdminHandler) Roles(c fiber.Ctx) error {
 	return c.JSON(item)
 }
 
+func (h *AdminHandler) CreateUser(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var request userRequest
+	if err = c.Bind().Body(&request); err != nil {
+		return NewAPIError(CodeValidationError, "The user request is invalid.", nil)
+	}
+	if err = h.validator.Validate(&request); err != nil {
+		return err
+	}
+	item, err := h.service.CreateUser(c.Context(), p, admin.UserInput{Email: request.Email, Phone: request.Phone, DisplayName: request.DisplayName, Password: request.Password, Roles: request.Roles})
+	if err != nil {
+		return adminAPIError(err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(item)
+}
+
+func (h *AdminHandler) UpdateUser(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var request userRequest
+	if err = c.Bind().Body(&request); err != nil {
+		return NewAPIError(CodeValidationError, "The user request is invalid.", nil)
+	}
+	if err = h.validator.Validate(&request); err != nil {
+		return err
+	}
+	item, err := h.service.UpdateUser(c.Context(), p, c.Params("id"), admin.UserInput{Email: request.Email, Phone: request.Phone, DisplayName: request.DisplayName, Password: request.Password, Roles: request.Roles})
+	if err != nil {
+		return adminAPIError(err)
+	}
+	return c.JSON(item)
+}
+
 func (h *AdminHandler) UserStatus(c fiber.Ctx) error {
 	p, err := customerPrincipal(c)
 	if err != nil {
@@ -76,6 +128,81 @@ func (h *AdminHandler) UserStatus(c fiber.Ctx) error {
 		return adminAPIError(err)
 	}
 	return c.JSON(item)
+}
+
+func (h *AdminHandler) Categories(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	page, size := queryPage(c)
+	items, total, err := h.service.ListCategories(c.Context(), p, page, size)
+	if err != nil {
+		return adminAPIError(err)
+	}
+	return c.JSON(PageDTO[admin.Category]{Items: items, Page: max(page, 1), PageSize: min(max(size, 1), 100), Total: total})
+}
+
+func (h *AdminHandler) Orders(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	page, size := queryPage(c)
+	items, total, err := h.service.ListOrders(c.Context(), p, page, size)
+	if err != nil {
+		return adminAPIError(err)
+	}
+	return c.JSON(PageDTO[admin.Order]{Items: items, Page: max(page, 1), PageSize: min(max(size, 1), 100), Total: total})
+}
+
+func (h *AdminHandler) CreateCategory(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var request categoryRequest
+	if err = c.Bind().Body(&request); err != nil {
+		return NewAPIError(CodeValidationError, "The category request is invalid.", nil)
+	}
+	if err = h.validator.Validate(&request); err != nil {
+		return err
+	}
+	item, err := h.service.CreateCategory(c.Context(), p, admin.CategoryInput{Slug: request.Slug, DisplayName: request.DisplayName, Translations: request.Translations, BenefitRateBasisPoints: request.BenefitRateBasisPoints, IsActive: request.IsActive})
+	if err != nil {
+		return adminAPIError(err)
+	}
+	return c.Status(fiber.StatusCreated).JSON(item)
+}
+
+func (h *AdminHandler) UpdateCategory(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	var request categoryRequest
+	if err = c.Bind().Body(&request); err != nil {
+		return NewAPIError(CodeValidationError, "The category request is invalid.", nil)
+	}
+	if err = h.validator.Validate(&request); err != nil {
+		return err
+	}
+	item, err := h.service.UpdateCategory(c.Context(), p, c.Params("id"), admin.CategoryInput{Slug: request.Slug, DisplayName: request.DisplayName, Translations: request.Translations, BenefitRateBasisPoints: request.BenefitRateBasisPoints, IsActive: request.IsActive})
+	if err != nil {
+		return adminAPIError(err)
+	}
+	return c.JSON(item)
+}
+
+func (h *AdminHandler) DeleteCategory(c fiber.Ctx) error {
+	p, err := customerPrincipal(c)
+	if err != nil {
+		return err
+	}
+	if err = h.service.DeleteCategory(c.Context(), p, c.Params("id")); err != nil {
+		return adminAPIError(err)
+	}
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (h *AdminHandler) Audit(c fiber.Ctx) error {
@@ -175,7 +302,7 @@ func adminAPIError(err error) error {
 	case errors.Is(err, admin.ErrValidation):
 		return NewAPIError(CodeValidationError, "The administration request is invalid.", nil)
 	case errors.Is(err, admin.ErrNotFound):
-		return NewAPIError(CodeResourceNotFound, "The requested user was not found.", nil)
+		return NewAPIError(CodeResourceNotFound, "The requested administration resource was not found.", nil)
 	case errors.Is(err, authorization.ErrForbidden):
 		return NewAPIError(CodeForbidden, "Access is forbidden.", nil)
 	default:
