@@ -149,6 +149,7 @@ SMTP_FROM
 
 FRONTEND_URL
 CORS_ALLOWED_ORIGINS
+SESSION_COOKIE_SECURE
 ```
 
 For local development the example allows `localhost:3033` and
@@ -157,6 +158,12 @@ origins plus the VPS frontend origin `http://167.86.79.16`; set
 `CORS_ALLOWED_ORIGINS` explicitly in the Jenkins production environment
 credential when the allowed-origin policy should be narrower. Credentials are
 enabled for the configured origins only.
+
+`SESSION_COOKIE_SECURE` controls whether frontend session cookies include the
+`Secure` attribute. Keep it `false` only while the VPS is served directly over
+HTTP (`http://167.86.79.16:3033`); browsers reject secure cookies on that URL.
+Set it to `true` after HTTPS is configured, and keep the production value in the
+Jenkins secret environment file rather than in source control.
 
 Provide `.env.example` with no real values.
 

@@ -33,6 +33,7 @@ services:
     environment:
       PORT: ${FRONTEND_PORT:-3033}
       API_BASE_URL: http://api:8088/api/v1
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     ports:
       - "${FRONTEND_PORT:-3033}:${FRONTEND_PORT:-3033}"
     healthcheck:
