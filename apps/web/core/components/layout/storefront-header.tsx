@@ -52,8 +52,8 @@ export function StorefrontHeader({
       <div className="bg-foreground py-2 text-center text-[0.6875rem] tracking-[0.12em] text-background">
         <Container>{messages.announcement}</Container>
       </div>
-      <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur-sm">
-        <Container className="grid min-h-16 grid-cols-[1fr_auto_1fr] items-center gap-1 sm:gap-3 lg:min-h-18">
+      <header className="relative sticky top-0 z-40 border-b border-border/80 bg-background/95 backdrop-blur-sm">
+        <Container className="grid min-h-16 min-w-0 grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-1 sm:grid-cols-[1fr_auto_1fr] sm:gap-3 lg:min-h-18">
           <nav className="hidden items-center gap-5 text-xs lg:flex" aria-label={messages.navigation.primary}>
             {navItems.map(([key, path]) => (
               <Link
@@ -76,7 +76,7 @@ export function StorefrontHeader({
             >
               {menuOpen ? <X aria-hidden size={21}/> : <Menu aria-hidden="true" size={21} strokeWidth={1.5} />}
             </button>
-            {menuOpen && <div className="fixed inset-x-0 top-[6.5rem] z-50 min-h-[calc(100svh-6.5rem)] border-b border-border bg-background px-4 py-8 shadow-sm">
+            {menuOpen && <div className="absolute inset-x-0 top-full z-50 min-h-[calc(100svh-4rem)] overflow-y-auto border-b border-border bg-background px-4 py-8 shadow-sm">
               <nav className="flex flex-col" aria-label={messages.navigation.mobile}>
                 {navItems.map(([key, path]) => (
                   <Link
@@ -103,7 +103,7 @@ export function StorefrontHeader({
             {messages.brand}
           </Link>
 
-          <div className="flex items-center justify-end gap-0 sm:gap-2">
+          <div className="flex min-w-0 items-center justify-end gap-0 sm:gap-2">
             <GlobalSearch locale={locale} copy={copy} {...catalogue}/>
             <div className="hidden lg:block">
               <ThemeToggle locale={locale} />
@@ -125,7 +125,7 @@ export function StorefrontHeader({
                 <UserRound aria-hidden="true" size={19} strokeWidth={1.5} />
               )}
             </Link>
-            <NotificationCenter locale={locale} />
+            <span className="hidden sm:block"><NotificationCenter locale={locale} /></span>
             <button
               type="button"
               onClick={() => setCartOpen(true)}

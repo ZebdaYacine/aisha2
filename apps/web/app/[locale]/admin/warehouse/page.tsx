@@ -24,7 +24,7 @@ export default async function AdminWarehousePage({
   return (
     <Container className="py-12">
       <AdminDashboardShell locale={locale} section="warehouse">
-        <WarehouseOperations />
+        <WarehouseOperations locale={locale} />
       </AdminDashboardShell>
     </Container>
   );

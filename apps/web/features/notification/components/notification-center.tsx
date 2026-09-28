@@ -21,11 +21,11 @@ type NotificationResponse = {
   unreadCount?: number;
 };
 
-const copy: Record<Locale, { label: string; title: string; empty: string; markAll: string; close: string }> = {
-  en: { label: "Notifications", title: "Notifications", empty: "You are all caught up.", markAll: "Mark all as read", close: "Close" },
-  fr: { label: "Notifications", title: "Notifications", empty: "Tout est à jour.", markAll: "Tout marquer comme lu", close: "Fermer" },
-  ar: { label: "الإشعارات", title: "الإشعارات", empty: "لا توجد إشعارات جديدة.", markAll: "تحديد الكل كمقروء", close: "إغلاق" },
-  es: { label: "Notificaciones", title: "Notificaciones", empty: "Todo está al día.", markAll: "Marcar todo como leído", close: "Cerrar" },
+const copy: Record<Locale, { label: string; title: string; empty: string; markAll: string; close: string; loading: string }> = {
+  en: { label: "Notifications", title: "Notifications", empty: "You are all caught up.", markAll: "Mark all as read", close: "Close", loading: "Loading…" },
+  fr: { label: "Notifications", title: "Notifications", empty: "Tout est à jour.", markAll: "Tout marquer comme lu", close: "Fermer", loading: "Chargement…" },
+  ar: { label: "الإشعارات", title: "الإشعارات", empty: "لا توجد إشعارات جديدة.", markAll: "تحديد الكل كمقروء", close: "إغلاق", loading: "جارٍ التحميل…" },
+  es: { label: "Notificaciones", title: "Notificaciones", empty: "Todo está al día.", markAll: "Marcar todo como leído", close: "Cerrar", loading: "Cargando…" },
 };
 
 const titles: Record<Locale, Record<string, string>> = {
@@ -276,12 +276,14 @@ export function NotificationCenter({ locale }: { locale: Locale }) {
     if (auth?.status !== "authenticated") {
       socketRef.current?.close();
       socketRef.current = null;
-      setItems([]);
-      setUnread(0);
-      return;
+      const resetTimer = window.setTimeout(() => {
+        setItems([]);
+        setUnread(0);
+      }, 0);
+      return () => window.clearTimeout(resetTimer);
     }
     let cancelled = false;
-    void load();
+    const loadTimer = window.setTimeout(() => { void load(); }, 0);
     const connect = async () => {
       const response = await fetch("/api/notifications/ws-ticket", { cache: "no-store" });
       if (!response.ok || cancelled) return;
@@ -306,6 +308,7 @@ export function NotificationCenter({ locale }: { locale: Locale }) {
     void connect().catch(() => undefined);
     return () => {
       cancelled = true;
+      window.clearTimeout(loadTimer);
       if (retryRef.current !== null) window.clearTimeout(retryRef.current);
       socketRef.current?.close();
       socketRef.current = null;
@@ -339,7 +342,7 @@ export function NotificationCenter({ locale }: { locale: Locale }) {
           <button type="button" className="grid size-8 place-items-center" aria-label={text.close} onClick={() => setOpen(false)}><X size={16} /></button>
         </div>
         <div className="max-h-[min(28rem,65vh)] overflow-y-auto">
-          {loading ? <p className="px-4 py-8 text-sm text-muted-foreground">Loading…</p> : items.length === 0 ? <p className="px-4 py-8 text-sm text-muted-foreground">{text.empty}</p> : items.map((item) => <button key={item.id} type="button" className={`block w-full border-b border-border px-4 py-3 text-start transition-colors hover:bg-muted/40 ${item.readAt ? "" : "bg-muted/20"}`} onClick={() => void markRead(item.id)}>
+          {loading ? <p className="px-4 py-8 text-sm text-muted-foreground">{text.loading}</p> : items.length === 0 ? <p className="px-4 py-8 text-sm text-muted-foreground">{text.empty}</p> : items.map((item) => <button key={item.id} type="button" className={`block w-full border-b border-border px-4 py-3 text-start transition-colors hover:bg-muted/40 ${item.readAt ? "" : "bg-muted/20"}`} onClick={() => void markRead(item.id)}>
             <span className="flex items-start justify-between gap-3"><strong className="text-sm">{titleFor(item, locale)}</strong>{!item.readAt && <span className="mt-1 size-2 shrink-0 rounded-full bg-primary" aria-label="Unread" />}</span>
             <span className="mt-1 block text-xs text-muted-foreground">{bodyFor(item, locale)}</span>
             <span className="mt-2 block text-[0.6875rem] text-muted-foreground">{formatFullDateTime(item.createdAt, locale)}</span>

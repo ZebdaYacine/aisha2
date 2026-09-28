@@ -60,7 +60,7 @@ export function ArtisanWorkspace({ locale }: { locale: keyof typeof labels }) {
         <h1 className="mt-3 font-serif text-4xl sm:text-5xl">{t.heading}</h1>
         {profile && (
           <p className="mt-4">
-            <strong>{t.status}:</strong> <StatusBadge status={profile.status} />
+            <strong>{t.status}:</strong> <StatusBadge status={profile.status} locale={locale} />
           </p>
         )}
         {profile?.reviewReason && <p className="mt-2 border-s-2 border-primary ps-3">{profile.reviewReason}</p>}

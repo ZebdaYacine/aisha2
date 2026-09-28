@@ -8,6 +8,8 @@ import { Button } from "@/core/components/ui/button";
 import { Combobox } from "@/core/components/ui/combobox";
 import { StatusBadge } from "@/core/components/ui/status-badge";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
+import type { Locale } from "@/core/lib/i18n";
+import { statusLabel } from "@/core/lib/common-copy";
 import {
   AdminTablePanel,
   AdminTableScroll,
@@ -54,7 +56,7 @@ const statusOptions: ProductStatus[] = [
   "ARCHIVED",
 ];
 
-export function ProductModeration() {
+export function ProductModeration({ locale = "en" }: { locale?: Locale }) {
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Item | null>(null);
   useEscapeKey(() => setSelected(null), selected !== null);
@@ -159,7 +161,7 @@ export function ProductModeration() {
       <AdminTablePanel
         eyebrow="Product moderation"
         title="Submission queue"
-        action={<label className="block text-sm"><span className="sr-only">Queue status</span><Combobox className="min-w-56" options={statusOptions.map((option) => ({ value: option, label: option.replaceAll("_", " ") }))} value={status} onChange={(next) => selectStatus(next as ProductStatus)} ariaLabel="Queue status" /></label>}
+        action={<label className="block text-sm"><span className="sr-only">{locale === "fr" ? "Statut de la file" : locale === "ar" ? "حالة القائمة" : locale === "es" ? "Estado de la cola" : "Queue status"}</span><Combobox className="min-w-56" options={statusOptions.map((option) => ({ value: option, label: statusLabel(option, locale) }))} value={status} onChange={(next) => selectStatus(next as ProductStatus)} ariaLabel={locale === "fr" ? "Statut de la file" : locale === "ar" ? "حالة القائمة" : locale === "es" ? "Estado de la cola" : "Queue status"} /></label>}
         summary={`${total} product(s)`}
       >
       {loading ? (
@@ -196,7 +198,7 @@ export function ProductModeration() {
                       </p>
                     </td>
                     <td className={adminTableCellClass}>
-                      <StatusBadge status={item.productStatus} />
+                      <StatusBadge status={item.productStatus} locale={locale} />
                     </td>
                     <td className={adminTableCellClass}>
                       {item.priceMinor} {item.currency}
@@ -290,7 +292,7 @@ export function ProductModeration() {
               </div>
               <div>
                 <dt className="text-muted-foreground">Status</dt>
-                <dd><StatusBadge status={selected.productStatus} /></dd>
+                <dd><StatusBadge status={selected.productStatus} locale={locale} /></dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Price</dt>

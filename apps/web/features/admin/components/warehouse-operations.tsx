@@ -8,6 +8,7 @@ import { Button } from "@/core/components/ui/button";
 import { Combobox } from "@/core/components/ui/combobox";
 import { StatusBadge } from "@/core/components/ui/status-badge";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
+import type { Locale } from "@/core/lib/i18n";
 
 type ReceptionStatus = "RECEIVED_PENDING_INSPECTION" | "INSPECTED";
 type Evidence = {
@@ -60,7 +61,7 @@ const statuses: Array<"" | ReceptionStatus> = [
   "INSPECTED",
 ];
 
-export function WarehouseOperations() {
+export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
   const [items, setItems] = useState<Reception[]>([]);
   const [selected, setSelected] = useState<Reception | null>(null);
   useEscapeKey(() => setSelected(null), selected !== null);
@@ -388,7 +389,7 @@ export function WarehouseOperations() {
                     <td className="px-4 py-4">{item.workshopName}</td>
                     <td className="px-4 py-4">{item.receivedQuantity}</td>
                     <td className="px-4 py-4">{item.referenceKey}</td>
-                    <td className="px-4 py-4"><StatusBadge status={item.status} /></td>
+                    <td className="px-4 py-4"><StatusBadge status={item.status} locale={locale} /></td>
                     <td className="px-4 py-4"><Button type="button" variant="outline" onClick={() => selectItem(item)}>Details</Button></td>
                   </tr>
                 ))}
@@ -417,7 +418,7 @@ export function WarehouseOperations() {
               <div><dt className="text-muted-foreground">Product</dt><dd>{selected.productName} ({selected.productCode || "Validated product"})</dd></div>
               <div><dt className="text-muted-foreground">Artisan / workshop</dt><dd>{selected.artisanName} / {selected.workshopName}</dd></div>
               <div><dt className="text-muted-foreground">Received quantity</dt><dd>{selected.receivedQuantity}</dd></div>
-              <div><dt className="text-muted-foreground">Status</dt><dd><StatusBadge status={selected.status} /></dd></div>
+              <div><dt className="text-muted-foreground">Status</dt><dd><StatusBadge status={selected.status} locale={locale} /></dd></div>
             </dl>
             <div className="mt-6 border-t border-border pt-5">
               <h3 className="font-medium">Evidence</h3>

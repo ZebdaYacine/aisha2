@@ -20,12 +20,12 @@ export default async function AdminModerationPage({
     <Container className="py-12">
       <AdminDashboardShell locale={locale} section="moderation">
         <section>
-          <p className="text-xs uppercase tracking-widest text-primary">
-            Product moderation
-          </p>
-          <h2 className="mt-3 font-serif text-4xl">Submission queue</h2>
+            <p className="text-xs uppercase tracking-widest text-primary">
+              {locale === "fr" ? "Modération des produits" : locale === "ar" ? "مراجعة المنتجات" : locale === "es" ? "Moderación de productos" : "Product moderation"}
+            </p>
+            <h2 className="mt-3 font-serif text-4xl">{locale === "fr" ? "File des soumissions" : locale === "ar" ? "قائمة الطلبات" : locale === "es" ? "Cola de envíos" : "Submission queue"}</h2>
           <div className="mt-8">
-            <ProductModeration />
+            <ProductModeration locale={locale} />
           </div>
         </section>
       </AdminDashboardShell>

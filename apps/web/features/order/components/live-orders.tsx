@@ -45,7 +45,7 @@ export function LiveOrders({
               {copy.order} {o.orderNumber}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              {formatFullDate(o.createdAt, locale)} · <StatusBadge status={o.status} /> · {formatMoney(o.totalMinor, o.currency, locale)}
+              {formatFullDate(o.createdAt, locale)} · <StatusBadge status={o.status} locale={locale} /> · {formatMoney(o.totalMinor, o.currency, locale)}
             </p>
           </div>
           <LocalizedLink

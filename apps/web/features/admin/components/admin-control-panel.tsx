@@ -84,16 +84,23 @@ type Labels = {
 };
 
 const pageSize = 10;
-const roleOptions = [
-  ["customer", "Customer"],
-  ["artisan", "Artisan"],
-  ["moderator", "Moderator"],
-  ["warehouse_agent", "Warehouse agent"],
-  ["administrator", "Administrator"],
-].map(([value, label]) => ({ value, label }));
-const accountStatusOptions = ["ACTIVE", "SUSPENDED", "DISABLED"].map((value) => ({
+const roleLabels: Record<Locale, Record<string, string>> = {
+  en: { customer: "Customer", artisan: "Artisan", moderator: "Moderator", warehouse_agent: "Warehouse agent", administrator: "Administrator" },
+  fr: { customer: "Client", artisan: "Artisan", moderator: "Modérateur", warehouse_agent: "Agent d’entrepôt", administrator: "Administrateur" },
+  ar: { customer: "عميل", artisan: "حرفي", moderator: "مراجع", warehouse_agent: "عامل مستودع", administrator: "مدير" },
+  es: { customer: "Cliente", artisan: "Artesano", moderator: "Moderador", warehouse_agent: "Agente de almacén", administrator: "Administrador" },
+};
+const roleValues = ["customer", "artisan", "moderator", "warehouse_agent", "administrator"];
+const roleOptionsFor = (locale: Locale) => roleValues.map((value) => ({ value, label: roleLabels[locale][value] }));
+const accountStatusLabels: Record<Locale, Record<string, string>> = {
+  en: { ACTIVE: "Active", SUSPENDED: "Suspended", DISABLED: "Disabled" },
+  fr: { ACTIVE: "Actif", SUSPENDED: "Suspendu", DISABLED: "Désactivé" },
+  ar: { ACTIVE: "نشط", SUSPENDED: "معلّق", DISABLED: "معطّل" },
+  es: { ACTIVE: "Activo", SUSPENDED: "Suspendido", DISABLED: "Desactivado" },
+};
+const accountStatusOptionsFor = (locale: Locale) => ["ACTIVE", "SUSPENDED", "DISABLED"].map((value) => ({
   value,
-  label: value.replaceAll("_", " "),
+  label: accountStatusLabels[locale][value],
 }));
 const labels: Record<Locale, Labels> = {
   en: {
@@ -280,6 +287,8 @@ export function AdminControlPanel({
   section?: "users" | "workers" | "audit";
 }) {
   const text = labels[locale];
+  const roleOptions = roleOptionsFor(locale);
+  const accountStatusOptions = accountStatusOptionsFor(locale);
   const router = useRouter();
   const { user, logout } = useAuth();
   const canReadAudit = hasCapability(user, "admin.audit.read");
@@ -614,7 +623,7 @@ export function AdminControlPanel({
                           </p>
                         </td>
                         <td className={adminTableCellClass}>
-                          <StatusBadge status={item.status} />
+                          <StatusBadge status={item.status} locale={locale} />
                         </td>
                         <td className={`${adminTableCellClass} text-xs`}>
                           {item.roles.join(", ") || "—"}

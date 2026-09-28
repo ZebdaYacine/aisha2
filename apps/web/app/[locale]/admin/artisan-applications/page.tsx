@@ -20,18 +20,22 @@ export default async function AdminArtisanApplicationsPage({
   const jar = await cookies();
   if (!jar.has("aisha_access") && !jar.has("aisha_refresh"))
     redirect(`/${locale}/login`);
+  const copy = {
+    eyebrow: locale === "fr" ? "Demandes d’artisans" : locale === "ar" ? "طلبات الحرفيين" : locale === "es" ? "Solicitudes de artesanos" : "Artisan applications",
+    title: locale === "fr" ? "File de vérification" : locale === "ar" ? "قائمة المراجعة" : locale === "es" ? "Cola de revisión" : "Review queue",
+  };
   return (
     <Container className="py-12">
       <AdminDashboardShell locale={locale} section="artisan-applications">
         <section className="space-y-8">
           <div>
             <p className="text-xs uppercase tracking-widest text-primary">
-              Artisan applications
+              {copy.eyebrow}
             </p>
-            <h2 className="mt-3 font-serif text-4xl">Review queue</h2>
+            <h2 className="mt-3 font-serif text-4xl">{copy.title}</h2>
           </div>
-          <ArtisanReview />
-          <ArtisanMembershipReview />
+          <ArtisanReview locale={locale} />
+          <ArtisanMembershipReview locale={locale} />
         </section>
       </AdminDashboardShell>
     </Container>

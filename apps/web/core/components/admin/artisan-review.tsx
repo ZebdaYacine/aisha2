@@ -9,6 +9,7 @@ import { StatusBadge } from "@/core/components/ui/status-badge";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
 import { hasCapability } from "@/features/auth/types";
 import { useOptionalAuth } from "@/features/auth/viewmodel/auth-context";
+import type { Locale } from "@/core/lib/i18n";
 import {
   AdminTablePanel,
   AdminTableScroll,
@@ -42,7 +43,7 @@ type MediaItem = {
   url?: string;
 };
 
-export function ArtisanReview() {
+export function ArtisanReview({ locale = "en" }: { locale?: Locale }) {
   const auth = useOptionalAuth();
   const canDecide = auth ? hasCapability(auth.user, "admin.artisan_applications.write") : true;
   const [items, setItems] = useState<Item[]>([]);
@@ -152,7 +153,7 @@ export function ArtisanReview() {
                 <td className={adminTableCellClass}>{item.workshopName}</td>
                 <td className={adminTableCellClass}>{item.wilaya}</td>
                 <td className={adminTableCellClass}>
-                  <StatusBadge status={item.status} />
+                  <StatusBadge status={item.status} locale={locale} />
                 </td>
                 <td className={adminTableCellClass}>
                   <Button
@@ -237,7 +238,7 @@ export function ArtisanReview() {
               </div>
               <div>
                 <dt className="text-muted-foreground">Status</dt>
-                <dd><StatusBadge status={selected.status} /></dd>
+                <dd><StatusBadge status={selected.status} locale={locale} /></dd>
               </div>
               {selected.reviewReason && (
                 <div>

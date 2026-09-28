@@ -8,6 +8,7 @@ import { Button } from "@/core/components/ui/button";
 import { Combobox } from "@/core/components/ui/combobox";
 import { Modal } from "@/core/components/ui/modal";
 import { StatusBadge } from "@/core/components/ui/status-badge";
+import { commonCopy } from "@/core/lib/common-copy";
 import { catalogue } from "@/features/catalogue/api";
 import {
   archiveProduct,
@@ -245,6 +246,7 @@ const labels = {
 
 export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
   const text = labels[locale];
+  const common = commonCopy(locale);
   const [items, setItems] = useState<ProductDraft[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [workshops, setWorkshops] = useState<OwnedWorkshop[]>([]);
@@ -446,7 +448,7 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
               const name = item.translations.find((translation) => translation.locale === locale)?.name || item.translations[0]?.name || "—";
               return <tr className="border-t border-border align-top" key={item.id}>
                 <td className="px-4 py-3"><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="min-h-10 px-3" onClick={() => { setDetailsItem(item); setDialog("details"); }}>{text.details}</Button><Button type="button" variant="outline" className="min-h-10 px-3" onClick={() => openEditor(item)}>{text.update}</Button>{item.status !== "ARCHIVED" && <Button type="button" variant="destructive" className="min-h-10 px-3" disabled={busy} onClick={() => { setPendingArchive(item); setDialog("archive"); }}>{text.archive}</Button>}</div></td>
-                <td className="px-4 py-3 font-medium">{name}</td><td className="px-4 py-3">{item.workshopName || "—"}</td><td className="px-4 py-3"><StatusBadge status={item.status} /></td><td className="px-4 py-3">{item.priceMinor} {item.currency}</td><td className="px-4 py-3">{item.plannedQuantity || 1}</td><td className="px-4 py-3">{item.orderTotalMinor || item.priceMinor} {item.currency}</td><td className="px-4 py-3">{item.media.length}/4</td><td className="px-4 py-3 font-mono text-xs">{item.productCode || "—"}</td>
+                <td className="px-4 py-3 font-medium">{name}</td><td className="px-4 py-3">{item.workshopName || "—"}</td><td className="px-4 py-3"><StatusBadge status={item.status} locale={locale} /></td><td className="px-4 py-3">{item.priceMinor} {item.currency}</td><td className="px-4 py-3">{item.plannedQuantity || 1}</td><td className="px-4 py-3">{item.orderTotalMinor || item.priceMinor} {item.currency}</td><td className="px-4 py-3">{item.media.length}/4</td><td className="px-4 py-3 font-mono text-xs">{item.productCode || "—"}</td>
               </tr>;
             })}</tbody>
           </table> : <p className="p-4 text-sm text-muted-foreground">{text.empty}</p>}
@@ -471,15 +473,15 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
                   .map((item) => ({ value: item.id ?? "", label: item.name.en }))}
                 value={form.categoryId}
                 onChange={(next) => change("categoryId", next)}
-                placeholder="Choose a category"
+                placeholder={common.chooseCategory}
                 ariaLabel={text.category}
               />
             </Field>
             <Field label={text.type}>
               <Combobox
                 options={[
-                  { value: "ARTISAN_SPECIFIC", label: "Artisan specific" },
-                  { value: "STANDARD_TRADITIONAL", label: "Standard traditional" },
+                  { value: "ARTISAN_SPECIFIC", label: common.artisanSpecific },
+                  { value: "STANDARD_TRADITIONAL", label: common.standardTraditional },
                 ]}
                 value={form.productType}
                 onChange={(next) => change("productType", next as ProductInput["productType"])}

@@ -41,8 +41,8 @@ export function Modal({ children, closeLabel, label, onClose, panelClassName }: 
     };
   }, []);
 
-  return <div className="fixed inset-0 z-[100] overflow-x-auto overflow-y-auto bg-foreground/60" onMouseDown={onClose}>
-    <div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className={cn("relative h-full max-w-full overflow-x-auto overflow-y-auto bg-background outline-none", panelClassName)} onMouseDown={(event) => event.stopPropagation()}>
+  return <div className="fixed inset-0 z-[100] overscroll-contain overflow-x-hidden overflow-y-auto bg-foreground/60" onMouseDown={onClose}>
+    <div ref={panelRef} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className={cn("relative min-h-full w-full max-w-full overflow-x-auto overflow-y-auto bg-background outline-none [overflow-wrap:anywhere]", panelClassName)} onMouseDown={(event) => event.stopPropagation()}>
       <button type="button" onClick={onClose} aria-label={closeLabel} className="absolute end-4 top-4 z-20 grid size-11 place-items-center bg-background text-foreground"><X aria-hidden="true" size={20} /></button>
       {children}
     </div>

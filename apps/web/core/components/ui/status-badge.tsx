@@ -1,5 +1,7 @@
 import { Badge } from "@/core/components/ui/badge";
 import { cn } from "@/core/lib/utils";
+import type { Locale } from "@/core/lib/i18n";
+import { statusLabel } from "@/core/lib/common-copy";
 
 const toneByStatus: Record<string, string> = {
   ACTIVE: "bg-success/15 text-success",
@@ -23,10 +25,10 @@ const toneByStatus: Record<string, string> = {
   ARCHIVED: "bg-muted text-muted-foreground",
 };
 
-export function StatusBadge({ status, className }: { status: string; className?: string }) {
+export function StatusBadge({ status, locale = "en", className }: { status: string; locale?: Locale; className?: string }) {
   return (
     <Badge className={cn("rounded-full border border-transparent px-3 py-1", toneByStatus[status] ?? "bg-muted text-muted-foreground", className)}>
-      {status.replaceAll("_", " ")}
+      {statusLabel(status, locale)}
     </Badge>
   );
 }
