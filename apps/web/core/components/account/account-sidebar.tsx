@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 import type { Locale } from "@/core/lib/i18n";
@@ -22,6 +22,7 @@ export function AccountSidebar({
   mode?: AccountSidebarMode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { logout, status, user } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const customerLinks = [
@@ -60,7 +61,7 @@ export function AccountSidebar({
       >
         {customerLinks.map(([label, href]) => (
           <LocalizedLink
-            className="min-h-11 whitespace-nowrap px-3 py-3 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={`min-h-11 whitespace-nowrap rounded px-3 py-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${pathname === `/${locale}${href}` ? "bg-secondary font-medium text-foreground" : ""}`}
             locale={locale}
             href={href}
             key={href}
@@ -82,7 +83,7 @@ export function AccountSidebar({
             <p className="px-3 pb-2 text-xs uppercase tracking-widest text-muted-foreground">{copy.account}</p>
             <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-1">
               <LocalizedLink
-                className={`min-h-11 whitespace-nowrap px-3 py-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "customer" ? "bg-foreground font-medium text-background hover:bg-foreground" : ""}`}
+                className={`min-h-11 whitespace-nowrap rounded px-3 py-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "customer" ? "bg-secondary font-medium text-foreground" : ""}`}
                 locale={locale}
                 href="/account"
                 aria-current={mode === "customer" ? "page" : undefined}
@@ -91,7 +92,7 @@ export function AccountSidebar({
               </LocalizedLink>
               {canUseArtisanArea && (
                 <LocalizedLink
-                  className={`min-h-11 whitespace-nowrap px-3 py-3 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "artisan" ? "bg-foreground font-medium text-background hover:bg-foreground" : ""}`}
+                  className={`min-h-11 whitespace-nowrap rounded px-3 py-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${mode === "artisan" ? "bg-secondary font-medium text-foreground" : ""}`}
                   locale={locale}
                   href="/artisan"
                   aria-current={mode === "artisan" ? "page" : undefined}

@@ -192,7 +192,7 @@ export function AdminDashboardShell({
             role="tab"
             aria-selected={section === key}
             aria-current={section === key ? "page" : undefined}
-            className={`shrink-0 rounded border px-4 py-3 text-sm transition-colors ${section === key ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:bg-muted"}`}
+            className={`shrink-0 rounded border px-4 py-3 text-sm transition-colors ${section === key ? "border-primary bg-secondary text-foreground shadow-sm" : "border-border bg-card hover:border-primary/60 hover:bg-muted"}`}
           >
             {label}
           </LocalizedLink>

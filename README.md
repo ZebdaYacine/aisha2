@@ -58,7 +58,7 @@ MinIO data must be preserved.
 
 ## Local demo accounts
 
-The development seed creates six Algerian demo accounts. They all use the
+The development seed creates sixteen Algerian demo accounts. They all use the
 development-only password `Yassine1996@Got`:
 
 | Account | Email | Role |
@@ -69,6 +69,16 @@ development-only password `Yassine1996@Got`:
 | Lyna | `lyna.customer@example.test` | Customer |
 | Oussama | `oussama.artisan@example.test` | Artisan |
 | Youcef | `youcef.moderator@example.test` | Moderator |
+| Nour | `nour.customer@example.test` | Customer |
+| Saad Kader | `saad.customer@example.test` | Customer |
+| Lyna B. | `lyna.customer2@example.test` | Customer |
+| Amina | `amina.moderator@example.test` | Moderator |
+| Kader Moderator | `kader.moderator@example.test` | Moderator |
+| Yassine Agent | `yassine.agent@example.test` | Warehouse agent |
+| Youcef Agent | `youcef.agent@example.test` | Warehouse agent |
+| Karim | `karim.artisan@example.test` | Artisan |
+| Sarah | `sarah.artisan@example.test` | Artisan |
+| Oussama K. | `oussama.artisan2@example.test` | Artisan |
 
 The application currently models agent/warehouse access with the single
 `warehouse_agent` role. These credentials are for local development only and

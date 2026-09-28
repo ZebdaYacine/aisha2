@@ -394,6 +394,113 @@ WHERE user_id = '90000000-0000-0000-0000-000000000007';
 DELETE FROM users
 WHERE id = '90000000-0000-0000-0000-000000000007';
 
+-- Expanded development directory: customers, approved artisans, moderators,
+-- and warehouse agents. All accounts use the documented development password:
+-- Yassine1996@Got.
+INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
+    ('90000000-0000-0000-0000-000000000200', 'nour.customer@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Nour', '2025-01-01T00:00:00Z', '+213560000200', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000201', 'saad.customer@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Saad Kader', '2025-01-01T00:00:00Z', '+213560000201', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000202', 'lyna.customer2@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Lyna B.', '2025-01-01T00:00:00Z', '+213560000202', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000203', 'amina.moderator@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Amina', '2025-01-01T00:00:00Z', '+213560000203', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000204', 'kader.moderator@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Kader Moderator', '2025-01-01T00:00:00Z', '+213560000204', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000205', 'yassine.agent@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Yassine Agent', '2025-01-01T00:00:00Z', '+213560000205', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000206', 'youcef.agent@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Youcef Agent', '2025-01-01T00:00:00Z', '+213560000206', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000207', 'karim.artisan@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Karim', '2025-01-01T00:00:00Z', '+213560000207', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000208', 'sarah.artisan@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Sarah', '2025-01-01T00:00:00Z', '+213560000208', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000209', 'oussama.artisan2@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Oussama K.', '2025-01-01T00:00:00Z', '+213560000209', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email, display_name = EXCLUDED.display_name, phone = EXCLUDED.phone,
+    status = EXCLUDED.status, password_hash = EXCLUDED.password_hash;
+
+INSERT INTO user_roles (user_id, role_id, assigned_by_user_id, assigned_at) VALUES
+    ('90000000-0000-0000-0000-000000000200', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000201', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000202', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000203', '10000000-0000-0000-0000-000000000004', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000204', '10000000-0000-0000-0000-000000000004', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000205', '10000000-0000-0000-0000-000000000005', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000206', '10000000-0000-0000-0000-000000000005', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000207', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000208', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000209', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z')
+ON CONFLICT DO NOTHING;
+
+-- Three additional approved artisan profiles, each with a public workshop and
+-- two images from the checked-in development image collection.
+INSERT INTO artisan_profiles (id, user_id, public_display_name, internal_name, workshop_name, wilaya, location_text, contact_email, contact_visibility, status, profile_image_object_key, created_at, updated_at, approved_at, submitted_at) VALUES
+    ('90000000-0000-0000-0000-000000000220', '90000000-0000-0000-0000-000000000207', 'Atelier Karim', 'Karim Woodcraft', 'Atelier Karim', 'Algiers', 'Bab El Oued', 'karim.artisan@example.test', 'PRIVATE', 'APPROVED', '/images/aisha/plateu en bois 1.jpg', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-01T12:00:00Z'),
+    ('90000000-0000-0000-0000-000000000221', '90000000-0000-0000-0000-000000000208', 'Atelier Sarah', 'Sarah Textile Artisan', 'Atelier Sarah', 'Oran', 'Sidi El Houari', 'sarah.artisan@example.test', 'PRIVATE', 'APPROVED', '/images/aisha/C1.jpg', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-01T12:00:00Z'),
+    ('90000000-0000-0000-0000-000000000222', '90000000-0000-0000-0000-000000000209', 'Atelier Oussama Kabyle', 'Oussama Kabyle Artisan', 'Atelier Oussama Kabyle', 'Béjaïa', 'Akbou', 'oussama.artisan2@example.test', 'PRIVATE', 'APPROVED', '/images/aisha/133T695O4.jpg', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-01T12:00:00Z')
+ON CONFLICT (id) DO UPDATE SET
+    public_display_name = EXCLUDED.public_display_name, workshop_name = EXCLUDED.workshop_name,
+    wilaya = EXCLUDED.wilaya, location_text = EXCLUDED.location_text,
+    profile_image_object_key = EXCLUDED.profile_image_object_key, status = EXCLUDED.status,
+    approved_at = EXCLUDED.approved_at;
+
+INSERT INTO artisan_profile_translations (artisan_profile_id, locale, display_name, biography, created_at, updated_at) VALUES
+    ('90000000-0000-0000-0000-000000000220', 'en', 'Atelier Karim', 'A woodcraft studio creating practical pieces with Algerian geometric motifs.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000220', 'fr', 'Atelier Karim', 'Un atelier de bois qui crée des pièces pratiques aux motifs géométriques algériens.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000220', 'ar', 'ورشة كريم', 'ورشة خشب تصنع قطعاً عملية بزخارف هندسية جزائرية.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000220', 'es', 'Taller Karim', 'Un taller de madera que crea piezas prácticas con motivos geométricos argelinos.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000221', 'en', 'Atelier Sarah', 'A textile studio combining festive colour with careful hand embroidery.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000221', 'fr', 'Atelier Sarah', 'Un atelier textile qui associe couleurs festives et broderie soignée.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000221', 'ar', 'ورشة سارة', 'ورشة نسيج تجمع بين الألوان الاحتفالية والتطريز المتقن.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000221', 'es', 'Taller Sarah', 'Un taller textil que combina color festivo con bordado cuidadoso.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000222', 'en', 'Atelier Oussama Kabyle', 'A Kabyle studio celebrating silver, colour and hand-finished ornament.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000222', 'fr', 'Atelier Oussama Kabyle', 'Un atelier kabyle qui célèbre l’argent, la couleur et l’ornement façonné à la main.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000222', 'ar', 'ورشة أسامة القبائلية', 'ورشة قبائلية تحتفي بالفضة والألوان والزخارف المصنوعة يدوياً.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000222', 'es', 'Taller Oussama Cabilia', 'Un taller cabilio que celebra la plata, el color y el adorno hecho a mano.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+ON CONFLICT (artisan_profile_id, locale) DO UPDATE SET display_name = EXCLUDED.display_name, biography = EXCLUDED.biography, updated_at = EXCLUDED.updated_at;
+
+INSERT INTO workshops (id, artisan_profile_id, name, description, wilaya, location_text, status, is_default, is_public) VALUES
+    ('90000000-0000-0000-0000-000000000230', '90000000-0000-0000-0000-000000000220', 'Atelier Karim', 'Woodcraft and painted serving pieces from Algiers.', 'Algiers', 'Bab El Oued', 'ACTIVE', true, true),
+    ('90000000-0000-0000-0000-000000000231', '90000000-0000-0000-0000-000000000221', 'Atelier Sarah', 'Embroidered festive textiles from Oran.', 'Oran', 'Sidi El Houari', 'ACTIVE', true, true),
+    ('90000000-0000-0000-0000-000000000232', '90000000-0000-0000-0000-000000000222', 'Atelier Oussama Kabyle', 'Silver and colourful Kabyle ornament from Béjaïa.', 'Béjaïa', 'Akbou', 'ACTIVE', true, true)
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, status = EXCLUDED.status, is_public = EXCLUDED.is_public;
+
+INSERT INTO workshop_translations (workshop_id, locale, name, description) VALUES
+    ('90000000-0000-0000-0000-000000000230', 'en', 'Atelier Karim', 'Woodcraft and painted serving pieces from Algiers.'),
+    ('90000000-0000-0000-0000-000000000230', 'fr', 'Atelier Karim', 'Objets en bois et plateaux peints fabriqués à Alger.'),
+    ('90000000-0000-0000-0000-000000000230', 'ar', 'ورشة كريم', 'قطع خشبية وصوانٍ مطلية من الجزائر.'),
+    ('90000000-0000-0000-0000-000000000230', 'es', 'Taller Karim', 'Piezas de madera y bandejas pintadas de Argel.'),
+    ('90000000-0000-0000-0000-000000000231', 'en', 'Atelier Sarah', 'Embroidered festive textiles from Oran.'),
+    ('90000000-0000-0000-0000-000000000231', 'fr', 'Atelier Sarah', 'Textiles festifs brodés d’Oran.'),
+    ('90000000-0000-0000-0000-000000000231', 'ar', 'ورشة سارة', 'منسوجات احتفالية مطرزة من وهران.'),
+    ('90000000-0000-0000-0000-000000000231', 'es', 'Taller Sarah', 'Textiles festivos bordados de Orán.'),
+    ('90000000-0000-0000-0000-000000000232', 'en', 'Atelier Oussama Kabyle', 'Silver and colourful Kabyle ornament from Béjaïa.'),
+    ('90000000-0000-0000-0000-000000000232', 'fr', 'Atelier Oussama Kabyle', 'Ornements kabyles en argent et en couleur de Béjaïa.'),
+    ('90000000-0000-0000-0000-000000000232', 'ar', 'ورشة أسامة القبائلية', 'زخارف قبائلية فضية وملونة من بجاية.'),
+    ('90000000-0000-0000-0000-000000000232', 'es', 'Taller Oussama Cabilia', 'Adornos cabilios de plata y color de Béjaïa.')
+ON CONFLICT (workshop_id, locale) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO artisan_profile_categories (artisan_profile_id, category_id, created_at) VALUES
+    ('90000000-0000-0000-0000-000000000220', '20000000-0000-0000-0000-000000000002', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000221', '20000000-0000-0000-0000-000000000012', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000222', '20000000-0000-0000-0000-000000000003', '2025-01-01T00:00:00Z')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO artisan_media (id, artisan_profile_id, media_kind, object_key, original_filename, media_type, size_bytes, checksum_sha256, sort_order, visibility, created_at) VALUES
+    ('90000000-0000-0000-0000-000000000240', '90000000-0000-0000-0000-000000000220', 'IMAGE', '/images/aisha/plateu en bois 1.jpg', 'karim-woodwork.jpg', 'image/jpeg', 266984, repeat('c', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000241', '90000000-0000-0000-0000-000000000220', 'IMAGE', '/images/aisha/Plateau en Bois avec Poignées ☕️#plateaux #plateau #bois #cuisinealgérienne #decocuisine (1).jpg', 'karim-tray.jpg', 'image/jpeg', 311240, repeat('d', 64), 1, 'PUBLIC', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000242', '90000000-0000-0000-0000-000000000221', 'IMAGE', '/images/aisha/C1.jpg', 'sarah-textile.jpg', 'image/jpeg', 182400, repeat('e', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000243', '90000000-0000-0000-0000-000000000221', 'IMAGE', '/images/aisha/C2.png', 'sarah-embroidered-piece.png', 'image/png', 2405470, repeat('f', 64), 1, 'PUBLIC', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000244', '90000000-0000-0000-0000-000000000222', 'IMAGE', '/images/aisha/133T695O4.jpg', 'oussama-silver.jpg', 'image/jpeg', 215300, repeat('a', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000245', '90000000-0000-0000-0000-000000000222', 'IMAGE', '/images/aisha/654382945Y.jpg', 'oussama-jewellery.jpg', 'image/jpeg', 101095, repeat('b', 64), 1, 'PUBLIC', '2025-01-01T00:00:00Z')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO artisan_memberships (user_id, artisan_profile_id, status, activated_at)
+VALUES
+    ('90000000-0000-0000-0000-000000000207', '90000000-0000-0000-0000-000000000220', 'ACTIVE', '2025-01-02T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000208', '90000000-0000-0000-0000-000000000221', 'ACTIVE', '2025-01-02T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000209', '90000000-0000-0000-0000-000000000222', 'ACTIVE', '2025-01-02T00:00:00Z')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO artisan_verifications (artisan_membership_id, status, decided_by_user_id, decided_at)
+SELECT id, 'VERIFIED', '90000000-0000-0000-0000-000000000001', '2025-01-02T00:00:00Z'
+FROM artisan_memberships
+WHERE artisan_profile_id IN ('90000000-0000-0000-0000-000000000220', '90000000-0000-0000-0000-000000000221', '90000000-0000-0000-0000-000000000222')
+ON CONFLICT DO NOTHING;
+
 -- Oussama is the sole artisan demo account. The migration creates a membership
 -- automatically for approved profiles, so the explicit upsert below also makes
 -- this fixture safe when the seed is loaded against a migrated database.
