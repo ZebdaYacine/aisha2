@@ -151,6 +151,13 @@ FRONTEND_URL
 CORS_ALLOWED_ORIGINS
 ```
 
+For local development the example allows `localhost:3033` and
+`127.0.0.1:3033`. The production Compose override defaults to these local
+origins plus the VPS frontend origin `http://167.86.79.16`; set
+`CORS_ALLOWED_ORIGINS` explicitly in the Jenkins production environment
+credential when the allowed-origin policy should be narrower. Credentials are
+enabled for the configured origins only.
+
 Provide `.env.example` with no real values.
 
 ## 6. Local Development Commands
@@ -206,6 +213,36 @@ Checkout
 -> Health checks
 -> Rollback on failure
 ```
+
+### VPS deployment pipeline
+
+The repository `Jenkinsfile` keeps deployment opt-in. A normal job runs the
+validation stages only. Start a build with `DEPLOY_VPS=true` to deploy the
+validated commit to the configured VPS.
+
+Configure these Jenkins credentials before enabling the deploy parameter:
+
+- `aisha-vps-ssh`: SSH private-key credential for the VPS user. The Jenkins
+  agent must already contain the VPS host key in its `known_hosts`; the
+  pipeline intentionally uses strict host-key checking.
+- `aisha-vps-production-env`: Secret-file credential containing the production
+  `.env`. It is copied over SSH with mode `0600` and is never committed or
+  printed in the build log.
+
+The deploy stage requires `rsync`, `ssh`, `scp`, Docker Compose, and the
+Jenkins SSH Agent plugin on the build agent. It synchronizes source without
+deleting the VPS application directory, backs up PostgreSQL, runs migrations
+without development seed data, builds images tagged with the commit SHA, and
+runs API, frontend, reverse-proxy, and readiness smoke checks. PostgreSQL,
+Redis, and MinIO volumes are preserved. The remote deploy script records the
+last successful image tag and restores it if the new containers fail health
+checks. Database migrations are not automatically rolled back; they must be
+backward-compatible before production approval.
+
+The VPS must have Docker Compose, `curl`, and a production `.env` policy with
+private PostgreSQL, Redis, and MinIO ports. Do not place the VPS password in
+the Jenkinsfile; use an SSH key credential and rotate any temporary password
+after key-based access is configured.
 
 ## 8. Example Jenkins Stage Requirements
 

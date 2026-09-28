@@ -8,6 +8,13 @@ import { Button } from "@/core/components/ui/button";
 import { Combobox } from "@/core/components/ui/combobox";
 import { StatusBadge } from "@/core/components/ui/status-badge";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
+import {
+  AdminTablePanel,
+  AdminTableScroll,
+  adminTableCellClass,
+  adminTableClass,
+  adminTableHeadClass,
+} from "@/core/components/admin/admin-table";
 
 type ProductStatus =
   | "PENDING_REVIEW"
@@ -149,21 +156,12 @@ export function ProductModeration() {
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <label className="block text-sm">
-          <span className="mb-2 block">Queue status</span>
-          <Combobox
-            className="min-w-56"
-            options={statusOptions.map((option) => ({ value: option, label: option.replaceAll("_", " ") }))}
-            value={status}
-            onChange={(next) => selectStatus(next as ProductStatus)}
-            ariaLabel="Queue status"
-          />
-        </label>
-        <span className="text-sm text-muted-foreground">
-          {total} product(s)
-        </span>
-      </div>
+      <AdminTablePanel
+        eyebrow="Product moderation"
+        title="Submission queue"
+        action={<label className="block text-sm"><span className="sr-only">Queue status</span><Combobox className="min-w-56" options={statusOptions.map((option) => ({ value: option, label: option.replaceAll("_", " ") }))} value={status} onChange={(next) => selectStatus(next as ProductStatus)} ariaLabel="Queue status" /></label>}
+        summary={`${total} product(s)`}
+      >
       {loading ? (
         <p
           className="border border-border p-5 text-sm text-muted-foreground"
@@ -173,9 +171,9 @@ export function ProductModeration() {
         </p>
       ) : (
         <>
-          <div className="overflow-x-auto border border-border">
-            <table className="w-full min-w-[48rem] text-start text-sm">
-              <thead className="border-b border-border bg-muted/40">
+          <AdminTableScroll>
+            <table className={adminTableClass}>
+              <thead className={adminTableHeadClass}>
                 <tr>
                   <th className="px-4 py-3 font-medium">Product</th>
                   <th className="px-4 py-3 font-medium">Artisan</th>
@@ -186,24 +184,24 @@ export function ProductModeration() {
               </thead>
               <tbody className="divide-y divide-border">
                 {items.map((item) => (
-                  <tr key={item.submissionId || item.productId}>
-                    <td className="px-4 py-4">
+                  <tr className="transition-colors hover:bg-muted/30" key={item.submissionId || item.productId}>
+                    <td className={adminTableCellClass}>
                       <span>{item.productName || "Unnamed product"}</span>
                       {item.productCode && <p className="text-xs text-muted-foreground">{item.productCode}</p>}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className={adminTableCellClass}>
                       {item.artisanName}
                       <p className="text-xs text-muted-foreground">
                         {item.workshopName}
                       </p>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className={adminTableCellClass}>
                       <StatusBadge status={item.productStatus} />
                     </td>
-                    <td className="px-4 py-4">
+                    <td className={adminTableCellClass}>
                       {item.priceMinor} {item.currency}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className={adminTableCellClass}>
                       <Button
                         type="button"
                         variant="outline"
@@ -224,7 +222,7 @@ export function ProductModeration() {
                 No products in this queue.
               </p>
             )}
-          </div>
+          </AdminTableScroll>
           <div className="mt-4 flex items-center justify-between gap-3">
             <Button
               type="button"
@@ -248,6 +246,7 @@ export function ProductModeration() {
           </div>
         </>
       )}
+      </AdminTablePanel>
       {selected && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center overflow-x-auto bg-foreground/50 p-4"

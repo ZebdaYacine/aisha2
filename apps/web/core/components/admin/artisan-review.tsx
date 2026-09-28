@@ -9,6 +9,13 @@ import { StatusBadge } from "@/core/components/ui/status-badge";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
 import { hasCapability } from "@/features/auth/types";
 import { useOptionalAuth } from "@/features/auth/viewmodel/auth-context";
+import {
+  AdminTablePanel,
+  AdminTableScroll,
+  adminTableCellClass,
+  adminTableClass,
+  adminTableHeadClass,
+} from "./admin-table";
 
 type Item = {
   id: string;
@@ -122,9 +129,14 @@ export function ArtisanReview() {
     );
   return (
     <>
-      <div className="overflow-x-auto border border-border">
-        <table className="w-full min-w-[42rem] text-start text-sm">
-          <thead className="border-b border-border bg-muted/40">
+      <AdminTablePanel
+        eyebrow="Review queue"
+        title="Submitted applications"
+        summary={`${total} application(s)`}
+      >
+      <AdminTableScroll>
+        <table className={adminTableClass}>
+          <thead className={adminTableHeadClass}>
             <tr>
               <th className="px-4 py-3 font-medium">Applicant</th>
               <th className="px-4 py-3 font-medium">Workshop</th>
@@ -135,14 +147,14 @@ export function ArtisanReview() {
           </thead>
           <tbody className="divide-y divide-border">
             {items.map((item) => (
-              <tr key={item.id}>
-                <td className="px-4 py-4">{item.publicDisplayName}</td>
-                <td className="px-4 py-4">{item.workshopName}</td>
-                <td className="px-4 py-4">{item.wilaya}</td>
-                <td className="px-4 py-4">
+              <tr className="transition-colors hover:bg-muted/30" key={item.id}>
+                <td className={adminTableCellClass}>{item.publicDisplayName}</td>
+                <td className={adminTableCellClass}>{item.workshopName}</td>
+                <td className={adminTableCellClass}>{item.wilaya}</td>
+                <td className={adminTableCellClass}>
                   <StatusBadge status={item.status} />
                 </td>
-                <td className="px-4 py-4">
+                <td className={adminTableCellClass}>
                   <Button
                     type="button"
                     variant="outline"
@@ -163,7 +175,7 @@ export function ArtisanReview() {
             No submitted applications.
           </p>
         )}
-      </div>
+      </AdminTableScroll>
       <div className="mt-4 flex items-center justify-between gap-3">
         <Button
           type="button"
@@ -185,6 +197,7 @@ export function ArtisanReview() {
           Next
         </Button>
       </div>
+      </AdminTablePanel>
       {selected && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center overflow-x-auto bg-foreground/50 p-4"

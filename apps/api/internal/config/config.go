@@ -93,7 +93,7 @@ func Load() (Config, error) {
 		ProductMediaMaxBytes:    productMediaMaxBytes,
 		ArtisanDocumentMaxBytes: artisanDocumentMaxBytes,
 		ArtisanMediaMaxBytes:    artisanMediaMaxBytes,
-		AllowedOrigins:          splitCSV(env("CORS_ALLOWED_ORIGINS", "http://localhost:3033")),
+		AllowedOrigins:          splitCSV(env("CORS_ALLOWED_ORIGINS", "http://localhost:3033,http://127.0.0.1:3033,http://167.86.79.16")),
 		AuthSigningKey:          env("AUTH_SIGNING_KEY", "aisha-development-signing-key-change-me"),
 		AuthRateLimitMax:        authRateLimitMax,
 		AuthRateLimitWindow:     time.Duration(authRateLimitWindowSeconds) * time.Second,

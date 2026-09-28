@@ -20,8 +20,14 @@ func TestLoadUsesFoundationDefaults(t *testing.T) {
 	if cfg.MinIOPublicEndpoint != "localhost:9000" {
 		t.Fatalf("unexpected public MinIO endpoint: %q", cfg.MinIOPublicEndpoint)
 	}
-	if len(cfg.AllowedOrigins) != 1 || cfg.AllowedOrigins[0] != "http://localhost:3033" {
+	wantOrigins := []string{"http://localhost:3033", "http://127.0.0.1:3033", "http://167.86.79.16"}
+	if len(cfg.AllowedOrigins) != len(wantOrigins) {
 		t.Fatalf("unexpected origins: %#v", cfg.AllowedOrigins)
+	}
+	for index, origin := range wantOrigins {
+		if cfg.AllowedOrigins[index] != origin {
+			t.Fatalf("unexpected origins: %#v", cfg.AllowedOrigins)
+		}
 	}
 	if cfg.AuthRateLimitMax != 10 || cfg.AuthRateLimitWindow != 60*time.Second {
 		t.Fatalf("unexpected authentication rate limit: max=%d window=%s", cfg.AuthRateLimitMax, cfg.AuthRateLimitWindow)

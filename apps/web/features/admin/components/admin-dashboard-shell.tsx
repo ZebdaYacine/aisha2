@@ -179,14 +179,20 @@ export function AdminDashboardShell({
           </Button>
         </div>
       </header>
-      <nav className="flex max-w-full flex-nowrap gap-2 overflow-x-auto pb-1" aria-label={text.title}>
+      <nav
+        className="-mx-1 flex max-w-full flex-nowrap gap-2 overflow-x-auto px-1 pb-2"
+        aria-label={text.title}
+        role="tablist"
+      >
         {links.map(([key, href, label]) => (
           <LocalizedLink
             key={key}
             locale={locale}
             href={href}
+            role="tab"
+            aria-selected={section === key}
             aria-current={section === key ? "page" : undefined}
-            className={`border px-4 py-3 text-sm ${section === key ? "border-foreground bg-foreground text-background" : "border-border hover:bg-muted"}`}
+            className={`shrink-0 rounded border px-4 py-3 text-sm transition-colors ${section === key ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:bg-muted"}`}
           >
             {label}
           </LocalizedLink>

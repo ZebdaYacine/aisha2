@@ -13,6 +13,13 @@ import { formatFullDate, formatFullDateTime } from "@/core/lib/format";
 import type { Locale } from "@/core/lib/i18n";
 import { hasCapability } from "@/features/auth/types";
 import { useAuth } from "@/features/auth/viewmodel/auth-context";
+import {
+  AdminTablePanel,
+  AdminTableScroll,
+  adminTableCellClass,
+  adminTableClass,
+  adminTableHeadClass,
+} from "@/core/components/admin/admin-table";
 
 type User = {
   id: string;
@@ -579,27 +586,16 @@ export function AdminControlPanel({
             ))}
           </div>
           <div className="grid gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,0.8fr)]">
-            <section className="min-w-0" aria-labelledby="admin-users-title">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-primary">
-                    {text.users}
-                  </p>
-                  <h2
-                    id="admin-users-title"
-                    className="mt-2 font-serif text-3xl"
-                  >
-                    {text.users}
-                  </h2>
-                </div>
-                {canManageUsers && <Button type="button" onClick={() => openAccountEditor()}>{text.createUser}</Button>}
-                <span className="text-sm text-muted-foreground">
-                  {pageLabel}
-                </span>
-              </div>
-              <div className="mt-5 overflow-x-auto border border-border">
-                <table className="w-full min-w-[40rem] text-start text-sm">
-                  <thead className="border-b border-border bg-muted/40">
+            <AdminTablePanel
+              className="min-w-0"
+              eyebrow={text.users}
+              title={text.users}
+              action={canManageUsers ? <Button type="button" onClick={() => openAccountEditor()}>{text.createUser}</Button> : undefined}
+              summary={pageLabel}
+            >
+              <AdminTableScroll>
+                <table className={adminTableClass}>
+                  <thead className={adminTableHeadClass}>
                     <tr>
                       <th className="px-4 py-3 font-medium">{text.email}</th>
                       <th className="px-4 py-3 font-medium">{text.status}</th>
@@ -610,23 +606,23 @@ export function AdminControlPanel({
                   </thead>
                   <tbody className="divide-y divide-border">
                     {users.map((item) => (
-                      <tr className="align-top" key={item.id}>
-                        <td className="px-4 py-4">
+                      <tr className="align-top transition-colors hover:bg-muted/30" key={item.id}>
+                        <td className={adminTableCellClass}>
                           <strong>{item.displayName || item.email}</strong>
                           <p className="mt-1 text-xs text-muted-foreground">
                             {item.email}
                           </p>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className={adminTableCellClass}>
                           <StatusBadge status={item.status} />
                         </td>
-                        <td className="px-4 py-4 text-xs">
+                        <td className={`${adminTableCellClass} text-xs`}>
                           {item.roles.join(", ") || "—"}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 text-xs text-muted-foreground">
+                        <td className={`${adminTableCellClass} whitespace-nowrap text-xs text-muted-foreground`}>
                           {formatFullDate(item.createdAt, locale)}
                         </td>
-                        <td className="px-4 py-4">
+                        <td className={adminTableCellClass}>
                           <Button
                             type="button"
                             variant="outline"
@@ -661,7 +657,7 @@ export function AdminControlPanel({
                     {text.load}
                   </p>
                 )}
-              </div>
+              </AdminTableScroll>
               <div className="mt-4 flex items-center justify-between gap-3">
                 <Button
                   type="button"
@@ -680,7 +676,7 @@ export function AdminControlPanel({
                   {text.next}
                 </Button>
               </div>
-            </section>
+            </AdminTablePanel>
             {selectedUser && (
               <aside
                 className="fixed inset-0 z-50 overflow-x-auto overflow-y-auto bg-foreground/50 p-4"
@@ -822,32 +818,13 @@ export function AdminControlPanel({
         </>
       )}
       {section === "audit" && canReadAudit && (
-        <section
+        <AdminTablePanel
           className="border-t border-border pt-8"
-          aria-labelledby="admin-audit-title"
+          eyebrow={text.auditEvents}
+          title={text.auditEvents}
+          action={<Button type="button" variant="outline" disabled={loadingAudit} onClick={() => void loadAudit({ targetType, eventType }).catch(() => toast.error(text.load))}>{text.search}</Button>}
+          summary={`${auditTotal} ${text.auditEvents.toLowerCase()}`}
         >
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-widest text-primary">
-                {text.auditEvents}
-              </p>
-              <h2 id="admin-audit-title" className="mt-2 font-serif text-3xl">
-                {text.auditEvents}
-              </h2>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={loadingAudit}
-              onClick={() =>
-                void loadAudit({ targetType, eventType }).catch(() =>
-                  toast.error(text.load),
-                )
-              }
-            >
-              {text.search}
-            </Button>
-          </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             <input
               className="auth-input"
@@ -864,37 +841,31 @@ export function AdminControlPanel({
               onChange={(event) => setEventType(event.target.value)}
             />
           </div>
-          <div className="mt-5 divide-y divide-border">
-            {audit.map((event) => (
-              <article
-                className="flex items-start justify-between gap-4 py-4 text-sm"
-                key={event.id}
-              >
-                <div>
-                  <strong>{event.eventType}</strong>
-                  <p className="text-muted-foreground">
-                    {event.targetType} {event.targetId ?? ""} ·{" "}
-                    {formatFullDateTime(event.occurredAt, locale)}
-                  </p>
-                  {event.reason && <p>{event.reason}</p>}
-                </div>
-                {section === "audit" && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setSelectedAudit(event)}
-                  >
-                    {text.details}
-                  </Button>
-                )}
-              </article>
-            ))}
-            {!loadingAudit && audit.length === 0 && (
-              <p className="py-5 text-sm text-muted-foreground">
-                {text.noAudit}
-              </p>
-            )}
-          </div>
+          <AdminTableScroll className="mt-5">
+            <table className={adminTableClass}>
+              <thead className={adminTableHeadClass}>
+                <tr>
+                  <th className="px-4 py-3 font-medium">{text.eventType}</th>
+                  <th className="px-4 py-3 font-medium">{text.targetType}</th>
+                  <th className="px-4 py-3 font-medium">{text.created}</th>
+                  <th className="px-4 py-3 font-medium">{text.reason}</th>
+                  <th className="px-4 py-3 font-medium">{text.actions}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {audit.map((event) => (
+                  <tr className="transition-colors hover:bg-muted/30" key={event.id}>
+                    <td className={adminTableCellClass}><strong>{event.eventType}</strong></td>
+                    <td className={adminTableCellClass}>{event.targetType}</td>
+                    <td className={`${adminTableCellClass} whitespace-nowrap text-xs text-muted-foreground`}>{formatFullDateTime(event.occurredAt, locale)}</td>
+                    <td className={`${adminTableCellClass} max-w-xs truncate`}>{event.reason || "—"}</td>
+                    <td className={adminTableCellClass}><Button type="button" variant="outline" onClick={() => setSelectedAudit(event)}>{text.details}</Button></td>
+                  </tr>
+                ))}
+                {!loadingAudit && audit.length === 0 && <tr><td className="p-6 text-sm text-muted-foreground" colSpan={5}>{text.noAudit}</td></tr>}
+              </tbody>
+            </table>
+          </AdminTableScroll>
           {section === "audit" && (
             <div className="mt-4 flex items-center justify-between gap-3">
               <Button
@@ -931,7 +902,7 @@ export function AdminControlPanel({
               </Button>
             </div>
           )}
-        </section>
+        </AdminTablePanel>
       )}
       {selectedAudit && (
         <div
