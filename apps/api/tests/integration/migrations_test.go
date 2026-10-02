@@ -16,7 +16,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-const expectedMigrationCount = 23
+const expectedMigrationCount = 24
 
 func migrationsPath(t *testing.T) string {
 	t.Helper()

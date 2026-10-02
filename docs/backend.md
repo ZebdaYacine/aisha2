@@ -228,6 +228,7 @@ Suggested migration sequence:
 000014_audit_idempotency
 000018_cart_wishlist
 000023_notifications
+000024_commerce_fulfilment
 ```
 
 ## 9. API Endpoints
@@ -345,15 +346,21 @@ POST   /api/v1/checkout
 GET    /api/v1/orders
 GET    /api/v1/orders/:id
 POST   /api/v1/orders/:id/cancel
+GET    /api/v1/payments/:paymentId
+POST   /api/v1/payments/:paymentId/confirm
 ```
 
 ### Payment and Shipping Callbacks
 
 ```text
 POST   /api/v1/payments/:paymentId/retry
-GET    /api/v1/payments/:paymentId
 POST   /api/v1/webhooks/payments/:provider
 POST   /api/v1/webhooks/shipments/:provider
+
+The current MVP uses an internal manual development adapter. Payment
+confirmation never accepts card data and only succeeds when the locked
+server-side payment amount and order total match. A real provider/webhook
+adapter may be added later without changing the order contract.
 ```
 
 ### Custom Orders

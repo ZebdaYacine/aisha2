@@ -72,4 +72,26 @@ func TestDevelopmentSeedIsIdempotent(t *testing.T) {
 			t.Errorf("expected seeded rows in %s", table)
 		}
 	}
+
+	fixtureCounts := []struct {
+		name  string
+		query string
+		want  int
+	}{
+		{"approved artisans", `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE r.code='artisan'`, 7},
+		{"moderators", `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE r.code='moderator'`, 3},
+		{"warehouse agents", `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE r.code='warehouse_agent'`, 2},
+		{"customers", `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE r.code='customer'`, 10},
+		{"development orders", `SELECT count(*) FROM orders WHERE order_number LIKE 'AISHA-DEV-%'`, 20},
+		{"submitted artisan applications", `SELECT count(*) FROM artisan_profiles WHERE status='SUBMITTED'`, 5},
+	}
+	for _, fixture := range fixtureCounts {
+		var got int
+		if err := db.QueryRowContext(ctx, fixture.query).Scan(&got); err != nil {
+			t.Fatalf("count %s: %v", fixture.name, err)
+		}
+		if got != fixture.want {
+			t.Errorf("%s=%d, want %d", fixture.name, got, fixture.want)
+		}
+	}
 }

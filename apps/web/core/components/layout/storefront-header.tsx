@@ -117,7 +117,7 @@ export function StorefrontHeader({
                 ))}
               </nav>
               <div className="mt-8 flex items-center justify-between border-t border-border pt-5">
-                <ThemeToggle locale={locale} />
+                <ThemeToggle locale={locale} mobile />
               </div>
             </div>}
           </div>

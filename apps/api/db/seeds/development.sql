@@ -96,7 +96,8 @@ INSERT INTO category_translations (category_id, locale, name, created_at, update
     ('20000000-0000-0000-0000-000000000012', 'es', 'Bordado', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (category_id, locale) DO UPDATE SET name=EXCLUDED.name, updated_at=EXCLUDED.updated_at;
 
--- Development-only password for every seeded account: Yassine1996@Got.
+-- Development-only accounts use the bcrypt hash below. Keep the seed password
+-- out of source control and provide it through the local development runbook.
 INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
     ('90000000-0000-0000-0000-000000000001', 'saad.admin@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Saad', '2025-01-01T00:00:00Z', '+213550000001', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
     ('90000000-0000-0000-0000-000000000002', 'kader.agent@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Kader', '2025-01-01T00:00:00Z', '+213550000002', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
@@ -395,8 +396,7 @@ DELETE FROM users
 WHERE id = '90000000-0000-0000-0000-000000000007';
 
 -- Expanded development directory: customers, approved artisans, moderators,
--- and warehouse agents. All accounts use the documented development password:
--- Yassine1996@Got.
+-- and warehouse agents. Accounts use the shared development bcrypt hash.
 INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
     ('90000000-0000-0000-0000-000000000200', 'nour.customer@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Nour', '2025-01-01T00:00:00Z', '+213560000200', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
     ('90000000-0000-0000-0000-000000000201', 'saad.customer@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Saad Kader', '2025-01-01T00:00:00Z', '+213560000201', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
@@ -527,5 +527,226 @@ SELECT id, 'ACCEPTED', 5, 'development-seed:' || id::text, 'Accepted development
 FROM products
 WHERE status = 'ACTIVE'
 ON CONFLICT (reference_key) DO NOTHING;
+
+-- Expanded development fixture requested for workflow testing.
+-- The bcrypt hash below is for the development-only password supplied out of
+-- band. Do not reuse it outside local development.
+-- Counts represented by this block: 7 approved artisans, 3 moderators,
+-- 2 warehouse agents, 10 customers, 20 orders, and 5 submitted applications.
+
+-- Keep exactly two users assigned to the warehouse-agent role in this fixture.
+DELETE FROM user_roles
+WHERE role_id = '10000000-0000-0000-0000-000000000005'
+  AND user_id IN ('90000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000003');
+DELETE FROM password_reset_tokens WHERE user_id IN ('90000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000003');
+DELETE FROM addresses WHERE user_id IN ('90000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000003');
+DELETE FROM sessions WHERE user_id IN ('90000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000003');
+DELETE FROM users WHERE id IN ('90000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000003');
+
+INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
+    ('90000000-0000-0000-0000-000000000210', 'yacine.belkacem@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Yacine Belkacem', '2025-01-01T00:00:00Z', '+213560000210', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000211', 'meriem.saidi@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Meriem Saidi', '2025-01-01T00:00:00Z', '+213560000211', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000212', 'walid.amrani@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Walid Amrani', '2025-01-01T00:00:00Z', '+213560000212', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000213', 'amel.benali@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Amel Benali', '2025-01-01T00:00:00Z', '+213560000213', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000214', 'sofiane.haddad@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Sofiane Haddad', '2025-01-01T00:00:00Z', '+213560000214', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000215', 'ines.touati@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Ines Touati', '2025-01-01T00:00:00Z', '+213560000215', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000216', 'rachid.meziane@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Rachid Meziane', '2025-01-01T00:00:00Z', '+213560000216', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000217', 'lina.boudiaf@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Lina Boudiaf', '2025-01-01T00:00:00Z', '+213560000217', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000218', 'farid.cherif@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Farid Cherif', '2025-01-01T00:00:00Z', '+213560000218', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email, password_hash = EXCLUDED.password_hash,
+    display_name = EXCLUDED.display_name, phone = EXCLUDED.phone,
+    status = EXCLUDED.status, updated_at = EXCLUDED.updated_at;
+
+INSERT INTO user_roles (user_id, role_id, assigned_by_user_id, assigned_at) VALUES
+    ('90000000-0000-0000-0000-000000000210', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000211', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000212', '10000000-0000-0000-0000-000000000003', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000213', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000214', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000215', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000216', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000217', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000218', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z')
+ON CONFLICT DO NOTHING;
+
+-- Three more approved artisans bring the approved artisan directory to seven.
+INSERT INTO artisan_profiles (id, user_id, public_display_name, internal_name, workshop_name, wilaya, location_text, contact_email, contact_visibility, status, profile_image_object_key, created_at, updated_at, approved_at, submitted_at) VALUES
+    ('90000000-0000-0000-0000-000000000223', '90000000-0000-0000-0000-000000000210', 'Atelier Yacine', 'Yacine Ceramics', 'Atelier Yacine', 'Constantine', 'Old Medina', 'yacine.belkacem@example.test', 'PRIVATE', 'APPROVED', '/images/aisha/A1.jpg', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-01T12:00:00Z'),
+    ('90000000-0000-0000-0000-000000000224', '90000000-0000-0000-0000-000000000211', 'Atelier Meriem', 'Meriem Weaving', 'Atelier Meriem', 'Bouira', 'Lakhdaria', 'meriem.saidi@example.test', 'PRIVATE', 'APPROVED', '/images/aisha/C1.jpg', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-01T12:00:00Z'),
+    ('90000000-0000-0000-0000-000000000225', '90000000-0000-0000-0000-000000000212', 'Atelier Walid', 'Walid Copperwork', 'Atelier Walid', 'Tlemcen', 'Mansourah', 'walid.amrani@example.test', 'PRIVATE', 'APPROVED', '/images/aisha/plateu en bois 1.jpg', '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-01T12:00:00Z')
+ON CONFLICT (id) DO UPDATE SET
+    public_display_name = EXCLUDED.public_display_name, internal_name = EXCLUDED.internal_name,
+    workshop_name = EXCLUDED.workshop_name, wilaya = EXCLUDED.wilaya,
+    location_text = EXCLUDED.location_text, contact_email = EXCLUDED.contact_email,
+    profile_image_object_key = EXCLUDED.profile_image_object_key, status = EXCLUDED.status,
+    approved_at = EXCLUDED.approved_at;
+
+INSERT INTO artisan_profile_translations (artisan_profile_id, locale, display_name, biography, created_at, updated_at) VALUES
+    ('90000000-0000-0000-0000-000000000223', 'en', 'Atelier Yacine', 'A ceramics studio shaped by the colours and forms of eastern Algeria.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000223', 'fr', 'Atelier Yacine', 'Un atelier de céramique inspiré par les couleurs de l’est algérien.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000223', 'ar', 'ورشة ياسين', 'ورشة خزف مستوحاة من ألوان وأشكال شرق الجزائر.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000223', 'es', 'Taller Yacine', 'Un estudio de cerámica inspirado en los colores del este de Argelia.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000224', 'en', 'Atelier Meriem', 'A weaving studio working with wool, texture and patient hand-finishing.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000224', 'fr', 'Atelier Meriem', 'Un atelier de tissage qui travaille la laine et les finitions patientes.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000224', 'ar', 'ورشة مريم', 'ورشة نسج تعمل بالصوف والملمس والتشطيبات اليدوية المتأنية.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000224', 'es', 'Taller Meriem', 'Un estudio de tejido que trabaja la lana y los acabados hechos a mano.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000225', 'en', 'Atelier Walid', 'A copper workshop combining traditional forms with a clean contemporary line.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000225', 'fr', 'Atelier Walid', 'Un atelier de cuivre qui associe formes traditionnelles et ligne contemporaine.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000225', 'ar', 'ورشة وليد', 'ورشة نحاس تجمع بين الأشكال التقليدية والخط المعاصر.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000225', 'es', 'Taller Walid', 'Un taller de cobre que combina formas tradicionales con una línea contemporánea.', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+ON CONFLICT (artisan_profile_id, locale) DO UPDATE SET display_name = EXCLUDED.display_name, biography = EXCLUDED.biography, updated_at = EXCLUDED.updated_at;
+
+INSERT INTO workshops (id, artisan_profile_id, name, description, wilaya, location_text, status, is_default, is_public) VALUES
+    ('90000000-0000-0000-0000-000000000233', '90000000-0000-0000-0000-000000000223', 'Atelier Yacine', 'Ceramics and hand-painted vessels from Constantine.', 'Constantine', '旧 Medina', 'ACTIVE', true, true),
+    ('90000000-0000-0000-0000-000000000234', '90000000-0000-0000-0000-000000000224', 'Atelier Meriem', 'Woven wool and textile pieces from Bouira.', 'Bouira', 'Lakhdaria', 'ACTIVE', true, true),
+    ('90000000-0000-0000-0000-000000000235', '90000000-0000-0000-0000-000000000225', 'Atelier Walid', 'Hand-finished copper pieces from Tlemcen.', 'Tlemcen', 'Mansourah', 'ACTIVE', true, true)
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, status = EXCLUDED.status, is_public = EXCLUDED.is_public;
+
+INSERT INTO workshop_translations (workshop_id, locale, name, description) VALUES
+    ('90000000-0000-0000-0000-000000000233', 'en', 'Atelier Yacine', 'Ceramics and hand-painted vessels from Constantine.'),
+    ('90000000-0000-0000-0000-000000000233', 'fr', 'Atelier Yacine', 'Céramiques et vases peints à la main de Constantine.'),
+    ('90000000-0000-0000-0000-000000000233', 'ar', 'ورشة ياسين', 'خزف وأوانٍ مطلية يدوياً من قسنطينة.'),
+    ('90000000-0000-0000-0000-000000000233', 'es', 'Taller Yacine', 'Cerámica y vasijas pintadas a mano de Constantina.'),
+    ('90000000-0000-0000-0000-000000000234', 'en', 'Atelier Meriem', 'Woven wool and textile pieces from Bouira.'),
+    ('90000000-0000-0000-0000-000000000234', 'fr', 'Atelier Meriem', 'Pièces tissées en laine et textile de Bouira.'),
+    ('90000000-0000-0000-0000-000000000234', 'ar', 'ورشة مريم', 'قطع منسوجة من الصوف والنسيج من البويرة.'),
+    ('90000000-0000-0000-0000-000000000234', 'es', 'Taller Meriem', 'Piezas tejidas de lana y textil de Bouira.'),
+    ('90000000-0000-0000-0000-000000000235', 'en', 'Atelier Walid', 'Hand-finished copper pieces from Tlemcen.'),
+    ('90000000-0000-0000-0000-000000000235', 'fr', 'Atelier Walid', 'Pièces en cuivre finies à la main de Tlemcen.'),
+    ('90000000-0000-0000-0000-000000000235', 'ar', 'ورشة وليد', 'قطع نحاسية مشغولة يدوياً من تلمسان.'),
+    ('90000000-0000-0000-0000-000000000235', 'es', 'Taller Walid', 'Piezas de cobre acabadas a mano de Tremecén.')
+ON CONFLICT (workshop_id, locale) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO artisan_profile_categories (artisan_profile_id, category_id, created_at) VALUES
+    ('90000000-0000-0000-0000-000000000223', '20000000-0000-0000-0000-000000000011', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000224', '20000000-0000-0000-0000-000000000005', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000225', '20000000-0000-0000-0000-000000000004', '2025-01-01T00:00:00Z')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO artisan_media (id, artisan_profile_id, media_kind, object_key, original_filename, media_type, size_bytes, checksum_sha256, sort_order, visibility, created_at) VALUES
+    ('90000000-0000-0000-0000-000000000246', '90000000-0000-0000-0000-000000000223', 'IMAGE', '/images/aisha/A1.jpg', 'yacine-ceramics.jpg', 'image/jpeg', 160000, repeat('c', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000247', '90000000-0000-0000-0000-000000000224', 'IMAGE', '/images/aisha/C1.jpg', 'meriem-weaving.jpg', 'image/jpeg', 182400, repeat('d', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000248', '90000000-0000-0000-0000-000000000225', 'IMAGE', '/images/aisha/plateu en bois 1.jpg', 'walid-copperwork.jpg', 'image/jpeg', 266984, repeat('e', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO artisan_memberships (user_id, artisan_profile_id, status, activated_at) VALUES
+    ('90000000-0000-0000-0000-000000000210', '90000000-0000-0000-0000-000000000223', 'ACTIVE', '2025-01-02T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000211', '90000000-0000-0000-0000-000000000224', 'ACTIVE', '2025-01-02T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000212', '90000000-0000-0000-0000-000000000225', 'ACTIVE', '2025-01-02T00:00:00Z')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO artisan_verifications (artisan_membership_id, status, decided_by_user_id, decided_at)
+SELECT id, 'VERIFIED', '90000000-0000-0000-0000-000000000001', '2025-01-02T00:00:00Z'
+FROM artisan_memberships
+WHERE artisan_profile_id IN ('90000000-0000-0000-0000-000000000223', '90000000-0000-0000-0000-000000000224', '90000000-0000-0000-0000-000000000225')
+ON CONFLICT DO NOTHING;
+
+-- Five submitted artisan applications are kept separate from the seven
+-- approved artisan accounts so the moderator queue has realistic work.
+INSERT INTO artisan_profiles (id, user_id, public_display_name, internal_name, workshop_name, wilaya, location_text, contact_email, contact_visibility, status, created_at, updated_at, submitted_at) VALUES
+    ('90000000-0000-0000-0000-000000000260', '90000000-0000-0000-0000-000000000213', 'Amel Benali Studio', 'Amel Benali Application', 'Atelier Amel', 'Algiers', 'Kouba', 'amel.benali@example.test', 'PRIVATE', 'SUBMITTED', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000261', '90000000-0000-0000-0000-000000000214', 'Sofiane Leather', 'Sofiane Haddad Application', 'Maison Sofiane', 'Batna', 'Lambèse', 'sofiane.haddad@example.test', 'PRIVATE', 'SUBMITTED', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000262', '90000000-0000-0000-0000-000000000215', 'Ines Embroidery', 'Ines Touati Application', 'Atelier Ines', 'Médéa', 'Berrouaghia', 'ines.touati@example.test', 'PRIVATE', 'SUBMITTED', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000263', '90000000-0000-0000-0000-000000000216', 'Rachid Wood Studio', 'Rachid Meziane Application', 'Atelier Rachid', 'Béjaïa', 'Sidi Aïch', 'rachid.meziane@example.test', 'PRIVATE', 'SUBMITTED', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000264', '90000000-0000-0000-0000-000000000217', 'Lina Basketry', 'Lina Boudiaf Application', 'Atelier Lina', 'Djelfa', 'Aïn Oussera', 'lina.boudiaf@example.test', 'PRIVATE', 'SUBMITTED', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z')
+ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, submitted_at = EXCLUDED.submitted_at, updated_at = EXCLUDED.updated_at;
+
+INSERT INTO artisan_profile_translations (artisan_profile_id, locale, display_name, biography, created_at, updated_at) VALUES
+    ('90000000-0000-0000-0000-000000000260', 'en', 'Amel Benali Studio', 'A new studio applying hand decoration to everyday objects.', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000261', 'en', 'Sofiane Leather', 'A leather workshop focused on durable small goods.', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000262', 'en', 'Ines Embroidery', 'An embroidery application rooted in family techniques.', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000263', 'en', 'Rachid Wood Studio', 'A proposed wood studio creating useful household pieces.', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000264', 'en', 'Lina Basketry', 'A basketry application using locally sourced fibres.', '2025-01-03T00:00:00Z', '2025-01-03T00:00:00Z')
+ON CONFLICT (artisan_profile_id, locale) DO UPDATE SET display_name = EXCLUDED.display_name, biography = EXCLUDED.biography, updated_at = EXCLUDED.updated_at;
+
+INSERT INTO artisan_documents (id, artisan_profile_id, document_type, object_key, original_filename, media_type, size_bytes, checksum_sha256, created_at) VALUES
+    ('90000000-0000-0000-0000-000000000270', '90000000-0000-0000-0000-000000000260', 'IDENTITY_DOCUMENT', 'seed/private/applications/amel-benali-id.pdf', 'amel-benali-id.pdf', 'application/pdf', 12000, repeat('a', 64), '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000271', '90000000-0000-0000-0000-000000000261', 'IDENTITY_DOCUMENT', 'seed/private/applications/sofiane-haddad-id.pdf', 'sofiane-haddad-id.pdf', 'application/pdf', 12000, repeat('b', 64), '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000272', '90000000-0000-0000-0000-000000000262', 'IDENTITY_DOCUMENT', 'seed/private/applications/ines-touati-id.pdf', 'ines-touati-id.pdf', 'application/pdf', 12000, repeat('c', 64), '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000273', '90000000-0000-0000-0000-000000000263', 'IDENTITY_DOCUMENT', 'seed/private/applications/rachid-meziane-id.pdf', 'rachid-meziane-id.pdf', 'application/pdf', 12000, repeat('d', 64), '2025-01-03T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000274', '90000000-0000-0000-0000-000000000264', 'IDENTITY_DOCUMENT', 'seed/private/applications/lina-boudiaf-id.pdf', 'lina-boudiaf-id.pdf', 'application/pdf', 12000, repeat('e', 64), '2025-01-03T00:00:00Z')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO addresses (id, user_id, full_name, phone, line1, city, postal_code, country, is_default, created_at, updated_at) VALUES
+    ('90000000-0000-0000-0000-000000000700', '90000000-0000-0000-0000-000000000004', 'Lyna', '+213550000004', '12 Rue Didouche Mourad', 'Algiers', '16000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000701', '90000000-0000-0000-0000-000000000200', 'Nour', '+213560000200', '8 Rue Larbi Ben M''hidi', 'Oran', '31000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000702', '90000000-0000-0000-0000-000000000201', 'Saad Kader', '+213560000201', '5 Rue de la Paix', 'Tizi Ouzou', '15000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000703', '90000000-0000-0000-0000-000000000202', 'Lyna B.', '+213560000202', '21 Rue Emir Abdelkader', 'Sétif', '19000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000704', '90000000-0000-0000-0000-000000000213', 'Amel Benali', '+213560000213', '14 Rue des Palmiers', 'Algiers', '16050', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000705', '90000000-0000-0000-0000-000000000214', 'Sofiane Haddad', '+213560000214', '3 Rue des Aurès', 'Batna', '05000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000706', '90000000-0000-0000-0000-000000000215', 'Ines Touati', '+213560000215', '7 Rue de la Poste', 'Médéa', '26000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000707', '90000000-0000-0000-0000-000000000216', 'Rachid Meziane', '+213560000216', '10 Rue de la Casbah', 'Béjaïa', '06000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000708', '90000000-0000-0000-0000-000000000217', 'Lina Boudiaf', '+213560000217', '19 Rue des Jardins', 'Djelfa', '17000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000709', '90000000-0000-0000-0000-000000000218', 'Farid Cherif', '+213560000218', '2 Rue Ibn Khaldoun', 'Blida', '09000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name, phone = EXCLUDED.phone, line1 = EXCLUDED.line1, city = EXCLUDED.city, postal_code = EXCLUDED.postal_code, country = EXCLUDED.country, is_default = EXCLUDED.is_default, updated_at = EXCLUDED.updated_at;
+
+-- Twenty realistic orders distributed across the ten customer accounts.
+WITH seed_orders(order_id, order_number, user_id, address_id, status, product_id, quantity, created_at) AS (VALUES
+    ('90000000-0000-0000-0000-000000000300', 'AISHA-DEV-0300', '90000000-0000-0000-0000-000000000004', '90000000-0000-0000-0000-000000000700', 'PAID', '90000000-0000-0000-0000-000000000050', 1, '2025-02-01T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000301', 'AISHA-DEV-0301', '90000000-0000-0000-0000-000000000200', '90000000-0000-0000-0000-000000000701', 'PAID', '90000000-0000-0000-0000-000000000150', 1, '2025-02-02T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000302', 'AISHA-DEV-0302', '90000000-0000-0000-0000-000000000201', '90000000-0000-0000-0000-000000000702', 'PREPARING', '90000000-0000-0000-0000-000000000151', 1, '2025-02-03T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000303', 'AISHA-DEV-0303', '90000000-0000-0000-0000-000000000202', '90000000-0000-0000-0000-000000000703', 'SHIPPED', '90000000-0000-0000-0000-000000000152', 2, '2025-02-04T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000304', 'AISHA-DEV-0304', '90000000-0000-0000-0000-000000000213', '90000000-0000-0000-0000-000000000704', 'DELIVERED', '90000000-0000-0000-0000-000000000153', 1, '2025-02-05T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000305', 'AISHA-DEV-0305', '90000000-0000-0000-0000-000000000214', '90000000-0000-0000-0000-000000000705', 'PAID', '90000000-0000-0000-0000-000000000050', 1, '2025-02-06T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000306', 'AISHA-DEV-0306', '90000000-0000-0000-0000-000000000215', '90000000-0000-0000-0000-000000000706', 'PAID', '90000000-0000-0000-0000-000000000150', 2, '2025-02-07T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000307', 'AISHA-DEV-0307', '90000000-0000-0000-0000-000000000216', '90000000-0000-0000-0000-000000000707', 'READY_TO_SHIP', '90000000-0000-0000-0000-000000000151', 1, '2025-02-08T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000308', 'AISHA-DEV-0308', '90000000-0000-0000-0000-000000000217', '90000000-0000-0000-0000-000000000708', 'CANCELLED', '90000000-0000-0000-0000-000000000152', 1, '2025-02-09T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000309', 'AISHA-DEV-0309', '90000000-0000-0000-0000-000000000218', '90000000-0000-0000-0000-000000000709', 'PAYMENT_FAILED', '90000000-0000-0000-0000-000000000153', 1, '2025-02-10T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000310', 'AISHA-DEV-0310', '90000000-0000-0000-0000-000000000004', '90000000-0000-0000-0000-000000000700', 'PENDING_PAYMENT', '90000000-0000-0000-0000-000000000150', 1, '2025-02-11T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000311', 'AISHA-DEV-0311', '90000000-0000-0000-0000-000000000200', '90000000-0000-0000-0000-000000000701', 'PAID', '90000000-0000-0000-0000-000000000151', 2, '2025-02-12T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000312', 'AISHA-DEV-0312', '90000000-0000-0000-0000-000000000201', '90000000-0000-0000-0000-000000000702', 'DELIVERED', '90000000-0000-0000-0000-000000000152', 1, '2025-02-13T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000313', 'AISHA-DEV-0313', '90000000-0000-0000-0000-000000000202', '90000000-0000-0000-0000-000000000703', 'SHIPPED', '90000000-0000-0000-0000-000000000153', 1, '2025-02-14T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000314', 'AISHA-DEV-0314', '90000000-0000-0000-0000-000000000213', '90000000-0000-0000-0000-000000000704', 'PREPARING', '90000000-0000-0000-0000-000000000050', 2, '2025-02-15T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000315', 'AISHA-DEV-0315', '90000000-0000-0000-0000-000000000214', '90000000-0000-0000-0000-000000000705', 'PAID', '90000000-0000-0000-0000-000000000150', 1, '2025-02-16T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000316', 'AISHA-DEV-0316', '90000000-0000-0000-0000-000000000215', '90000000-0000-0000-0000-000000000706', 'READY_TO_SHIP', '90000000-0000-0000-0000-000000000151', 1, '2025-02-17T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000317', 'AISHA-DEV-0317', '90000000-0000-0000-0000-000000000216', '90000000-0000-0000-0000-000000000707', 'DELIVERED', '90000000-0000-0000-0000-000000000152', 2, '2025-02-18T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000318', 'AISHA-DEV-0318', '90000000-0000-0000-0000-000000000217', '90000000-0000-0000-0000-000000000708', 'PAID', '90000000-0000-0000-0000-000000000153', 1, '2025-02-19T10:00:00Z'::timestamptz),
+    ('90000000-0000-0000-0000-000000000319', 'AISHA-DEV-0319', '90000000-0000-0000-0000-000000000218', '90000000-0000-0000-0000-000000000709', 'PENDING_PAYMENT', '90000000-0000-0000-0000-000000000050', 1, '2025-02-20T10:00:00Z'::timestamptz)
+)
+INSERT INTO orders (id, order_number, user_id, status, currency, subtotal_minor, shipping_minor, total_minor, address_snapshot, created_at, updated_at)
+SELECT s.order_id::uuid, s.order_number, s.user_id::uuid, s.status, p.currency, p.price_minor * s.quantity, 0, p.price_minor * s.quantity,
+       jsonb_build_object('fullName', a.full_name, 'phone', a.phone, 'line1', a.line1, 'city', a.city, 'postalCode', a.postal_code, 'country', a.country), s.created_at, s.created_at
+FROM seed_orders s JOIN products p ON p.id = s.product_id::uuid JOIN addresses a ON a.id = s.address_id::uuid
+ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, total_minor = EXCLUDED.total_minor, address_snapshot = EXCLUDED.address_snapshot, updated_at = EXCLUDED.updated_at;
+
+WITH seed_lines(order_id, product_id, quantity) AS (VALUES
+    ('90000000-0000-0000-0000-000000000300', '90000000-0000-0000-0000-000000000050', 1), ('90000000-0000-0000-0000-000000000301', '90000000-0000-0000-0000-000000000150', 1),
+    ('90000000-0000-0000-0000-000000000302', '90000000-0000-0000-0000-000000000151', 1), ('90000000-0000-0000-0000-000000000303', '90000000-0000-0000-0000-000000000152', 2),
+    ('90000000-0000-0000-0000-000000000304', '90000000-0000-0000-0000-000000000153', 1), ('90000000-0000-0000-0000-000000000305', '90000000-0000-0000-0000-000000000050', 1),
+    ('90000000-0000-0000-0000-000000000306', '90000000-0000-0000-0000-000000000150', 2), ('90000000-0000-0000-0000-000000000307', '90000000-0000-0000-0000-000000000151', 1),
+    ('90000000-0000-0000-0000-000000000308', '90000000-0000-0000-0000-000000000152', 1), ('90000000-0000-0000-0000-000000000309', '90000000-0000-0000-0000-000000000153', 1),
+    ('90000000-0000-0000-0000-000000000310', '90000000-0000-0000-0000-000000000150', 1), ('90000000-0000-0000-0000-000000000311', '90000000-0000-0000-0000-000000000151', 2),
+    ('90000000-0000-0000-0000-000000000312', '90000000-0000-0000-0000-000000000152', 1), ('90000000-0000-0000-0000-000000000313', '90000000-0000-0000-0000-000000000153', 1),
+    ('90000000-0000-0000-0000-000000000314', '90000000-0000-0000-0000-000000000050', 2), ('90000000-0000-0000-0000-000000000315', '90000000-0000-0000-0000-000000000150', 1),
+    ('90000000-0000-0000-0000-000000000316', '90000000-0000-0000-0000-000000000151', 1), ('90000000-0000-0000-0000-000000000317', '90000000-0000-0000-0000-000000000152', 2),
+    ('90000000-0000-0000-0000-000000000318', '90000000-0000-0000-0000-000000000153', 1), ('90000000-0000-0000-0000-000000000319', '90000000-0000-0000-0000-000000000050', 1)
+)
+INSERT INTO order_items (id, order_id, product_id, artisan_profile_id, workshop_id, product_name, artisan_name, workshop_name, unit_price_minor, currency, quantity, subtotal_minor)
+SELECT gen_random_uuid(), s.order_id::uuid, p.id, p.artisan_profile_id, p.workshop_id,
+       COALESCE(pt.name, p.product_type), a.public_display_name, w.name, p.price_minor, p.currency, s.quantity, p.price_minor * s.quantity
+FROM seed_lines s JOIN products p ON p.id = s.product_id::uuid JOIN artisan_profiles a ON a.id = p.artisan_profile_id JOIN workshops w ON w.id = p.workshop_id
+LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = 'en'
+WHERE NOT EXISTS (SELECT 1 FROM order_items oi WHERE oi.order_id = s.order_id::uuid);
+
+INSERT INTO payment_attempts (order_id, provider, status, amount_minor, currency, failure_reason)
+SELECT o.id, CASE WHEN o.status IN ('PENDING_PAYMENT', 'PAYMENT_FAILED', 'CANCELLED') THEN 'PENDING_PROVIDER' ELSE 'manual' END,
+       CASE WHEN o.status = 'PENDING_PAYMENT' THEN 'PENDING' WHEN o.status = 'PAYMENT_FAILED' THEN 'FAILED' WHEN o.status = 'CANCELLED' THEN 'CANCELLED' ELSE 'CONFIRMED' END,
+       o.total_minor, o.currency, CASE WHEN o.status = 'PAYMENT_FAILED' THEN 'Development payment failure fixture' ELSE NULL END
+FROM orders o
+WHERE o.order_number LIKE 'AISHA-DEV-%'
+  AND NOT EXISTS (SELECT 1 FROM payment_attempts p WHERE p.order_id = o.id);
+
+INSERT INTO shipment_events (order_id, status, occurred_at)
+SELECT o.id, CASE WHEN o.status = 'PENDING_PAYMENT' THEN 'PENDING' ELSE o.status END, o.created_at
+FROM orders o
+WHERE o.order_number LIKE 'AISHA-DEV-%'
+  AND NOT EXISTS (SELECT 1 FROM shipment_events e WHERE e.order_id = o.id);
+
+INSERT INTO stock_reservations (order_id, product_id, quantity, status, expires_at)
+SELECT oi.order_id, oi.product_id, oi.quantity, 'HELD', CURRENT_TIMESTAMP + INTERVAL '30 minutes'
+FROM order_items oi JOIN orders o ON o.id = oi.order_id
+WHERE o.status = 'PENDING_PAYMENT'
+  AND NOT EXISTS (SELECT 1 FROM stock_reservations sr WHERE sr.order_id = oi.order_id AND sr.product_id = oi.product_id);
 
 COMMIT;

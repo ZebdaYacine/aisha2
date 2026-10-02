@@ -92,3 +92,15 @@ func TestOrderIdentifiersAreValidatedBeforeRepository(t *testing.T) {
 		t.Fatalf("return err=%v", err)
 	}
 }
+
+func TestConfirmPaymentRequiresPaymentIdentifierAndIdempotencyKey(t *testing.T) {
+	s := NewService(orderRepo{}, orderAuth{})
+	p := auth.Principal{UserID: "u"}
+	validPaymentID := "00000000-0000-0000-0000-000000000003"
+	if _, err := s.ConfirmPayment(context.Background(), p, "not-a-uuid", "payment-1"); err != domain.ErrValidation {
+		t.Fatalf("payment id err=%v", err)
+	}
+	if _, err := s.ConfirmPayment(context.Background(), p, validPaymentID, ""); err != domain.ErrValidation {
+		t.Fatalf("idempotency key err=%v", err)
+	}
+}

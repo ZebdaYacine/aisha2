@@ -14,7 +14,7 @@ const copy = {
   es: { label: "Tema", light: "Claro", dark: "Oscuro", system: "Sistema" },
 } as const;
 
-export function ThemeToggle({ locale }: { locale: Locale }) {
+export function ThemeToggle({ locale, mobile = false }: { locale: Locale; mobile?: boolean }) {
   const text = copy[locale];
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
@@ -38,21 +38,22 @@ export function ThemeToggle({ locale }: { locale: Locale }) {
   }, []);
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className={mobile ? "relative w-full" : "relative"}>
       <Button
         type="button"
         variant="ghost"
-        className="size-11 min-h-11 px-0"
+        className={mobile ? "min-h-11 w-full justify-start px-3" : "size-11 min-h-11 px-0"}
         aria-label={text.label}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
         <Icon aria-hidden size={18} strokeWidth={1.5} />
+        {mobile ? <span>{text.label}</span> : null}
       </Button>
       {open ? (
         <div
-          className="absolute end-0 top-[calc(100%+0.5rem)] z-50 min-w-32 border border-border bg-popover p-1 shadow-[var(--shadow-floating)]"
+          className={mobile ? "mt-2 w-full border border-border bg-popover p-1 shadow-[var(--shadow-floating)]" : "absolute end-0 top-[calc(100%+0.5rem)] z-50 min-w-32 border border-border bg-popover p-1 shadow-[var(--shadow-floating)]"}
           role="menu"
           aria-label={text.label}
         >

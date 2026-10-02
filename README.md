@@ -58,14 +58,14 @@ MinIO data must be preserved.
 
 ## Local demo accounts
 
-The development seed creates sixteen Algerian demo accounts. They all use the
-development-only password `Yassine1996@Got`:
+The development seed creates 23 Algerian demo accounts: 7 artisans, 3
+moderators, 2 warehouse agents, 10 customers, and 1 administrator. The seed
+stores only bcrypt hashes; provide the shared development password through the
+local development secret setup and never reuse it in production.
 
 | Account | Email | Role |
 | --- | --- | --- |
 | Saad | `saad.admin@example.test` | Administrator |
-| Kader | `kader.agent@example.test` | Warehouse agent |
-| Yassine | `yassine.warehouse@example.test` | Warehouse agent |
 | Lyna | `lyna.customer@example.test` | Customer |
 | Oussama | `oussama.artisan@example.test` | Artisan |
 | Youcef | `youcef.moderator@example.test` | Moderator |
@@ -74,6 +74,9 @@ development-only password `Yassine1996@Got`:
 | Lyna B. | `lyna.customer2@example.test` | Customer |
 | Amina | `amina.moderator@example.test` | Moderator |
 | Kader Moderator | `kader.moderator@example.test` | Moderator |
+| Yacine Belkacem | `yacine.belkacem@example.test` | Artisan |
+| Meriem Saidi | `meriem.saidi@example.test` | Artisan |
+| Walid Amrani | `walid.amrani@example.test` | Artisan |
 | Yassine Agent | `yassine.agent@example.test` | Warehouse agent |
 | Youcef Agent | `youcef.agent@example.test` | Warehouse agent |
 | Karim | `karim.artisan@example.test` | Artisan |
@@ -81,8 +84,9 @@ development-only password `Yassine1996@Got`:
 | Oussama K. | `oussama.artisan2@example.test` | Artisan |
 
 The application currently models agent/warehouse access with the single
-`warehouse_agent` role. These credentials are for local development only and
-must never be reused in production.
+`warehouse_agent` role. The seed also includes 20 order records and 5 submitted
+artisan applications for workflow testing. These credentials are for local
+development only and must never be reused in production.
 
 ## Database
 

@@ -237,7 +237,7 @@ func (r *PostgresRepository) load(ctx context.Context, q interface {
 		o.Items = append(o.Items, i)
 	}
 	var payment domain.PaymentAttempt
-	err = q.QueryRow(ctx, `SELECT id,status,amount_minor,currency FROM payment_attempts WHERE order_id=$1 ORDER BY created_at DESC LIMIT 1`, o.ID).Scan(&payment.ID, &payment.Status, &payment.AmountMinor, &payment.Currency)
+	err = q.QueryRow(ctx, `SELECT id,provider,COALESCE(provider_reference,''),status,amount_minor,currency,COALESCE(failure_reason,'') FROM payment_attempts WHERE order_id=$1 ORDER BY created_at DESC LIMIT 1`, o.ID).Scan(&payment.ID, &payment.Provider, &payment.ProviderReference, &payment.Status, &payment.AmountMinor, &payment.Currency, &payment.FailureReason)
 	if err == nil {
 		o.Payment = &payment
 	}

@@ -80,11 +80,12 @@ export function CheckoutForm({
       });
       if (!address.ok) return { ok: false, code: "VALIDATION_FAILED" as const };
       const saved = (await address.json()) as { id: string };
+      const idempotencyKey = crypto.randomUUID();
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
+          "Idempotency-Key": idempotencyKey,
         },
         body: JSON.stringify({
           addressId: saved.id,
@@ -102,8 +103,18 @@ export function CheckoutForm({
               ? ("SERVICE_UNAVAILABLE" as const)
               : ("UNKNOWN" as const),
         };
-      const result = (await response.json()) as { order: { id: string } };
+      const result = (await response.json()) as { order: { id: string; payment?: { id: string } } };
       cart.clear();
+      if (result.order.payment?.id) {
+        const paymentResponse = await fetch(`/api/payments/${result.order.payment.id}/confirm`, {
+          method: "POST",
+          headers: { "Idempotency-Key": idempotencyKey },
+        });
+        if (!paymentResponse.ok) {
+          window.location.assign(`/${locale}/account/orders/${result.order.id}`);
+          return { ok: true };
+        }
+      }
       window.location.assign(`/${locale}/account/orders/${result.order.id}`);
       return { ok: true };
     });
@@ -201,12 +212,12 @@ export function CheckoutForm({
       <div className="mt-6 border border-border p-5">
         <p className="flex gap-3 text-sm">
           <LockKeyhole aria-hidden size={18} />
-          {copy.paymentPending}
+        {copy.paymentPending}
         </p>
       </div>
       <Step number="05" title={copy.review} />
       <Button className="mt-7 w-full" disabled={isSubmitting} type="submit">
-        {copy.placeOrder}
+        {copy.payNow}
       </Button>
     </form>
   );
