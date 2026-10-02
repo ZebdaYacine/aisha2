@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Archive, Eye, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import type { Category } from "@/features/catalogue/types";
 import { Button } from "@/core/components/ui/button";
 import { Combobox } from "@/core/components/ui/combobox";
+import { FileDropzone } from "@/core/components/ui/file-dropzone";
 import { IconAction } from "@/core/components/ui/icon-action";
 import { Modal } from "@/core/components/ui/modal";
 import { StatusBadge } from "@/core/components/ui/status-badge";
@@ -261,7 +262,6 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
   const [form, setForm] = useState<ProductInput>(() => blankProduct(locale));
   const [busy, setBusy] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
-  const mediaInput = useRef<HTMLInputElement>(null);
 
   const closeDialog = (force = false) => {
     if (busy && !force) return;
@@ -624,26 +624,7 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
                   </button>
                 </div>
               ))}
-              <input
-                ref={mediaInput}
-                className="sr-only"
-                type="file"
-                accept="image/jpeg,image/png,image/webp,video/mp4"
-                disabled={!selected || busy}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.currentTarget.value = "";
-                  if (file) void upload(file);
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!selected || busy || selected.status === "ARCHIVED" || selected.media.length >= 4}
-                onClick={() => mediaInput.current?.click()}
-              >
-                {busy ? text.uploading : text.upload}
-              </Button>
+              <div className="w-full"><FileDropzone accept="image/jpeg,image/png,image/webp,video/mp4" label={busy ? text.uploading : text.upload} disabled={!selected || busy || selected.status === "ARCHIVED" || selected.media.length >= 4} onFileChange={(file) => { if (file) void upload(file); }} resetAfterChange /></div>
             </div>
             {uploadingMedia && <UploadProgress label={text.uploading} />}
           </div>

@@ -24,6 +24,8 @@ var (
 
 type PostgresRepository struct{ pool *pgxpool.Pool }
 
+const emailVerificationLifetime = "120 seconds"
+
 func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
@@ -46,7 +48,7 @@ func (r *PostgresRepository) CreateUser(ctx context.Context, email, passwordHash
 	if _, err = tx.Exec(ctx, `INSERT INTO user_roles(user_id,role_id) SELECT $1,id FROM roles WHERE code='customer'`, user.ID); err != nil {
 		return User{}, fmt.Errorf("assign customer role: %w", err)
 	}
-	if _, err = tx.Exec(ctx, `INSERT INTO email_verification_tokens(user_id,token_hash,expires_at) VALUES($1,$2,CURRENT_TIMESTAMP + INTERVAL '24 hours')`, user.ID, verificationHash); err != nil {
+	if _, err = tx.Exec(ctx, `INSERT INTO email_verification_tokens(user_id,token_hash,expires_at) VALUES($1,$2,CURRENT_TIMESTAMP + $3::interval)`, user.ID, verificationHash, emailVerificationLifetime); err != nil {
 		return User{}, fmt.Errorf("store email verification token: %w", err)
 	}
 	// Keep the aggregate id parameter consistently typed as UUID. Reusing the
@@ -176,7 +178,7 @@ func (r *PostgresRepository) ConsumeEmailVerification(ctx context.Context, token
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	var userID string
-	err = tx.QueryRow(ctx, `UPDATE email_verification_tokens SET consumed_at=$2 WHERE token_hash=$1 AND consumed_at IS NULL AND expires_at>$2 RETURNING user_id`, tokenHash, now).Scan(&userID)
+	err = tx.QueryRow(ctx, `UPDATE email_verification_tokens SET consumed_at=$2 WHERE token_hash=$1 AND consumed_at IS NULL AND expires_at>$2 AND created_at + INTERVAL '120 seconds'>$2 RETURNING user_id`, tokenHash, now).Scan(&userID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrInvalidToken
 	}

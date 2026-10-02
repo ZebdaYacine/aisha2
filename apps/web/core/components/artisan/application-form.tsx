@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { FormErrorSummary } from "@/core/components/forms/form-error-summary";
 import { Button } from "@/core/components/ui/button";
+import { FileDropzone } from "@/core/components/ui/file-dropzone";
 import { UploadProgress } from "@/core/components/ui/upload-progress";
 
 const copy = {
@@ -210,8 +211,8 @@ export function ApplicationForm({ locale, profile }: { locale: Locale; profile?:
       {!profile?.status || profile.status !== "APPROVED" ? <fieldset className="space-y-4 rounded-xl border border-border p-4 sm:p-5">
         <legend className="px-1 font-medium">{t.files}</legend>
         <p className="text-sm text-muted-foreground">{t.filesHelp}</p>
-        <label className="block"><span className="mb-2 block text-sm">{t.document}</span><select className="auth-input mb-3" value={documentType} onChange={(event) => setDocumentType(event.target.value)}><option value="IDENTITY">{t.identity}</option><option value="BUSINESS_REGISTRATION">{t.registration}</option><option value="PROOF_OF_ADDRESS">{t.proof}</option></select><input className="block w-full text-sm" type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => setDocumentFile(event.target.files?.[0])} />{existingDocuments > 0 && <span className="mt-2 block text-xs text-muted-foreground">{t.existing}: {existingDocuments}</span>}</label>
-        <label className="block"><span className="mb-2 block text-sm">{t.media}</span><select className="auth-input mb-3" value={mediaKind} onChange={(event) => setMediaKind(event.target.value)}><option value="IMAGE">{t.image}</option><option value="VIDEO">{t.video}</option></select><input className="block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp,video/mp4" onChange={(event) => setMediaFile(event.target.files?.[0])} />{existingMedia > 0 && <span className="mt-2 block text-xs text-muted-foreground">{t.existing}: {existingMedia}</span>}</label>
+        <label className="block"><span className="mb-2 block text-sm">{t.document}</span><select className="auth-input mb-3" value={documentType} onChange={(event) => setDocumentType(event.target.value)}><option value="IDENTITY">{t.identity}</option><option value="BUSINESS_REGISTRATION">{t.registration}</option><option value="PROOF_OF_ADDRESS">{t.proof}</option></select><FileDropzone accept="application/pdf,image/jpeg,image/png" label={t.chooseFile} file={documentFile} onFileChange={setDocumentFile} />{existingDocuments > 0 && <span className="mt-2 block text-xs text-muted-foreground">{t.existing}: {existingDocuments}</span>}</label>
+        <label className="block"><span className="mb-2 block text-sm">{t.media}</span><select className="auth-input mb-3" value={mediaKind} onChange={(event) => setMediaKind(event.target.value)}><option value="IMAGE">{t.image}</option><option value="VIDEO">{t.video}</option></select><FileDropzone accept="image/jpeg,image/png,image/webp,video/mp4" label={t.chooseFile} file={mediaFile} onFileChange={setMediaFile} />{existingMedia > 0 && <span className="mt-2 block text-xs text-muted-foreground">{t.existing}: {existingMedia}</span>}</label>
       </fieldset> : null}
       {isSubmitting && <UploadProgress label={uploadingLabels[locale]} />}
       <Button disabled={isSubmitting} type="submit">{t.submit}</Button>

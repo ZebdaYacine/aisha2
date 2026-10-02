@@ -73,24 +73,30 @@ func (w *Worker) tick(ctx context.Context) {
 			}
 			continue
 		}
-		var emailErr error
 		for _, notification := range notifications {
 			if w.publisher != nil {
 				w.publisher.Publish(notification.RecipientUserID, notification)
 			}
 			if w.mailer != nil && strings.TrimSpace(notification.RecipientEmail) != "" {
+				claimed, claimErr := w.repository.ClaimEmailDelivery(ctx, notification.ID)
+				if claimErr != nil {
+					w.logger.Error("claim notification email delivery", "notification_id", notification.ID, "error", claimErr)
+					continue
+				}
+				if !claimed {
+					continue
+				}
 				if err := w.mailer.Send(ctx, notification.RecipientEmail, emailSubject(notification.EventType), emailBody(notification)); err != nil {
-					emailErr = err
 					w.logger.Error("send notification email", "notification_id", notification.ID, "event_type", notification.EventType, "error", err)
+					if markErr := w.repository.MarkEmailDeliveryFailed(ctx, notification.ID, err); markErr != nil {
+						w.logger.Error("mark notification email delivery failed", "notification_id", notification.ID, "error", markErr)
+					}
+					continue
+				}
+				if markErr := w.repository.MarkEmailDeliverySent(ctx, notification.ID); markErr != nil {
+					w.logger.Error("mark notification email delivery sent", "notification_id", notification.ID, "error", markErr)
 				}
 			}
-		}
-		if emailErr != nil {
-			next := time.Now().UTC().Add(backoff(event.AttemptCount))
-			if markErr := w.repository.MarkOutboxFailed(ctx, event.ID, next, emailErr); markErr != nil {
-				w.logger.Error("mark notification email retry", "event_id", event.ID, "error", markErr)
-			}
-			continue
 		}
 		if err = w.repository.MarkOutboxProcessed(ctx, event.ID); err != nil {
 			w.logger.Error("mark notification outbox event processed", "event_id", event.ID, "error", err)

@@ -41,6 +41,9 @@ type Repository interface {
 	MarkAllRead(context.Context, string) error
 	ClaimOutbox(context.Context, int, time.Duration) ([]OutboxEvent, error)
 	DeliverOutbox(context.Context, OutboxEvent) ([]Notification, error)
+	ClaimEmailDelivery(context.Context, string) (bool, error)
+	MarkEmailDeliverySent(context.Context, string) error
+	MarkEmailDeliveryFailed(context.Context, string, error) error
 	MarkOutboxProcessed(context.Context, string) error
 	MarkOutboxFailed(context.Context, string, time.Time, error) error
 }

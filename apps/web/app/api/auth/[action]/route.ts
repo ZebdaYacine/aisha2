@@ -35,8 +35,7 @@ export async function GET(
   const response = await backend(`/auth/activate?token=${encodeURIComponent(token)}`);
   if (!response.ok) return proxyResponse(response);
   const result = await response.json();
-  await setSession(result.tokens);
-  return NextResponse.json({ user: result.user }, { status: response.status });
+  return NextResponse.json({ activated: true, user: result.user }, { status: response.status });
 }
 
 export async function POST(

@@ -42,6 +42,16 @@ type Config struct {
 }
 
 func Load() (Config, error) {
+	environment := strings.ToLower(strings.TrimSpace(env("APP_ENV", "development")))
+	isProduction := environment == "production" || environment == "prod"
+	webBaseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("WEB_BASE_URL")), "/")
+	if webBaseURL == "" {
+		if isProduction {
+			webBaseURL = "https://aishasouk.com"
+		} else {
+			webBaseURL = "http://localhost:3033"
+		}
+	}
 	maxOpen, err := positiveInt32("DATABASE_MAX_OPEN_CONNS", 20)
 	if err != nil {
 		return Config{}, err
@@ -92,7 +102,7 @@ func Load() (Config, error) {
 	}
 	cfg := Config{
 		AppName:                 env("APP_NAME", "AISHA"),
-		Environment:             env("APP_ENV", "development"),
+		Environment:             environment,
 		APIPort:                 env("API_PORT", "8088"),
 		ShutdownTimeout:         10 * time.Second,
 		DatabaseURL:             env("DATABASE_URL", "postgres://aisha:aisha_dev@localhost:5432/aisha?sslmode=disable"),
@@ -112,7 +122,7 @@ func Load() (Config, error) {
 		SMTPUser:                smtpUser,
 		SMTPPassword:            smtpPassword,
 		SMTPFrom:                smtpFrom,
-		WebBaseURL:              strings.TrimRight(env("WEB_BASE_URL", "http://localhost:3033"), "/"),
+		WebBaseURL:              webBaseURL,
 		UploadMaxBytes:          uploadMaxBytes,
 		ProductMediaMaxBytes:    productMediaMaxBytes,
 		ArtisanDocumentMaxBytes: artisanDocumentMaxBytes,
@@ -125,7 +135,7 @@ func Load() (Config, error) {
 	if len(cfg.AuthSigningKey) < 32 {
 		return Config{}, fmt.Errorf("AUTH_SIGNING_KEY must contain at least 32 characters")
 	}
-	if cfg.Environment == "production" {
+	if isProduction {
 		if strings.Contains(cfg.DatabaseURL, "aisha_dev") || cfg.MinIOSecretKey == "aisha_minio_dev" || cfg.AuthSigningKey == "aisha-development-signing-key-change-me" {
 			return Config{}, fmt.Errorf("development credentials are forbidden in production")
 		}

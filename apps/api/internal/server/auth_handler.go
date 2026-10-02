@@ -121,7 +121,7 @@ func (h *AuthHandler) ResetPassword(c fiber.Ctx) error {
 }
 
 func (h *AuthHandler) Activate(c fiber.Ctx) error {
-	user, tokens, err := h.service.ActivateEmail(c.Context(), c.Query("token"))
+	user, err := h.service.ActivateEmail(c.Context(), c.Query("token"))
 	if err != nil {
 		return authAPIError(err)
 	}
@@ -129,7 +129,7 @@ func (h *AuthHandler) Activate(c fiber.Ctx) error {
 	if err != nil {
 		return authAPIError(err)
 	}
-	return c.JSON(AuthenticationResponse{User: response, Tokens: tokenResponseFrom(tokens)})
+	return c.JSON(ActivationResponse{Activated: true, User: response})
 }
 
 func (h *AuthHandler) bindAndValidate(c fiber.Ctx, request any) error {

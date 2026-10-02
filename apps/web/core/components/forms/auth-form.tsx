@@ -123,7 +123,6 @@ export function AuthForm({
       const result = await (submit ?? ((input) => submitJSON(`/api/auth/${mode === "forgot" ? "forgot-password" : mode}`, input)))(payload);
       if (result.ok) {
         if (mode === "register") {
-          focusSummary(copy.activationPending);
           toast.success(copy.activationPending);
           return;
         }

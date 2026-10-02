@@ -55,6 +55,10 @@ type AuthenticationResponse struct {
 	User   UserResponse  `json:"user"`
 	Tokens TokenResponse `json:"tokens"`
 }
+type ActivationResponse struct {
+	Activated bool         `json:"activated"`
+	User      UserResponse `json:"user"`
+}
 
 func userResponseFrom(user auth.User) UserResponse {
 	response := UserResponse{ID: user.ID, Email: user.Email, DisplayName: user.DisplayName, Status: user.Status, Roles: user.Roles, CreatedAt: user.CreatedAt}

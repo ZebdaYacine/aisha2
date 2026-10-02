@@ -11,11 +11,14 @@ import (
 )
 
 type workerRepository struct {
-	events     []domain.OutboxEvent
-	items      []domain.Notification
-	deliverErr error
-	processed  []string
-	failed     []string
+	events      []domain.OutboxEvent
+	items       []domain.Notification
+	deliverErr  error
+	processed   []string
+	failed      []string
+	emailClaims map[string]bool
+	emailSent   []string
+	emailFailed []string
 }
 
 func (r *workerRepository) List(context.Context, string, int, int) ([]domain.Notification, int, error) {
@@ -31,6 +34,24 @@ func (r *workerRepository) ClaimOutbox(context.Context, int, time.Duration) ([]d
 }
 func (r *workerRepository) DeliverOutbox(context.Context, domain.OutboxEvent) ([]domain.Notification, error) {
 	return r.items, r.deliverErr
+}
+func (r *workerRepository) ClaimEmailDelivery(_ context.Context, id string) (bool, error) {
+	if r.emailClaims == nil {
+		r.emailClaims = make(map[string]bool)
+	}
+	if r.emailClaims[id] {
+		return false, nil
+	}
+	r.emailClaims[id] = true
+	return true, nil
+}
+func (r *workerRepository) MarkEmailDeliverySent(_ context.Context, id string) error {
+	r.emailSent = append(r.emailSent, id)
+	return nil
+}
+func (r *workerRepository) MarkEmailDeliveryFailed(_ context.Context, id string, _ error) error {
+	r.emailFailed = append(r.emailFailed, id)
+	return nil
 }
 func (r *workerRepository) MarkOutboxProcessed(_ context.Context, id string) error {
 	r.processed = append(r.processed, id)
@@ -51,9 +72,11 @@ type workerMailer struct {
 	subject string
 	body    string
 	err     error
+	calls   int
 }
 
 func (m *workerMailer) Send(_ context.Context, to, subject, body string) error {
+	m.calls++
 	m.to, m.subject, m.body = to, subject, body
 	return m.err
 }
@@ -128,10 +151,11 @@ func TestWorkerSendsTransactionalEmailForDeliveredNotification(t *testing.T) {
 	}
 }
 
-func TestWorkerRetriesOutboxWhenEmailDeliveryFails(t *testing.T) {
+func TestWorkerRecordsEmailFailureWithoutRetryingOutbox(t *testing.T) {
 	repository := &workerRepository{
 		events: []domain.OutboxEvent{{ID: "event-email-failure", AttemptCount: 1}},
 		items: []domain.Notification{{
+			ID:              "notification-email-failure",
 			RecipientUserID: "user-1",
 			RecipientEmail:  "nour@example.test",
 			EventType:       "PAYMENT_FAILED",
@@ -142,11 +166,14 @@ func TestWorkerRetriesOutboxWhenEmailDeliveryFails(t *testing.T) {
 
 	worker.tick(context.Background())
 
-	if len(repository.failed) != 1 || repository.failed[0] != "event-email-failure" {
-		t.Fatalf("failed = %#v", repository.failed)
+	if len(repository.emailFailed) != 1 || repository.emailFailed[0] != "notification-email-failure" {
+		t.Fatalf("email failures = %#v", repository.emailFailed)
 	}
-	if len(repository.processed) != 0 {
-		t.Fatalf("event was processed despite email failure: %#v", repository.processed)
+	if len(repository.processed) != 1 || repository.processed[0] != "event-email-failure" {
+		t.Fatalf("processed = %#v", repository.processed)
+	}
+	if len(repository.failed) != 0 {
+		t.Fatalf("outbox was retried after email failure: %#v", repository.failed)
 	}
 }
 
@@ -166,5 +193,26 @@ func TestWorkerEmailUsesRegistrationActivationLink(t *testing.T) {
 
 	if !strings.Contains(mailer.body, `href="https://aisha.example/en/activate?token=raw-token"`) || !strings.Contains(mailer.body, "Activate your AISHA account") {
 		t.Fatalf("activation link missing from email: %q", mailer.body)
+	}
+}
+
+func TestWorkerDoesNotSendSameNotificationMoreThanOnce(t *testing.T) {
+	repository := &workerRepository{
+		events: []domain.OutboxEvent{{ID: "event-first", AttemptCount: 1}},
+		items: []domain.Notification{{
+			ID:              "notification-once",
+			RecipientUserID: "user-1",
+			RecipientEmail:  "nour@example.test",
+			EventType:       "PAYMENT_CONFIRMED",
+		}},
+	}
+	mailer := &workerMailer{}
+	worker := NewWorker(repository, nil, time.Second, nil, mailer)
+	worker.tick(context.Background())
+	repository.events = []domain.OutboxEvent{{ID: "event-retry", AttemptCount: 2}}
+	worker.tick(context.Background())
+
+	if mailer.calls != 1 {
+		t.Fatalf("email sends = %d, want 1", mailer.calls)
 	}
 }

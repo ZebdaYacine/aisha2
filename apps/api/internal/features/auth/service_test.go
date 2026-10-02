@@ -100,7 +100,7 @@ func TestRegisterHashesPasswordAndReturnsUsableTokens(t *testing.T) {
 	if _, err := service.Authenticate(context.Background(), tokens.AccessToken); !errors.Is(err, ErrEmailUnverified) {
 		t.Fatalf("unverified registration session should be blocked, got %v", err)
 	}
-	if _, _, err := service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
+	if _, err := service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
 		t.Fatalf("activation failed: %v", err)
 	}
 	principal, err := service.Authenticate(context.Background(), tokens.AccessToken)
@@ -130,7 +130,7 @@ func TestLoginAcceptsPhoneIdentifier(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo.user.Phone = "0555123456"
-	if _, _, err = service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
+	if _, err = service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err = service.Login(context.Background(), "0555123456", "long-password-value"); err != nil {
@@ -145,7 +145,7 @@ func TestAuthenticateRejectsRevokedBackingSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err = service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
+	if _, err = service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
 		t.Fatal(err)
 	}
 	repo.sessionActive = false
@@ -161,7 +161,7 @@ func TestRefreshRotatesHashedToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err = service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
+	if _, err = service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
 		t.Fatal(err)
 	}
 	next, err := service.Refresh(context.Background(), tokens.RefreshToken)

@@ -37,8 +37,8 @@ paths:
           schema: {type: string}
       responses:
         '200':
-          description: Email verified and authenticated
-          content: {application/json: {schema: {$ref: '#/components/schemas/AuthenticationResponse'}}}
+          description: Email verified; the browser can now sign in
+          content: {application/json: {schema: {$ref: '#/components/schemas/ActivationResponse'}}}
         '401': {$ref: '#/components/responses/AuthenticationError'}
         '403': {$ref: '#/components/responses/ForbiddenError'}
         default: {$ref: '#/components/responses/Error'}
@@ -1694,6 +1694,12 @@ components:
       properties:
         user: {$ref: '#/components/schemas/User'}
         tokens: {$ref: '#/components/schemas/TokenResponse'}
+    ActivationResponse:
+      type: object
+      required: [activated, user]
+      properties:
+        activated: {type: boolean}
+        user: {$ref: '#/components/schemas/User'}
     Health:
       type: object
       required: [status]

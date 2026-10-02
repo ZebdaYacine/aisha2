@@ -229,6 +229,8 @@ Suggested migration sequence:
 000018_cart_wishlist
 000023_notifications
 000024_commerce_fulfilment
+000025_email_verification_tokens
+000026_notification_email_delivery
 ```
 
 ## 9. API Endpoints
@@ -248,9 +250,12 @@ GET    /api/v1/me
 
 Registration stores only a hash of the single-use email-verification token and
 publishes an outbox email containing the configured `WEB_BASE_URL` activation
-link. The activation endpoint consumes the token transactionally, marks the
-email as verified, creates a session, and lets the web page redirect the user
-to their account.
+link. The API defaults that base URL to `http://localhost:3033` in development
+and `https://aishasouk.com` in production when it is not explicitly configured.
+Activation links expire after 120 seconds. The activation endpoint consumes the
+token transactionally and marks the email as verified; it returns an activation
+result without creating a session. The web page then shows the activated state
+and a Sign in button.
 
 ### Notifications
 
@@ -263,8 +268,8 @@ GET    /api/v1/notifications/ws?ticket=<one-time-ticket>
 ```
 
 The API worker claims pending outbox records with a lease, creates recipient-scoped
-notifications idempotently, retries failures with backoff, and publishes committed
-notifications to connected users over WebSocket. The browser receives a one-minute,
+notifications idempotently, retries persistence failures with backoff, and publishes
+committed notifications to connected users over WebSocket. The browser receives a one-minute,
 one-time ticket through the authenticated BFF so HttpOnly access cookies stay private.
 Workflow events also fan out to the relevant operational peers: moderators and
 administrators for review queues, warehouse agents for stock transitions, and the
@@ -274,8 +279,9 @@ When SMTP is configured, the same committed workflow notifications are sent to e
 recipient's account email through the transactional mail adapter. Registration,
 artisan application and moderation, payment, warehouse, inventory, order, account,
 and future workflow events use the same outbox path. Hostinger's implicit TLS mode
-is used for port 465; delivery failures are retried with backoff without exposing
-SMTP credentials. Email bodies are responsive HTML messages with inline-safe CSS,
+is used for port 465. Each notification has a durable email-delivery state and is
+claimed once, so SMTP failures are recorded without retrying the entire outbox event
+or resending messages already delivered. Email bodies are responsive HTML messages with inline-safe CSS,
 event summaries, and an allowlisted set of business details. Internal identifiers
 such as user, payment, product, workshop, actor, and aggregate IDs are excluded
 from email content; they remain available only to protected internal workflows.

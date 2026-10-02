@@ -5,8 +5,6 @@ import { useEffect, useState } from "react";
 import { LocalizedLink } from "@/core/components/shared/localized-link";
 import type { Locale } from "@/core/lib/i18n";
 import type { StoreCopy } from "@/core/lib/store-copy";
-import { userFromAuthResponse } from "@/features/auth/types";
-import { useOptionalAuth } from "@/features/auth/viewmodel/auth-context";
 
 export function EmailActivation({
   locale,
@@ -17,9 +15,7 @@ export function EmailActivation({
   copy: StoreCopy;
   token: string;
 }) {
-  const auth = useOptionalAuth();
-  const [message, setMessage] = useState(token ? copy.activationChecking : copy.activationMissing);
-  const [error, setError] = useState(!token);
+  const [state, setState] = useState<"checking" | "success" | "expired" | "missing">(token ? "checking" : "missing");
 
   useEffect(() => {
     if (!token) {
@@ -32,32 +28,41 @@ export function EmailActivation({
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result?.error?.message ?? copy.activationError);
         if (cancelled) return;
-        const user = userFromAuthResponse(result);
-        if (user) auth?.setUser(user);
-        setMessage(copy.activationSuccess);
-        window.setTimeout(() => {
-          window.location.assign(`/${locale}/account`);
-        }, 500);
+        setState("success");
       })
       .catch(() => {
         if (!cancelled) {
-          setMessage(copy.activationError);
-          setError(true);
+          setState("expired");
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [auth, copy.activationChecking, copy.activationError, copy.activationMissing, copy.activationSuccess, locale, token]);
+  }, [copy.activationError, token]);
+
+  const message = state === "checking"
+    ? copy.activationChecking
+    : state === "success"
+      ? copy.activationSuccess
+      : state === "missing"
+        ? copy.activationMissing
+        : copy.activationExpired;
+  const error = state === "expired" || state === "missing";
+  const success = state === "success";
 
   return (
     <section className="mx-auto flex min-h-[60svh] max-w-md flex-col justify-center px-5 py-16">
       <p className="text-xs uppercase tracking-widest text-primary">AISHA</p>
       <h1 className="mt-4 font-serif text-5xl">{copy.activationTitle}</h1>
-      <p className={`mt-6 border p-4 text-sm ${error ? "border-destructive/30 bg-destructive/10 text-destructive" : "border-border bg-muted/30"}`} role={error ? "alert" : "status"}>
+      <p className={`mt-6 border p-4 text-sm ${error ? "border-destructive/30 bg-destructive/10 text-destructive" : success ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-border bg-muted/30"}`} role={error ? "alert" : "status"}>
         {message}
       </p>
+      {state === "success" && (
+        <LocalizedLink locale={locale} href="/login" className="mt-6 inline-flex w-fit rounded-md bg-primary px-5 py-3 text-sm text-primary-foreground">
+          {copy.login}
+        </LocalizedLink>
+      )}
       {error && (
         <LocalizedLink locale={locale} href="/login" className="mt-6 underline">
           {copy.login}

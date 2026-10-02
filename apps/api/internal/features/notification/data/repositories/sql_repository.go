@@ -153,6 +153,48 @@ func (r *PostgresRepository) DeliverOutbox(ctx context.Context, event domain.Out
 	return items, nil
 }
 
+// ClaimEmailDelivery makes email sending idempotent per notification. A stale
+// SENDING claim is recoverable after a process crash, while SENT and FAILED
+// notifications are never sent again by the outbox worker.
+func (r *PostgresRepository) ClaimEmailDelivery(ctx context.Context, notificationID string) (bool, error) {
+	var claimedID string
+	err := r.pool.QueryRow(ctx, `
+		UPDATE notifications
+		SET email_delivery_status='SENDING',
+		    email_delivery_attempted_at=CURRENT_TIMESTAMP,
+		    email_delivery_error=NULL
+		WHERE id=$1
+		  AND (
+				email_delivery_status='PENDING'
+				OR (email_delivery_status='SENDING'
+				    AND COALESCE(email_delivery_attempted_at, TIMESTAMP 'epoch') < CURRENT_TIMESTAMP - INTERVAL '15 minutes')
+		  )
+		RETURNING id`, notificationID).Scan(&claimedID)
+	if err == pgx.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("claim notification email delivery: %w", err)
+	}
+	return claimedID != "", nil
+}
+
+func (r *PostgresRepository) MarkEmailDeliverySent(ctx context.Context, notificationID string) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE notifications
+		SET email_delivery_status='SENT', email_delivery_error=NULL
+		WHERE id=$1 AND email_delivery_status='SENDING'`, notificationID)
+	return err
+}
+
+func (r *PostgresRepository) MarkEmailDeliveryFailed(ctx context.Context, notificationID string, cause error) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE notifications
+		SET email_delivery_status='FAILED', email_delivery_error=$2
+		WHERE id=$1 AND email_delivery_status='SENDING'`, notificationID, truncateError(cause))
+	return err
+}
+
 func (r *PostgresRepository) MarkOutboxProcessed(ctx context.Context, id string) error {
 	_, err := r.pool.Exec(ctx, `UPDATE outbox_events SET processed_at=CURRENT_TIMESTAMP,locked_at=NULL,last_error=NULL WHERE id=$1`, id)
 	return err

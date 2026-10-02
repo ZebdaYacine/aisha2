@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/core/components/ui/button";
 import { Combobox } from "@/core/components/ui/combobox";
+import { FileDropzone } from "@/core/components/ui/file-dropzone";
 import { IconAction } from "@/core/components/ui/icon-action";
 import { Modal } from "@/core/components/ui/modal";
 import { StatusBadge } from "@/core/components/ui/status-badge";
@@ -482,7 +483,7 @@ export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
             <div className="mt-6 border-t border-border pt-5">
               <h3 className="font-medium">Evidence</h3>
               <div className="mt-3 flex flex-wrap gap-2">{selected.evidence.map((file) => file.url ? <a className="underline" key={file.id} href={file.url} target="_blank" rel="noreferrer">{file.originalFilename || file.mediaType}</a> : <span key={file.id}>{file.originalFilename}</span>)}</div>
-              {selected.status === "RECEIVED_PENDING_INSPECTION" && <div className="mt-4 space-y-3"><div className="flex flex-wrap items-center gap-3"><input aria-label="Inspection evidence" type="file" accept="image/*,application/pdf,video/mp4" onChange={(event) => setEvidence(event.target.files?.[0] ?? null)} />{evidence && <span className="text-xs text-muted-foreground">{evidence.name} will be uploaded with the inspection</span>}</div>{saving && <UploadProgress label="Uploading evidence and submitting inspection…" />}</div>}
+              {selected.status === "RECEIVED_PENDING_INSPECTION" && <div className="mt-4 space-y-3"><FileDropzone accept="image/*,application/pdf,video/mp4" label="Choose inspection evidence" file={evidence} onFileChange={(file) => setEvidence(file ?? null)} disabled={saving} />{saving && <UploadProgress label="Uploading evidence and submitting inspection…" />}</div>}
             </div>
             {selected.status === "RECEIVED_PENDING_INSPECTION" ? (
               <div className="mt-6 border-t border-border pt-5">

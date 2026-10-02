@@ -7,6 +7,7 @@ import (
 
 func TestLoadUsesFoundationDefaults(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
+	t.Setenv("WEB_BASE_URL", "")
 	t.Setenv("DATABASE_MAX_OPEN_CONNS", "12")
 	t.Setenv("DATABASE_MAX_IDLE_CONNS", "3")
 
@@ -19,6 +20,9 @@ func TestLoadUsesFoundationDefaults(t *testing.T) {
 	}
 	if cfg.MinIOPublicEndpoint != "localhost:9000" {
 		t.Fatalf("unexpected public MinIO endpoint: %q", cfg.MinIOPublicEndpoint)
+	}
+	if cfg.WebBaseURL != "http://localhost:3033" {
+		t.Fatalf("unexpected development web base URL: %q", cfg.WebBaseURL)
 	}
 	wantOrigins := []string{"http://localhost:3033", "http://127.0.0.1:3033", "http://167.86.79.16"}
 	if len(cfg.AllowedOrigins) != len(wantOrigins) {
@@ -34,6 +38,22 @@ func TestLoadUsesFoundationDefaults(t *testing.T) {
 	}
 	if cfg.SMTPPort != 465 || cfg.SMTPHost != "" || cfg.SMTPPassword != "" {
 		t.Fatalf("unexpected SMTP defaults: %#v", cfg)
+	}
+}
+
+func TestLoadUsesProductionWebBaseURLWhenUnset(t *testing.T) {
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("WEB_BASE_URL", "")
+	t.Setenv("DATABASE_URL", "postgres://aisha:production-secret@postgres:5432/aisha?sslmode=disable")
+	t.Setenv("MINIO_SECRET_KEY", "production-minio-secret")
+	t.Setenv("AUTH_SIGNING_KEY", "production-signing-key-with-at-least-32-characters")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WebBaseURL != "https://aishasouk.com" {
+		t.Fatalf("unexpected production web base URL: %q", cfg.WebBaseURL)
 	}
 }
 

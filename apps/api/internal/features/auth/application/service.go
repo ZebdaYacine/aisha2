@@ -71,26 +71,22 @@ func (s *Service) Register(ctx context.Context, email, password, name string) (U
 	return user, tokens, err
 }
 
-func (s *Service) ActivateEmail(ctx context.Context, token string) (User, Tokens, error) {
+func (s *Service) ActivateEmail(ctx context.Context, token string) (User, error) {
 	if strings.TrimSpace(token) == "" {
-		return User{}, Tokens{}, ErrInvalidToken
+		return User{}, ErrInvalidToken
 	}
 	userID, err := s.repo.ConsumeEmailVerification(ctx, hashToken(token), s.now())
 	if err != nil {
-		return User{}, Tokens{}, fmt.Errorf("consume email verification: %w", err)
+		return User{}, fmt.Errorf("consume email verification: %w", err)
 	}
 	user, err := s.repo.UserByID(ctx, userID)
 	if err != nil {
-		return User{}, Tokens{}, ErrInvalidToken
+		return User{}, ErrInvalidToken
 	}
 	if user.Status != "ACTIVE" {
-		return User{}, Tokens{}, ErrUserInactive
+		return User{}, ErrUserInactive
 	}
-	tokens, err := s.newSession(ctx, user.ID, uuid.NewString())
-	if err != nil {
-		return User{}, Tokens{}, err
-	}
-	return user, tokens, nil
+	return user, nil
 }
 func (s *Service) Login(ctx context.Context, identifier, password string) (User, Tokens, error) {
 	identifier = strings.TrimSpace(identifier)

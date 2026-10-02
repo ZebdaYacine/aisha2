@@ -223,6 +223,8 @@ services:
       MINIO_PUBLIC_BUCKET: ${MINIO_PUBLIC_BUCKET:-product-public}
       MINIO_PRIVATE_BUCKET: ${MINIO_PRIVATE_BUCKET:-product-private}
       MINIO_ARTISAN_BUCKET: ${MINIO_ARTISAN_BUCKET:-artisan-private}
+    volumes:
+      - ../minio/seed:/seed:ro
     entrypoint:
       - /bin/sh
       - -ec
@@ -239,6 +241,19 @@ services:
         mc mb --ignore-existing "local/$${MINIO_ARTISAN_BUCKET}"
 
         mc anonymous set download "local/$${MINIO_PUBLIC_BUCKET}"
+
+        # Development SQL references private application documents. Keep the
+        # checked-in fixtures in MinIO as well as in PostgreSQL so signed
+        # preview links never point at missing objects after a fresh reset.
+        for key in \
+          seed/private/artisan-application.pdf \
+          seed/private/applications/amel-benali-id.pdf \
+          seed/private/applications/sofiane-haddad-id.pdf \
+          seed/private/applications/ines-touati-id.pdf \
+          seed/private/applications/rachid-meziane-id.pdf \
+          seed/private/applications/lina-boudiaf-id.pdf; do
+          mc cp /seed/private-document.pdf "local/$${MINIO_ARTISAN_BUCKET}/$${key}"
+        done
     restart: "no"
     networks:
       - data

@@ -171,9 +171,10 @@ Provide `.env.example` with no real values.
 Transactional email uses `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
 `SMTP_PASSWORD`, and `SMTP_FROM`. For compatibility, `SMTP_PASS` is accepted as
 an alias for `SMTP_PASSWORD`, and `MAIL_FROM` as an alias for `SMTP_FROM`.
-`WEB_BASE_URL` must point to the public frontend origin (for example
-`http://167.86.79.16:3033` in the VPS environment) so registration emails link
-to the correct email-activation page.
+`WEB_BASE_URL` must point to the public frontend origin so registration emails
+link to the correct email-activation page. It defaults to
+`http://localhost:3033` in development and `https://aishasouk.com` in
+production; set it explicitly for staging or another public hostname.
 Port `465` uses implicit TLS. Keep real values only in the ignored local `.env`
 or the Jenkins production secret-file credential; never commit them.
 
