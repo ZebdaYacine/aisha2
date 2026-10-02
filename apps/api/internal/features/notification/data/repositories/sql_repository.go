@@ -134,7 +134,7 @@ func (r *PostgresRepository) DeliverOutbox(ctx context.Context, event domain.Out
 		err := tx.QueryRow(ctx, `
 			INSERT INTO notifications(recipient_user_id,event_type,title_key,body_key,payload,dedupe_key)
 			VALUES($1,$2,$3,$4,$5,$6)
-			ON CONFLICT (recipient_user_id,dedupe_key) DO NOTHING
+			ON CONFLICT (recipient_user_id,dedupe_key) DO UPDATE SET payload=EXCLUDED.payload
 			RETURNING id,event_type,title_key,body_key,payload,read_at,created_at`, recipient.id, event.EventType, titleKey, bodyKey, event.Payload, event.ID).Scan(&item.ID, &item.EventType, &item.TitleKey, &item.BodyKey, &item.Payload, &item.ReadAt, &item.CreatedAt)
 		if err == pgx.ErrNoRows {
 			continue
@@ -266,6 +266,8 @@ func audienceRoles(eventType string) []string {
 		return []string{"warehouse_agent", "administrator"}
 	case "ORDER_CHECKOUT_CREATED", "ORDER_RETURN_RECORDED":
 		return []string{"warehouse_agent", "administrator"}
+	case "PAYMENT_CONFIRMED":
+		return []string{"warehouse_agent", "administrator"}
 	default:
 		return nil
 	}
@@ -384,7 +386,17 @@ func specificTemplateFor(eventType string) (string, string, bool) {
 		return "notifications.account.statusChanged.title", accountBody, true
 	case "USER_ROLES_CHANGED":
 		return "notifications.account.rolesChanged.title", accountBody, true
+	case "USER_REGISTERED":
+		return "notifications.account.registered.title", accountBody, true
+	case "PASSWORD_RESET_REQUESTED":
+		return "notifications.account.passwordReset.title", accountBody, true
 	default:
+		// Keep the outbox forward-compatible: every committed event with a
+		// resolvable recipient still gets an in-app and email notification even
+		// before a dedicated localized title is added.
+		if strings.TrimSpace(eventType) != "" {
+			return "notifications.account.title", "notifications.account.body", true
+		}
 		return "", "", false
 	}
 }

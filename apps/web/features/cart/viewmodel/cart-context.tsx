@@ -60,6 +60,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(key, JSON.stringify(items));
   }, [items]);
+  useEffect(() => {
+    const clearOnLogout = () => {
+      setItems([]);
+      setOpen(false);
+      setAuthenticated(false);
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // Storage can be unavailable in privacy-restricted browsers.
+      }
+    };
+    window.addEventListener("aisha:session-cleared", clearOnLogout);
+    return () => window.removeEventListener("aisha:session-cleared", clearOnLogout);
+  }, []);
   const value = useMemo<CartValue>(
     () => ({
       items,

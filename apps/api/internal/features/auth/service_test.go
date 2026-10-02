@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"net/url"
 	"testing"
 	"time"
 )
@@ -14,11 +15,16 @@ type fakeRepository struct {
 	rotatedCurrentHash  string
 	resetTokenHash      string
 	resetPasswordHash   string
+	verificationHash    string
+	verificationToken   string
 	sessionActive       bool
 }
 
-func (r *fakeRepository) CreateUser(_ context.Context, email, hash, name string) (User, error) {
+func (r *fakeRepository) CreateUser(_ context.Context, email, hash, name, verificationHash, activationURL string) (User, error) {
 	r.createdPasswordHash = hash
+	r.verificationHash = verificationHash
+	parsed, _ := url.Parse(activationURL)
+	r.verificationToken = parsed.Query().Get("token")
 	r.user = User{ID: "user-1", Email: email, PasswordHash: hash, DisplayName: name, Status: "ACTIVE", Roles: []string{"customer"}}
 	return r.user, nil
 }
@@ -53,6 +59,13 @@ func (r *fakeRepository) StorePasswordReset(_ context.Context, _ string, hash st
 	r.resetTokenHash = hash
 	return nil
 }
+func (r *fakeRepository) ConsumeEmailVerification(_ context.Context, tokenHash string, now time.Time) (string, error) {
+	if tokenHash != r.verificationHash {
+		return "", ErrInvalidToken
+	}
+	r.user.EmailVerifiedAt = &now
+	return r.user.ID, nil
+}
 func (r *fakeRepository) UpdatePassword(_ context.Context, _ string, passwordHash string, _ time.Time) error {
 	r.resetPasswordHash = passwordHash
 	return nil
@@ -84,9 +97,15 @@ func TestRegisterHashesPasswordAndReturnsUsableTokens(t *testing.T) {
 	if tokens.RefreshToken == "" || repo.createdTokenHash == tokens.RefreshToken {
 		t.Fatal("refresh token must be returned and stored only as a hash")
 	}
+	if _, err := service.Authenticate(context.Background(), tokens.AccessToken); !errors.Is(err, ErrEmailUnverified) {
+		t.Fatalf("unverified registration session should be blocked, got %v", err)
+	}
+	if _, _, err := service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
+		t.Fatalf("activation failed: %v", err)
+	}
 	principal, err := service.Authenticate(context.Background(), tokens.AccessToken)
 	if err != nil || principal.UserID != user.ID {
-		t.Fatalf("authenticate returned %#v, %v", principal, err)
+		t.Fatalf("authenticate after activation returned %#v, %v", principal, err)
 	}
 }
 
@@ -111,6 +130,9 @@ func TestLoginAcceptsPhoneIdentifier(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo.user.Phone = "0555123456"
+	if _, _, err = service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
+		t.Fatal(err)
+	}
 	if _, _, err = service.Login(context.Background(), "0555123456", "long-password-value"); err != nil {
 		t.Fatalf("phone identifier should authenticate user %q: %v", user.ID, err)
 	}
@@ -121,6 +143,9 @@ func TestAuthenticateRejectsRevokedBackingSession(t *testing.T) {
 	service := NewService(repo, nil, "test-signing-key")
 	_, tokens, err := service.Register(context.Background(), "user@example.com", "long-password-value", "Amina")
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
 		t.Fatal(err)
 	}
 	repo.sessionActive = false
@@ -134,6 +159,9 @@ func TestRefreshRotatesHashedToken(t *testing.T) {
 	service := NewService(repo, nil, "key")
 	_, tokens, err := service.Register(context.Background(), "user@example.com", "long-password-value", "Amina")
 	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = service.ActivateEmail(context.Background(), repo.verificationToken); err != nil {
 		t.Fatal(err)
 	}
 	next, err := service.Refresh(context.Background(), tokens.RefreshToken)

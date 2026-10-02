@@ -40,9 +40,9 @@ export function StorefrontFooter({
               {messages.currencyLabel}
             </label>
             <select id="footer-currency" className="h-11 max-w-52 rounded-md border border-background/30 bg-transparent px-3 text-sm text-background">
-              <option className="text-foreground" value="DZD">DZD — Algerian dinar</option>
-              <option className="text-foreground" value="EUR">EUR — Euro</option>
-              <option className="text-foreground" value="USD">USD — US dollar</option>
+              <option className="text-foreground" value="DZD">DZD — {currencyName(locale, "DZD")}</option>
+              <option className="text-foreground" value="EUR">EUR — {currencyName(locale, "EUR")}</option>
+              <option className="text-foreground" value="USD">USD — {currencyName(locale, "USD")}</option>
             </select>
           </FooterGroup>
         </div>
@@ -53,6 +53,16 @@ export function StorefrontFooter({
       </Container>
     </footer>
   );
+}
+
+function currencyName(locale: Locale, currency: "DZD" | "EUR" | "USD") {
+  const names = {
+    en: { DZD: "Algerian dinar", EUR: "Euro", USD: "US dollar" },
+    fr: { DZD: "dinar algérien", EUR: "euro", USD: "dollar américain" },
+    ar: { DZD: "الدينار الجزائري", EUR: "اليورو", USD: "الدولار الأمريكي" },
+    es: { DZD: "dinar argelino", EUR: "euro", USD: "dólar estadounidense" },
+  } as const;
+  return names[locale][currency];
 }
 
 function FooterGroup({ children, title }: { children: React.ReactNode; title: string }) {

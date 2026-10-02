@@ -107,7 +107,7 @@ func (s *SMTP) SendMessage(ctx context.Context, message Message) error {
 		"To: " + to.String() + "\r\n" +
 		"Subject: " + message.Subject + "\r\n" +
 		"MIME-Version: 1.0\r\n" +
-		"Content-Type: text/plain; charset=UTF-8\r\n" +
+		"Content-Type: text/html; charset=UTF-8\r\n" +
 		"Content-Transfer-Encoding: 8bit\r\n\r\n" +
 		message.Body
 	if _, err := io.WriteString(writer, content); err != nil {

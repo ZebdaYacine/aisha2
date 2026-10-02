@@ -65,6 +65,7 @@ func newServer(cfg config.Config, healthService *health.Service, authService *au
 		public.Logout = []fiber.Handler{authHandler.Logout}
 		public.ForgotPassword = []fiber.Handler{authRateLimit(rateLimiter, cfg.AuthRateLimitMax, cfg.AuthRateLimitWindow, "forgot-password"), authHandler.ForgotPassword}
 		public.ResetPassword = []fiber.Handler{authHandler.ResetPassword}
+		public.Activate = []fiber.Handler{authHandler.Activate}
 	}
 	if len(catalogueServices) > 0 && catalogueServices[0] != nil {
 		handler := NewCatalogueHandler(catalogueServices[0])

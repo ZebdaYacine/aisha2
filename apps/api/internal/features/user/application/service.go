@@ -19,33 +19,41 @@ func NewService(repository domain.Repository, authorizer domain.Authorizer) *Ser
 }
 
 const (
-	capCustomerAccountRead    = "customer.account.read"
-	capCustomerProfileRead    = "customer.profile.read"
-	capCustomerProfileWrite   = "customer.profile.write"
-	capCustomerAddressesRead  = "customer.addresses.read"
-	capCustomerAddressesWrite = "customer.addresses.write"
-	capCustomerPurchasesRead  = "customer.purchases.read"
-	capCustomerTrackingRead   = "customer.tracking.read"
-	capArtisanAccountRead     = "artisan.account.read"
-	capArtisanProfileRead     = "artisan.profile.read"
-	capArtisanProfileWrite    = "artisan.profile.write"
-	capArtisanProductsRead    = "artisan.products.read"
-	capArtisanProductsWrite   = "artisan.products.write"
-	capArtisanOrdersRead      = "artisan.orders.read"
-	capAdminDashboardRead     = "admin.dashboard.read"
-	capAdminUsersRead         = "admin.users.read"
-	capAdminUsersWrite        = "admin.users.write"
-	capAdminApplicationsRead  = "admin.artisan_applications.read"
-	capAdminApplicationsWrite = "admin.artisan_applications.write"
-	capAdminMediaRead         = "admin.media.read"
-	capAdminMediaWrite        = "admin.media.write"
-	capAdminModerationRead    = "admin.product_moderation.read"
-	capAdminModerationWrite   = "admin.product_moderation.write"
-	capAdminAuditRead         = "admin.audit.read"
-	capWarehouseRead          = "warehouse.read"
-	capWarehouseWrite         = "warehouse.write"
-	capInventoryRead          = "inventory.read"
-	capInventoryWrite         = "inventory.write"
+	capCustomerAccountRead     = "customer.account.read"
+	capCustomerProfileRead     = "customer.profile.read"
+	capCustomerProfileWrite    = "customer.profile.write"
+	capCustomerAddressesRead   = "customer.addresses.read"
+	capCustomerAddressesWrite  = "customer.addresses.write"
+	capCustomerPurchasesRead   = "customer.purchases.read"
+	capCustomerTrackingRead    = "customer.tracking.read"
+	capArtisanAccountRead      = "artisan.account.read"
+	capArtisanProfileRead      = "artisan.profile.read"
+	capArtisanProfileWrite     = "artisan.profile.write"
+	capArtisanProductsRead     = "artisan.products.read"
+	capArtisanProductsWrite    = "artisan.products.write"
+	capArtisanOrdersRead       = "artisan.orders.read"
+	capAdminDashboardRead      = "admin.dashboard.read"
+	capAdminUsersRead          = "admin.users.read"
+	capAdminUsersWrite         = "admin.users.write"
+	capAdminApplicationsRead   = "admin.artisan_applications.read"
+	capAdminApplicationsWrite  = "admin.artisan_applications.write"
+	capAdminMediaRead          = "admin.media.read"
+	capAdminMediaWrite         = "admin.media.write"
+	capAdminModerationRead     = "admin.product_moderation.read"
+	capAdminModerationWrite    = "admin.product_moderation.write"
+	capAdminAuditRead          = "admin.audit.read"
+	capAdminCategoriesRead     = "admin.categories.read"
+	capAdminCategoriesWrite    = "admin.categories.write"
+	capAdminOrdersRead         = "admin.orders.read"
+	capAdminReturnsWrite       = "admin.orders.returns.write"
+	capAdminWorkshopsWrite     = "admin.workshops.write"
+	capAdminMembershipsWrite   = "admin.artisan_memberships.write"
+	capAdminVerificationsRead  = "admin.artisan_verifications.read"
+	capAdminVerificationsWrite = "admin.artisan_verifications.write"
+	capWarehouseRead           = "warehouse.read"
+	capWarehouseWrite          = "warehouse.write"
+	capInventoryRead           = "inventory.read"
+	capInventoryWrite          = "inventory.write"
 )
 
 // AccountSummary returns trusted capability state for the authenticated
@@ -99,7 +107,20 @@ func (s *Service) AccountSummary(ctx context.Context, p auth.Principal) (domain.
 			summary.Capabilities = append(summary.Capabilities, capAdminMediaRead, capAdminModerationRead, capAdminModerationWrite)
 		}
 		if hasRole(p.Roles, "administrator") {
-			summary.Capabilities = append(summary.Capabilities, capAdminUsersWrite, capAdminApplicationsWrite, capAdminMediaWrite, capAdminAuditRead)
+			summary.Capabilities = append(summary.Capabilities,
+				capAdminUsersWrite,
+				capAdminApplicationsWrite,
+				capAdminMediaWrite,
+				capAdminAuditRead,
+				capAdminCategoriesRead,
+				capAdminCategoriesWrite,
+				capAdminOrdersRead,
+				capAdminReturnsWrite,
+				capAdminWorkshopsWrite,
+				capAdminMembershipsWrite,
+				capAdminVerificationsRead,
+				capAdminVerificationsWrite,
+			)
 		}
 		if hasRole(p.Roles, "warehouse_agent") || hasRole(p.Roles, "administrator") {
 			summary.Capabilities = append(summary.Capabilities, capWarehouseRead, capWarehouseWrite, capInventoryRead, capInventoryWrite)

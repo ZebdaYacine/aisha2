@@ -81,6 +81,7 @@ type Labels = {
   displayName: string;
   phone: string;
   password: string;
+  keepPassword: string;
   saveAccount: string;
   cancel: string;
 };
@@ -145,6 +146,7 @@ const labels: Record<Locale, Labels> = {
     displayName: "Display name",
     phone: "Phone",
     password: "Password",
+    keepPassword: "Leave blank to keep the current password",
     saveAccount: "Save account",
     cancel: "Cancel",
   },
@@ -188,6 +190,7 @@ const labels: Record<Locale, Labels> = {
     displayName: "Nom affiché",
     phone: "Téléphone",
     password: "Mot de passe",
+    keepPassword: "Laissez vide pour conserver le mot de passe actuel",
     saveAccount: "Enregistrer le compte",
     cancel: "Annuler",
   },
@@ -231,6 +234,7 @@ const labels: Record<Locale, Labels> = {
     displayName: "الاسم الظاهر",
     phone: "الهاتف",
     password: "كلمة المرور",
+    keepPassword: "اتركه فارغاً للاحتفاظ بكلمة المرور الحالية",
     saveAccount: "حفظ الحساب",
     cancel: "إلغاء",
   },
@@ -274,6 +278,7 @@ const labels: Record<Locale, Labels> = {
     displayName: "Nombre visible",
     phone: "Teléfono",
     password: "Contraseña",
+    keepPassword: "Déjalo vacío para conservar la contraseña actual",
     saveAccount: "Guardar cuenta",
     cancel: "Cancelar",
   },
@@ -746,7 +751,7 @@ export function AdminControlPanel({
                               }))
                             }
                             ariaLabel={text.roles}
-                            placeholder="Choose roles"
+                            placeholder={text.roles}
                           />
                         </label>
                         <Button
@@ -816,7 +821,7 @@ export function AdminControlPanel({
                     <label className="block text-sm"><span className="mb-2 block">{text.displayName}</span><input className="auth-input w-full" required value={accountForm.displayName} onChange={(event) => setAccountForm({ ...accountForm, displayName: event.target.value })} /></label>
                     <label className="block text-sm"><span className="mb-2 block">{text.email}</span><input className="auth-input w-full" required type="email" value={accountForm.email} onChange={(event) => setAccountForm({ ...accountForm, email: event.target.value })} /></label>
                     <label className="block text-sm"><span className="mb-2 block">{text.phone}</span><input className="auth-input w-full" value={accountForm.phone} onChange={(event) => setAccountForm({ ...accountForm, phone: event.target.value })} /></label>
-                    <label className="block text-sm"><span className="mb-2 block">{text.password}</span><input className="auth-input w-full" minLength={selectedUser ? undefined : 12} type="password" required={!selectedUser} value={accountForm.password} onChange={(event) => setAccountForm({ ...accountForm, password: event.target.value })} placeholder={selectedUser ? "Leave blank to keep current password" : undefined} /></label>
+                    <label className="block text-sm"><span className="mb-2 block">{text.password}</span><input className="auth-input w-full" minLength={selectedUser ? undefined : 12} type="password" required={!selectedUser} value={accountForm.password} onChange={(event) => setAccountForm({ ...accountForm, password: event.target.value })} placeholder={selectedUser ? text.keepPassword : undefined} /></label>
                     <label className="block text-sm"><span className="mb-2 block">{text.roles}</span><MultiCombobox options={roleOptions} value={accountForm.roles} onChange={(roles) => setAccountForm({ ...accountForm, roles })} ariaLabel={text.roles} placeholder={text.roles} /></label>
                   </div>
                   <div className="mt-6 flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setAccountEditorOpen(false)}>{text.cancel}</Button><Button type="submit" disabled={busy === "account"}>{busy === "account" ? "Saving…" : text.saveAccount}</Button></div>

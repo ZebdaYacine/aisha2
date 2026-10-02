@@ -99,9 +99,9 @@ ON CONFLICT (category_id, locale) DO UPDATE SET name=EXCLUDED.name, updated_at=E
 -- Development-only accounts use the bcrypt hash below. Keep the seed password
 -- out of source control and provide it through the local development runbook.
 INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
-    ('90000000-0000-0000-0000-000000000001', 'saad.admin@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Saad', '2025-01-01T00:00:00Z', '+213550000001', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000002', 'kader.agent@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Kader', '2025-01-01T00:00:00Z', '+213550000002', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000003', 'yassine.warehouse@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Yassine', '2025-01-01T00:00:00Z', '+213550000003', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000001', 'saad.admin@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Saad', '2025-01-01T00:00:00Z', '+213550000001', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000002', 'kader.agent@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Kader', '2025-01-01T00:00:00Z', '+213550000002', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000003', 'yassine.warehouse@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Yassine', '2025-01-01T00:00:00Z', '+213550000003', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (id) DO UPDATE SET password_hash=EXCLUDED.password_hash;
 
 INSERT INTO user_roles (user_id, role_id, assigned_by_user_id, assigned_at) VALUES
@@ -187,10 +187,10 @@ ON CONFLICT DO NOTHING;
 -- Additional development catalogue fixtures backed by images in
 -- apps/web/public/images/aisha.
 INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
-    ('90000000-0000-0000-0000-000000000004', 'lyna.customer@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Lyna', '2025-01-01T00:00:00Z', '+213550000004', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000005', 'oussama.artisan@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Oussama', '2025-01-01T00:00:00Z', '+213550000005', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000006', 'youcef.moderator@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Youcef', '2025-01-01T00:00:00Z', '+213550000006', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000007', 'legacy.removed@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Legacy fixture', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000004', 'lyna.customer@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Lyna', '2025-01-01T00:00:00Z', '+213550000004', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000005', 'oussama.artisan@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Oussama', '2025-01-01T00:00:00Z', '+213550000005', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000006', 'youcef.moderator@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Youcef', '2025-01-01T00:00:00Z', '+213550000006', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000007', 'legacy.removed@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Legacy fixture', '2025-01-01T00:00:00Z', NULL, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (id) DO UPDATE SET password_hash=EXCLUDED.password_hash;
 
 INSERT INTO user_roles (user_id, role_id, assigned_by_user_id, assigned_at) VALUES
@@ -398,16 +398,16 @@ WHERE id = '90000000-0000-0000-0000-000000000007';
 -- Expanded development directory: customers, approved artisans, moderators,
 -- and warehouse agents. Accounts use the shared development bcrypt hash.
 INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
-    ('90000000-0000-0000-0000-000000000200', 'nour.customer@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Nour', '2025-01-01T00:00:00Z', '+213560000200', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000201', 'saad.customer@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Saad Kader', '2025-01-01T00:00:00Z', '+213560000201', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000202', 'lyna.customer2@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Lyna B.', '2025-01-01T00:00:00Z', '+213560000202', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000203', 'amina.moderator@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Amina', '2025-01-01T00:00:00Z', '+213560000203', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000204', 'kader.moderator@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Kader Moderator', '2025-01-01T00:00:00Z', '+213560000204', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000205', 'yassine.agent@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Yassine Agent', '2025-01-01T00:00:00Z', '+213560000205', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000206', 'youcef.agent@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Youcef Agent', '2025-01-01T00:00:00Z', '+213560000206', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000207', 'karim.artisan@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Karim', '2025-01-01T00:00:00Z', '+213560000207', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000208', 'sarah.artisan@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Sarah', '2025-01-01T00:00:00Z', '+213560000208', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000209', 'oussama.artisan2@example.test', '$2a$12$NQsAT76BPVFvuz/4nUT2QO.WezqW96ahPazYygd9.uhWqrKJ05Dke', 'ACTIVE', 'Oussama K.', '2025-01-01T00:00:00Z', '+213560000209', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000200', 'nour.customer@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Nour', '2025-01-01T00:00:00Z', '+213560000200', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000201', 'saad.customer@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Saad Kader', '2025-01-01T00:00:00Z', '+213560000201', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000202', 'lyna.customer2@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Lyna B.', '2025-01-01T00:00:00Z', '+213560000202', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000203', 'amina.moderator@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Amina', '2025-01-01T00:00:00Z', '+213560000203', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000204', 'kader.moderator@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Kader Moderator', '2025-01-01T00:00:00Z', '+213560000204', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000205', 'yassine.agent@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Yassine Agent', '2025-01-01T00:00:00Z', '+213560000205', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000206', 'youcef.agent@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Youcef Agent', '2025-01-01T00:00:00Z', '+213560000206', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000207', 'karim.artisan@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Karim', '2025-01-01T00:00:00Z', '+213560000207', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000208', 'sarah.artisan@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Sarah', '2025-01-01T00:00:00Z', '+213560000208', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000209', 'oussama.artisan2@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Oussama K.', '2025-01-01T00:00:00Z', '+213560000209', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email, display_name = EXCLUDED.display_name, phone = EXCLUDED.phone,
     status = EXCLUDED.status, password_hash = EXCLUDED.password_hash;
@@ -532,7 +532,7 @@ ON CONFLICT (reference_key) DO NOTHING;
 -- The bcrypt hash below is for the development-only password supplied out of
 -- band. Do not reuse it outside local development.
 -- Counts represented by this block: 7 approved artisans, 3 moderators,
--- 2 warehouse agents, 10 customers, 20 orders, and 5 submitted applications.
+-- 2 warehouse agents, 20 customers, 20 orders, and 5 submitted applications.
 
 -- Keep exactly two users assigned to the warehouse-agent role in this fixture.
 DELETE FROM user_roles
@@ -544,15 +544,15 @@ DELETE FROM sessions WHERE user_id IN ('90000000-0000-0000-0000-000000000002', '
 DELETE FROM users WHERE id IN ('90000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000003');
 
 INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
-    ('90000000-0000-0000-0000-000000000210', 'yacine.belkacem@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Yacine Belkacem', '2025-01-01T00:00:00Z', '+213560000210', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000211', 'meriem.saidi@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Meriem Saidi', '2025-01-01T00:00:00Z', '+213560000211', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000212', 'walid.amrani@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Walid Amrani', '2025-01-01T00:00:00Z', '+213560000212', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000213', 'amel.benali@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Amel Benali', '2025-01-01T00:00:00Z', '+213560000213', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000214', 'sofiane.haddad@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Sofiane Haddad', '2025-01-01T00:00:00Z', '+213560000214', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000215', 'ines.touati@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Ines Touati', '2025-01-01T00:00:00Z', '+213560000215', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000216', 'rachid.meziane@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Rachid Meziane', '2025-01-01T00:00:00Z', '+213560000216', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000217', 'lina.boudiaf@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Lina Boudiaf', '2025-01-01T00:00:00Z', '+213560000217', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000218', 'farid.cherif@example.test', '$2a$12$NeiBLeftB6nO684/gyPqlutzCffPZ9hSKhXKHPwd0n3JlkYdqqp6e', 'ACTIVE', 'Farid Cherif', '2025-01-01T00:00:00Z', '+213560000218', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000210', 'yacine.belkacem@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Yacine Belkacem', '2025-01-01T00:00:00Z', '+213560000210', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000211', 'meriem.saidi@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Meriem Saidi', '2025-01-01T00:00:00Z', '+213560000211', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000212', 'walid.amrani@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Walid Amrani', '2025-01-01T00:00:00Z', '+213560000212', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000213', 'amel.benali@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Amel Benali', '2025-01-01T00:00:00Z', '+213560000213', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000214', 'sofiane.haddad@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Sofiane Haddad', '2025-01-01T00:00:00Z', '+213560000214', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000215', 'ines.touati@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Ines Touati', '2025-01-01T00:00:00Z', '+213560000215', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000216', 'rachid.meziane@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Rachid Meziane', '2025-01-01T00:00:00Z', '+213560000216', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000217', 'lina.boudiaf@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Lina Boudiaf', '2025-01-01T00:00:00Z', '+213560000217', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000218', 'farid.cherif@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Farid Cherif', '2025-01-01T00:00:00Z', '+213560000218', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email, password_hash = EXCLUDED.password_hash,
     display_name = EXCLUDED.display_name, phone = EXCLUDED.phone,
@@ -568,6 +568,37 @@ INSERT INTO user_roles (user_id, role_id, assigned_by_user_id, assigned_at) VALU
     ('90000000-0000-0000-0000-000000000216', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
     ('90000000-0000-0000-0000-000000000217', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
     ('90000000-0000-0000-0000-000000000218', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z')
+ON CONFLICT DO NOTHING;
+
+-- Ten additional customer accounts keep catalogue, checkout, and notification
+-- flows populated with a broader set of realistic development users.
+INSERT INTO users (id, email, password_hash, status, display_name, email_verified_at, phone, created_at, updated_at) VALUES
+    ('90000000-0000-0000-0000-000000000280', 'nadia.bensaid@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Nadia Bensaid', '2025-01-01T00:00:00Z', '+213560000280', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000281', 'rayan.mansouri@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Rayan Mansouri', '2025-01-01T00:00:00Z', '+213560000281', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000282', 'sabrina.kaci@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Sabrina Kaci', '2025-01-01T00:00:00Z', '+213560000282', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000283', 'mehdi.aitsaid@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Mehdi Ait Said', '2025-01-01T00:00:00Z', '+213560000283', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000284', 'selma.ferhat@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Selma Ferhat', '2025-01-01T00:00:00Z', '+213560000284', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000285', 'amine.cheriet@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Amine Cheriet', '2025-01-01T00:00:00Z', '+213560000285', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000286', 'kahina.brahimi@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Kahina Brahimi', '2025-01-01T00:00:00Z', '+213560000286', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000287', 'imad.boualem@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Imad Boualem', '2025-01-01T00:00:00Z', '+213560000287', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000288', 'yasmine.touati@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Yasmine Touati', '2025-01-01T00:00:00Z', '+213560000288', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000289', 'mourad.belhadj@example.test', '$2a$12$4dZdCbYMX/22IXJcDuP.EOO6K6bl44Ww.T68UmzDRmiwgi.nPSyuK', 'ACTIVE', 'Mourad Belhadj', '2025-01-01T00:00:00Z', '+213560000289', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email, password_hash = EXCLUDED.password_hash,
+    display_name = EXCLUDED.display_name, phone = EXCLUDED.phone,
+    status = EXCLUDED.status, updated_at = EXCLUDED.updated_at;
+
+INSERT INTO user_roles (user_id, role_id, assigned_by_user_id, assigned_at) VALUES
+    ('90000000-0000-0000-0000-000000000280', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000281', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000282', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000283', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000284', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000285', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000286', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000287', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000288', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000289', '10000000-0000-0000-0000-000000000002', '90000000-0000-0000-0000-000000000001', '2025-01-01T00:00:00Z')
 ON CONFLICT DO NOTHING;
 
 -- Three more approved artisans bring the approved artisan directory to seven.
@@ -690,7 +721,7 @@ WITH seed_catalog(product_id, workshop_id, artisan_profile_id, category_id, pric
     ('90000000-0000-0000-0000-000000000405'::uuid, '90000000-0000-0000-0000-000000000230'::uuid, '90000000-0000-0000-0000-000000000220'::uuid, '20000000-0000-0000-0000-000000000010'::uuid, 9800, 22, 'Leather card wallet', 'Porte-cartes en cuir', 'محفظة بطاقات جلدية', 'Cartera de tarjetas de cuero', '/images/aisha/jewee.jpg'),
     ('90000000-0000-0000-0000-000000000406'::uuid, '90000000-0000-0000-0000-000000000231'::uuid, '90000000-0000-0000-0000-000000000221'::uuid, '20000000-0000-0000-0000-000000000005'::uuid, 33500, 8, 'Oran wool wall hanging', 'Tissage mural en laine d Oran', 'نسيج جداري من صوف وهران', 'Tapiz mural de lana de Orán', '/images/aisha/C3.png'),
     ('90000000-0000-0000-0000-000000000407'::uuid, '90000000-0000-0000-0000-000000000232'::uuid, '90000000-0000-0000-0000-000000000222'::uuid, '20000000-0000-0000-0000-000000000009'::uuid, 5200, 35, 'Béjaïa keepsake magnet', 'Aimant souvenir de Béjaïa', 'مغناطيس تذكاري من بجاية', 'Imán recuerdo de Béjaïa', '/images/aisha/C1.jpg'),
-    ('90000000-0000-0000-0000-000000000408'::uuid, '90000000-0000-0000-0000-000000000233'::uuid, '90000000-0000-0000-0000-000000000223'::uuid, '20000000-0000-0000-0000-000000000011'::uuid, 14600, 11, 'Hand-thrown serving dish', 'Plat de service tourné à la main', 'طبق تقديم مشغول يدوياً', 'Fuente de servir torneada a mano', '/images/aisha/C3.png'),
+    ('90000000-0000-0000-0000-000000000408'::uuid, '90000000-0000-0000-0000-000000000233'::uuid, '90000000-0000-0000-0000-000000000223'::uuid, '20000000-0000-0000-0000-000000000011'::uuid, 14600, 11, 'Hand-thrown serving dish', 'Plat de service tourné à la main', 'طبق تقديم مشغول يدوياً', 'Fuente de servir torneada a mano', '/images/aisha/Screenshot 2025-01-09 001747.png'),
     ('90000000-0000-0000-0000-000000000409'::uuid, '90000000-0000-0000-0000-000000000234'::uuid, '90000000-0000-0000-0000-000000000224'::uuid, '20000000-0000-0000-0000-000000000012'::uuid, 17500, 13, 'Festive embroidered pouch', 'Pochette brodée de fête', 'حقيبة صغيرة مطرزة للمناسبات', 'Bolsa bordada festiva', '/images/aisha/CP1.jpg'),
     ('90000000-0000-0000-0000-000000000410'::uuid, '90000000-0000-0000-0000-000000000235'::uuid, '90000000-0000-0000-0000-000000000225'::uuid, '20000000-0000-0000-0000-000000000006'::uuid, 8300, 26, 'Tlemcen blue glass', 'Verre bleu de Tlemcen', 'كأس زجاجي أزرق من تلمسان', 'Vaso de vidrio azul de Tremecén', '/images/aisha/D1.jpg'),
     ('90000000-0000-0000-0000-000000000411'::uuid, '90000000-0000-0000-0000-000000000236'::uuid, '90000000-0000-0000-0000-000000000223'::uuid, '20000000-0000-0000-0000-000000000008'::uuid, 18900, 7, 'Ceramic frame drum', 'Tambour sur cadre en céramique', 'طبل إطار خزفي', 'Tambor de marco de cerámica', '/images/aisha/B2.jpg'),
@@ -809,6 +840,19 @@ INSERT INTO addresses (id, user_id, full_name, phone, line1, city, postal_code, 
     ('90000000-0000-0000-0000-000000000707', '90000000-0000-0000-0000-000000000216', 'Rachid Meziane', '+213560000216', '10 Rue de la Casbah', 'Béjaïa', '06000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
     ('90000000-0000-0000-0000-000000000708', '90000000-0000-0000-0000-000000000217', 'Lina Boudiaf', '+213560000217', '19 Rue des Jardins', 'Djelfa', '17000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
     ('90000000-0000-0000-0000-000000000709', '90000000-0000-0000-0000-000000000218', 'Farid Cherif', '+213560000218', '2 Rue Ibn Khaldoun', 'Blida', '09000', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
+ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name, phone = EXCLUDED.phone, line1 = EXCLUDED.line1, city = EXCLUDED.city, postal_code = EXCLUDED.postal_code, country = EXCLUDED.country, is_default = EXCLUDED.is_default, updated_at = EXCLUDED.updated_at;
+
+INSERT INTO addresses (id, user_id, full_name, phone, line1, city, postal_code, country, is_default, created_at, updated_at) VALUES
+    ('90000000-0000-0000-0000-000000000710', '90000000-0000-0000-0000-000000000280', 'Nadia Bensaid', '+213560000280', '6 Rue des Oliviers', 'Algiers', '16030', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000711', '90000000-0000-0000-0000-000000000281', 'Rayan Mansouri', '+213560000281', '18 Rue de la Gare', 'Oran', '31010', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000712', '90000000-0000-0000-0000-000000000282', 'Sabrina Kaci', '+213560000282', '4 Rue des Amandiers', 'Béjaïa', '06020', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000713', '90000000-0000-0000-0000-000000000283', 'Mehdi Ait Said', '+213560000283', '9 Rue des Aurès', 'Batna', '05020', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000714', '90000000-0000-0000-0000-000000000284', 'Selma Ferhat', '+213560000284', '27 Rue Ibn Sina', 'Sétif', '19020', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000715', '90000000-0000-0000-0000-000000000285', 'Amine Cheriet', '+213560000285', '11 Rue de la République', 'Tlemcen', '13020', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000716', '90000000-0000-0000-0000-000000000286', 'Kahina Brahimi', '+213560000286', '3 Rue des Jardins', 'Blida', '09020', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000717', '90000000-0000-0000-0000-000000000287', 'Imad Boualem', '+213560000287', '15 Rue de la Mosquée', 'Constantine', '25020', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000718', '90000000-0000-0000-0000-000000000288', 'Yasmine Touati', '+213560000288', '22 Rue des Palmiers', 'Médéa', '26020', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000719', '90000000-0000-0000-0000-000000000289', 'Mourad Belhadj', '+213560000289', '7 Rue de la Casbah', 'Biskra', '07020', 'Algeria', true, '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')
 ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name, phone = EXCLUDED.phone, line1 = EXCLUDED.line1, city = EXCLUDED.city, postal_code = EXCLUDED.postal_code, country = EXCLUDED.country, is_default = EXCLUDED.is_default, updated_at = EXCLUDED.updated_at;
 
 -- Twenty realistic orders distributed across the ten customer accounts.

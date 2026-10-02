@@ -446,7 +446,7 @@ func (r *PostgresRepository) ConfirmPayment(ctx context.Context, userID, payment
 	if _, err = tx.Exec(ctx, `UPDATE payment_attempts SET provider='manual',provider_reference=$2,status='CONFIRMED',failure_reason=NULL WHERE id=$1`, paymentID, providerReference); err != nil {
 		return domain.Order{}, err
 	}
-	if _, err = tx.Exec(ctx, `UPDATE stock_reservations SET status='COMMITTED' WHERE order_id=$1 AND status='HELD'`, orderID); err != nil {
+	if _, err = tx.Exec(ctx, `UPDATE stock_reservations SET status='COMMITTED',committed_at=CURRENT_TIMESTAMP WHERE order_id=$1 AND status='HELD'`, orderID); err != nil {
 		return domain.Order{}, err
 	}
 	if _, err = tx.Exec(ctx, `UPDATE orders SET status='PAID',updated_at=CURRENT_TIMESTAMP WHERE id=$1`, orderID); err != nil {

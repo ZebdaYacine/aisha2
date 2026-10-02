@@ -40,6 +40,7 @@ describe("StorefrontHeader", () => {
   it("switches language without leaving the current route", () => {
     renderHeader("en");
     fireEvent.focus(screen.getByRole("combobox", { name: "Language" }));
+    expect(screen.getByRole("button", { name: "🇫🇷 FR" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /🇫🇷 FR/ }));
     expect(mockReplace).toHaveBeenCalledWith("/fr/products/kabyle-brooch?sort=newest#story");
   });

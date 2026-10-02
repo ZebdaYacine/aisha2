@@ -8,6 +8,7 @@ export function ProductGallery({ images, alt, previous, next, zoomLabel = alt, c
   const [index, setIndex] = useState(0);
   const [zoom, setZoom] = useState(false);
   const [zoomed, setZoomed] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const [origin, setOrigin] = useState("50% 50%");
   const move = (delta: number) => setIndex((current) => (current + delta + images.length) % images.length);
   const trackPointer = (event: PointerEvent<HTMLDivElement>) => {
@@ -15,10 +16,11 @@ export function ProductGallery({ images, alt, previous, next, zoomLabel = alt, c
     const x = bounds.width ? Math.min(100, Math.max(0, ((event.clientX - bounds.left) / bounds.width) * 100)) : 50;
     const y = bounds.height ? Math.min(100, Math.max(0, ((event.clientY - bounds.top) / bounds.height) * 100)) : 50;
     setOrigin(`${x}% ${y}%`);
+    if (event.pointerType === "mouse") setHovered(true);
   };
   return <div>
-    <div className="gallery-media bg-muted">
-      <Image src={images[index]} alt={`${alt} ${index + 1}`} fill priority sizes="(max-width:1024px) 100vw,60vw" className="pointer-events-none object-cover" />
+    <div className="gallery-media bg-muted" onPointerMove={trackPointer} onPointerLeave={() => setHovered(false)}>
+      <Image src={images[index]} alt={`${alt} ${index + 1}`} fill priority sizes="(max-width:1024px) 100vw,60vw" className="pointer-events-none object-cover transition-transform duration-200 ease-out" style={{ transformOrigin: origin, transform: hovered ? "scale(1.35)" : undefined }} />
       <button onClick={() => setZoom(true)} className="absolute end-3 top-3 z-10 grid size-11 place-items-center bg-background" aria-label={zoomLabel}><Expand aria-hidden="true" size={18} /></button>
       {images.length > 1 && <><button onClick={() => move(-1)} aria-label={previous} className="absolute start-3 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center bg-background"><ChevronLeft className="rtl:-scale-x-100" /></button><button onClick={() => move(1)} aria-label={next} className="absolute end-3 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center bg-background"><ChevronRight className="rtl:-scale-x-100" /></button></>}
     </div>

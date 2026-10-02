@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -28,18 +29,24 @@ var (
 	ErrEmailExists        = domain.ErrEmailExists
 	ErrInvalidToken       = domain.ErrInvalidToken
 	ErrUserInactive       = domain.ErrUserInactive
+	ErrEmailUnverified    = domain.ErrEmailUnverified
 	ErrValidation         = domain.ErrValidation
 )
 
 type Service struct {
-	repo     Repository
-	notifier ResetNotifier
-	secret   []byte
-	now      func() time.Time
+	repo       Repository
+	notifier   ResetNotifier
+	secret     []byte
+	now        func() time.Time
+	webBaseURL string
 }
 
-func NewService(repo Repository, notifier ResetNotifier, secret string) *Service {
-	return &Service{repo: repo, notifier: notifier, secret: []byte(secret), now: func() time.Time { return time.Now().UTC() }}
+func NewService(repo Repository, notifier ResetNotifier, secret string, webBaseURLs ...string) *Service {
+	webBaseURL := "http://localhost:3033"
+	if len(webBaseURLs) > 0 && strings.TrimSpace(webBaseURLs[0]) != "" {
+		webBaseURL = strings.TrimRight(strings.TrimSpace(webBaseURLs[0]), "/")
+	}
+	return &Service{repo: repo, notifier: notifier, secret: []byte(secret), now: func() time.Time { return time.Now().UTC() }, webBaseURL: webBaseURL}
 }
 
 func (s *Service) Register(ctx context.Context, email, password, name string) (User, Tokens, error) {
@@ -51,12 +58,39 @@ func (s *Service) Register(ctx context.Context, email, password, name string) (U
 	if err != nil {
 		return User{}, Tokens{}, fmt.Errorf("hash password: %w", err)
 	}
-	user, err := s.repo.CreateUser(ctx, email, string(hash), strings.TrimSpace(name))
+	verificationToken, verificationHash, err := randomToken()
+	if err != nil {
+		return User{}, Tokens{}, fmt.Errorf("create email verification token: %w", err)
+	}
+	activationURL := s.webBaseURL + "/en/activate?token=" + url.QueryEscape(verificationToken)
+	user, err := s.repo.CreateUser(ctx, email, string(hash), strings.TrimSpace(name), verificationHash, activationURL)
 	if err != nil {
 		return User{}, Tokens{}, fmt.Errorf("create user: %w", err)
 	}
 	tokens, err := s.newSession(ctx, user.ID, uuid.NewString())
 	return user, tokens, err
+}
+
+func (s *Service) ActivateEmail(ctx context.Context, token string) (User, Tokens, error) {
+	if strings.TrimSpace(token) == "" {
+		return User{}, Tokens{}, ErrInvalidToken
+	}
+	userID, err := s.repo.ConsumeEmailVerification(ctx, hashToken(token), s.now())
+	if err != nil {
+		return User{}, Tokens{}, fmt.Errorf("consume email verification: %w", err)
+	}
+	user, err := s.repo.UserByID(ctx, userID)
+	if err != nil {
+		return User{}, Tokens{}, ErrInvalidToken
+	}
+	if user.Status != "ACTIVE" {
+		return User{}, Tokens{}, ErrUserInactive
+	}
+	tokens, err := s.newSession(ctx, user.ID, uuid.NewString())
+	if err != nil {
+		return User{}, Tokens{}, err
+	}
+	return user, tokens, nil
 }
 func (s *Service) Login(ctx context.Context, identifier, password string) (User, Tokens, error) {
 	identifier = strings.TrimSpace(identifier)
@@ -69,6 +103,9 @@ func (s *Service) Login(ctx context.Context, identifier, password string) (User,
 	}
 	if user.Status != "ACTIVE" {
 		return User{}, Tokens{}, ErrUserInactive
+	}
+	if user.Email != "" && user.EmailVerifiedAt == nil {
+		return User{}, Tokens{}, ErrEmailUnverified
 	}
 	tokens, err := s.newSession(ctx, user.ID, uuid.NewString())
 	return user, tokens, err
@@ -125,6 +162,9 @@ func (s *Service) Authenticate(ctx context.Context, access string) (Principal, e
 	}
 	if user.Status != "ACTIVE" {
 		return Principal{}, ErrUserInactive
+	}
+	if user.Email != "" && user.EmailVerifiedAt == nil {
+		return Principal{}, ErrEmailUnverified
 	}
 	return Principal{UserID: user.ID, Roles: user.Roles}, nil
 }

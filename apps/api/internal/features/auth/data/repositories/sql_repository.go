@@ -28,14 +28,14 @@ func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 
-func (r *PostgresRepository) CreateUser(ctx context.Context, email, passwordHash, name string) (User, error) {
+func (r *PostgresRepository) CreateUser(ctx context.Context, email, passwordHash, name, verificationHash, activationURL string) (User, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return User{}, fmt.Errorf("begin create user: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	var user User
-	err = tx.QueryRow(ctx, `INSERT INTO users(email,password_hash,display_name) VALUES($1,$2,$3) RETURNING id,email,password_hash,display_name,status,created_at`, email, passwordHash, name).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.DisplayName, &user.Status, &user.CreatedAt)
+	err = tx.QueryRow(ctx, `INSERT INTO users(email,password_hash,display_name) VALUES($1,$2,$3) RETURNING id,email,password_hash,display_name,status,email_verified_at,created_at`, email, passwordHash, name).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.DisplayName, &user.Status, &user.EmailVerifiedAt, &user.CreatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -45,6 +45,15 @@ func (r *PostgresRepository) CreateUser(ctx context.Context, email, passwordHash
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO user_roles(user_id,role_id) SELECT $1,id FROM roles WHERE code='customer'`, user.ID); err != nil {
 		return User{}, fmt.Errorf("assign customer role: %w", err)
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO email_verification_tokens(user_id,token_hash,expires_at) VALUES($1,$2,CURRENT_TIMESTAMP + INTERVAL '24 hours')`, user.ID, verificationHash); err != nil {
+		return User{}, fmt.Errorf("store email verification token: %w", err)
+	}
+	// Keep the aggregate id parameter consistently typed as UUID. Reusing the
+	// same placeholder as both UUID and text makes PostgreSQL reject the
+	// statement with SQLSTATE 42P08 before the registration can commit.
+	if _, err = tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES('USER_REGISTERED','user',$1::uuid,jsonb_build_object('userId',$1::uuid,'email',$2::text,'activationUrl',$3::text))`, user.ID, user.Email, activationURL); err != nil {
+		return User{}, fmt.Errorf("write registration notification: %w", err)
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return User{}, fmt.Errorf("commit create user: %w", err)
@@ -73,7 +82,7 @@ func (r *PostgresRepository) UserByID(ctx context.Context, id string) (User, err
 }
 func (r *PostgresRepository) user(ctx context.Context, where, arg string) (User, error) {
 	var user User
-	err := r.pool.QueryRow(ctx, `SELECT u.id,u.email,COALESCE(u.phone,''),u.password_hash,u.display_name,u.status,u.created_at,COALESCE(array_agg(r.code) FILTER(WHERE r.code IS NOT NULL),'{}') FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id `+where+` GROUP BY u.id`, arg).Scan(&user.ID, &user.Email, &user.Phone, &user.PasswordHash, &user.DisplayName, &user.Status, &user.CreatedAt, &user.Roles)
+	err := r.pool.QueryRow(ctx, `SELECT u.id,u.email,COALESCE(u.phone,''),u.password_hash,u.display_name,u.status,u.email_verified_at,u.created_at,COALESCE(array_agg(r.code) FILTER(WHERE r.code IS NOT NULL),'{}') FROM users u LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id `+where+` GROUP BY u.id`, arg).Scan(&user.ID, &user.Email, &user.Phone, &user.PasswordHash, &user.DisplayName, &user.Status, &user.EmailVerifiedAt, &user.CreatedAt, &user.Roles)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return User{}, ErrInvalidCredentials
 	}
@@ -159,6 +168,28 @@ func (r *PostgresRepository) SessionActive(ctx context.Context, sessionID string
 func (r *PostgresRepository) StorePasswordReset(ctx context.Context, userID, tokenHash string, expires time.Time) error {
 	_, err := r.pool.Exec(ctx, `INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) VALUES($1,$2,$3)`, userID, tokenHash, expires)
 	return err
+}
+func (r *PostgresRepository) ConsumeEmailVerification(ctx context.Context, tokenHash string, now time.Time) (string, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var userID string
+	err = tx.QueryRow(ctx, `UPDATE email_verification_tokens SET consumed_at=$2 WHERE token_hash=$1 AND consumed_at IS NULL AND expires_at>$2 RETURNING user_id`, tokenHash, now).Scan(&userID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrInvalidToken
+	}
+	if err != nil {
+		return "", err
+	}
+	if _, err = tx.Exec(ctx, `UPDATE users SET email_verified_at=COALESCE(email_verified_at,$2),updated_at=$2 WHERE id=$1`, userID, now); err != nil {
+		return "", err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return "", err
+	}
+	return userID, nil
 }
 func (r *PostgresRepository) UpdatePassword(ctx context.Context, userID, passwordHash string, now time.Time) error {
 	tx, err := r.pool.Begin(ctx)

@@ -58,8 +58,8 @@ MinIO data must be preserved.
 
 ## Local demo accounts
 
-The development seed creates 23 Algerian demo accounts: 7 artisans, 3
-moderators, 2 warehouse agents, 10 customers, and 1 administrator. It also
+The development seed creates 33 Algerian demo accounts: 7 artisans, 3
+moderators, 2 warehouse agents, 20 customers, and 1 administrator. It also
 creates 10 public workshops and 30 active products distributed across all 12
 seeded categories, with translated product copy, public media, and accepted
 development stock. The seed stores only bcrypt hashes; provide the shared

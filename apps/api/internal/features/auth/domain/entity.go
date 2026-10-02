@@ -11,18 +11,20 @@ var (
 	ErrEmailExists        = errors.New("email already exists")
 	ErrInvalidToken       = errors.New("invalid token")
 	ErrUserInactive       = errors.New("user is inactive")
+	ErrEmailUnverified    = errors.New("email is not verified")
 	ErrValidation         = errors.New("validation error")
 )
 
 type User struct {
-	ID           string
-	Email        string
-	Phone        string
-	PasswordHash string
-	DisplayName  string
-	Status       string
-	Roles        []string
-	CreatedAt    time.Time
+	ID              string
+	Email           string
+	Phone           string
+	PasswordHash    string
+	DisplayName     string
+	Status          string
+	Roles           []string
+	CreatedAt       time.Time
+	EmailVerifiedAt *time.Time
 }
 
 type Session struct {
@@ -34,7 +36,7 @@ type Session struct {
 }
 
 type Repository interface {
-	CreateUser(context.Context, string, string, string) (User, error)
+	CreateUser(context.Context, string, string, string, string, string) (User, error)
 	UserByEmail(context.Context, string) (User, error)
 	UserByIdentifier(context.Context, string) (User, error)
 	UserByID(context.Context, string) (User, error)
@@ -43,6 +45,7 @@ type Repository interface {
 	RevokeSession(context.Context, string) error
 	SessionActive(context.Context, string, time.Time) (bool, error)
 	StorePasswordReset(context.Context, string, string, time.Time) error
+	ConsumeEmailVerification(context.Context, string, time.Time) (string, error)
 	ResetPassword(context.Context, string, string, time.Time) error
 	UpdatePassword(context.Context, string, string, time.Time) error
 }

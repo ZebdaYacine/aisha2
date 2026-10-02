@@ -106,7 +106,7 @@ func TestWorkerSendsTransactionalEmailForDeliveredNotification(t *testing.T) {
 			RecipientEmail:  "nour@example.test",
 			RecipientName:   "Nour",
 			EventType:       "ORDER_CHECKOUT_CREATED",
-			Payload:         []byte(`{"orderNumber":"AIS-123"}`),
+			Payload:         []byte(`{"orderNumber":"AIS-123","userId":"internal-user-uuid"}`),
 		}},
 	}
 	mailer := &workerMailer{}
@@ -122,5 +122,49 @@ func TestWorkerSendsTransactionalEmailForDeliveredNotification(t *testing.T) {
 	}
 	if !strings.Contains(mailer.body, "Hello Nour") || !strings.Contains(mailer.body, "AIS-123") {
 		t.Fatalf("body = %q", mailer.body)
+	}
+	if !strings.Contains(mailer.body, "<style>") || strings.Contains(mailer.body, "userId") || strings.Contains(mailer.body, "internal-user-uuid") {
+		t.Fatalf("email contains unsafe or unstyled details: %q", mailer.body)
+	}
+}
+
+func TestWorkerRetriesOutboxWhenEmailDeliveryFails(t *testing.T) {
+	repository := &workerRepository{
+		events: []domain.OutboxEvent{{ID: "event-email-failure", AttemptCount: 1}},
+		items: []domain.Notification{{
+			RecipientUserID: "user-1",
+			RecipientEmail:  "nour@example.test",
+			EventType:       "PAYMENT_FAILED",
+		}},
+	}
+	mailer := &workerMailer{err: errors.New("smtp unavailable")}
+	worker := NewWorker(repository, nil, time.Second, nil, mailer)
+
+	worker.tick(context.Background())
+
+	if len(repository.failed) != 1 || repository.failed[0] != "event-email-failure" {
+		t.Fatalf("failed = %#v", repository.failed)
+	}
+	if len(repository.processed) != 0 {
+		t.Fatalf("event was processed despite email failure: %#v", repository.processed)
+	}
+}
+
+func TestWorkerEmailUsesRegistrationActivationLink(t *testing.T) {
+	repository := &workerRepository{
+		events: []domain.OutboxEvent{{ID: "event-registration", AttemptCount: 1}},
+		items: []domain.Notification{{
+			RecipientUserID: "user-1",
+			RecipientEmail:  "nour@example.test",
+			RecipientName:   "Nour",
+			EventType:       "USER_REGISTERED",
+			Payload:         []byte(`{"activationUrl":"https://aisha.example/en/activate?token=raw-token"}`),
+		}},
+	}
+	mailer := &workerMailer{}
+	NewWorker(repository, nil, time.Second, nil, mailer).tick(context.Background())
+
+	if !strings.Contains(mailer.body, `href="https://aisha.example/en/activate?token=raw-token"`) || !strings.Contains(mailer.body, "Activate your AISHA account") {
+		t.Fatalf("activation link missing from email: %q", mailer.body)
 	}
 }

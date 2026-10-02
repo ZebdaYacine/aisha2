@@ -59,6 +59,12 @@ const statusOptions: ProductStatus[] = [
 ];
 
 export function ProductModeration({ locale = "en" }: { locale?: Locale }) {
+  const reasonPlaceholder = {
+    en: "Required for changes, rejection, and suspension",
+    fr: "Obligatoire pour une modification, un rejet ou une suspension",
+    ar: "مطلوب للتعديل أو الرفض أو التعليق",
+    es: "Obligatorio para cambios, rechazo o suspensión",
+  }[locale];
   const [items, setItems] = useState<Item[]>([]);
   const [selected, setSelected] = useState<Item | null>(null);
   useEscapeKey(() => setSelected(null), selected !== null);
@@ -321,7 +327,7 @@ export function ProductModeration({ locale = "en" }: { locale?: Locale }) {
                     className="auth-input min-h-24"
                     value={reason}
                     onChange={(event) => setReason(event.target.value)}
-                    placeholder="Required for changes, rejection, and suspension"
+                    placeholder={reasonPlaceholder}
                   />
                 </label>
                 <div className="mt-5 flex flex-wrap gap-2">

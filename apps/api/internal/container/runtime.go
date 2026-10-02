@@ -68,7 +68,7 @@ func NewRuntime(ctx context.Context, cfg config.Config) (*Runtime, error) {
 	)
 	authRepository := auth.NewPostgresRepository(pool)
 	resetNotifier := auth.NewOutboxResetNotifier(pool)
-	authService := auth.NewService(authRepository, resetNotifier, cfg.AuthSigningKey)
+	authService := auth.NewService(authRepository, resetNotifier, cfg.AuthSigningKey, cfg.WebBaseURL)
 	authorizationService, err := authorization.New()
 	if err != nil {
 		_ = redisClient.Close()

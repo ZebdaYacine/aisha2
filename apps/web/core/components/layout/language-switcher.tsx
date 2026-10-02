@@ -7,6 +7,7 @@ import type { Locale, Messages } from "@/core/lib/i18n";
 import { locales } from "@/core/lib/i18n";
 
 const flags: Record<Locale, string> = { en: "🇬🇧", fr: "🇫🇷", ar: "🇩🇿", es: "🇪🇸" };
+const abbreviations: Record<Locale, string> = { en: "EN", fr: "FR", ar: "AR", es: "ES" };
 
 export function pathForLocale(pathname: string, nextLocale: Locale) {
   const segments = pathname.split("/");
@@ -18,7 +19,10 @@ export function pathForLocale(pathname: string, nextLocale: Locale) {
 export function LanguageSwitcher({ locale, messages, compact = false }: { locale: Locale; messages: Messages; compact?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
-  const options = locales.map((item) => ({ value: item, label: `${flags[item]} ${item.toUpperCase()} · ${messages.locales[item]}` }));
+  const options = locales.map((item) => ({
+    value: item,
+    label: `${flags[item]} ${abbreviations[item]}`,
+  }));
 
   const changeLocale = (next: string) => {
     if (!locales.includes(next as Locale)) return;
@@ -29,7 +33,7 @@ export function LanguageSwitcher({ locale, messages, compact = false }: { locale
   return (
     <Combobox
       key={locale}
-      className={compact ? "w-[4.75rem] sm:w-24" : "w-full max-w-52"}
+      className={compact ? "w-[4.75rem] sm:w-24" : "w-full max-w-28"}
       options={options}
       value={locale}
       ariaLabel={messages.languageLabel}

@@ -152,6 +152,9 @@ func (r *PostgresRepository) CreateUser(ctx context.Context, actor string, input
 	if err = replaceUserRoles(ctx, tx, id, assignedBy, input.Roles); err != nil {
 		return domain.User{}, err
 	}
+	if _, err = tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES('USER_REGISTERED','user',$1,jsonb_build_object('userId',$1::text,'source','administrator'))`, id); err != nil {
+		return domain.User{}, fmt.Errorf("write administrator-created user notification: %w", err)
+	}
 	if err = recordUserAudit(ctx, tx, actor, id, "ADMIN_USER_CREATED"); err != nil {
 		return domain.User{}, err
 	}
@@ -179,6 +182,9 @@ func (r *PostgresRepository) UpdateUser(ctx context.Context, actor, userID strin
 	}
 	if err = replaceUserRoles(ctx, tx, userID, actor, input.Roles); err != nil {
 		return domain.User{}, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES('USER_ACCOUNT_UPDATED','user',$1,jsonb_build_object('userId',$1::text,'source','administrator'))`, userID); err != nil {
+		return domain.User{}, fmt.Errorf("write administrator-updated user notification: %w", err)
 	}
 	if err = recordUserAudit(ctx, tx, actor, userID, "ADMIN_USER_UPDATED"); err != nil {
 		return domain.User{}, err

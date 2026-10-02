@@ -20,12 +20,14 @@ func TestPostgresAuthenticationLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	email := "auth-integration-" + uuid.NewString() + "@example.com"
 	service := NewService(NewPostgresRepository(pool), nil, "integration-test-signing-key-at-least-32-bytes")
 	user, tokens, err := service.Register(ctx, email, "initial-password-value", "Integration User")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE users SET email_verified_at=CURRENT_TIMESTAMP WHERE id=$1`, user.ID); err != nil {
+		t.Fatalf("verify integration user: %v", err)
 	}
 	t.Cleanup(func() {
 		defer pool.Close()

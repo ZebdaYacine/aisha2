@@ -66,6 +66,18 @@ const statuses: Array<"" | ReceptionStatus> = [
 ];
 
 export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
+  const text = {
+    artisanPhone: locale === "fr" ? "Téléphone de l’artisan" : locale === "ar" ? "هاتف الحرفي" : locale === "es" ? "Teléfono del artesano" : "Artisan phone",
+    phonePlaceholder: locale === "fr" ? "ex. 0550123456" : locale === "ar" ? "مثال: 0550123456" : locale === "es" ? "p. ej. 0550123456" : "e.g. 0550123456",
+    findProducts: locale === "fr" ? "Rechercher des produits" : locale === "ar" ? "البحث عن المنتجات" : locale === "es" ? "Buscar productos" : "Find products",
+    searching: locale === "fr" ? "Recherche…" : locale === "ar" ? "جارٍ البحث…" : locale === "es" ? "Buscando…" : "Searching…",
+    workshop: locale === "fr" ? "Atelier" : locale === "ar" ? "الورشة" : locale === "es" ? "Taller" : "Workshop",
+    selectWorkshop: locale === "fr" ? "Sélectionner un atelier" : locale === "ar" ? "اختر ورشة" : locale === "es" ? "Selecciona un taller" : "Select a workshop",
+    searchArtisanFirst: locale === "fr" ? "Recherchez d’abord un artisan" : locale === "ar" ? "ابحث عن حرفي أولاً" : locale === "es" ? "Busca primero un artesano" : "Search an artisan first",
+    productCode: locale === "fr" ? "Code ou nom du produit" : locale === "ar" ? "رمز المنتج أو اسمه" : locale === "es" ? "Código o nombre del producto" : "Product code or name",
+    selectProduct: locale === "fr" ? "Sélectionner un produit approuvé" : locale === "ar" ? "اختر منتجاً معتمداً" : locale === "es" ? "Selecciona un producto aprobado" : "Select an approved product",
+    selectWorkshopFirst: locale === "fr" ? "Sélectionnez d’abord un atelier" : locale === "ar" ? "اختر ورشة أولاً" : locale === "es" ? "Selecciona primero un taller" : "Select a workshop first",
+  };
   const [items, setItems] = useState<Reception[]>([]);
   const [selected, setSelected] = useState<Reception | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -391,24 +403,24 @@ export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
                 </div>
                 <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
                   <label className="block text-sm">
-                    <span className="mb-2 block">Artisan phone</span>
-                    <input className="auth-input w-full" type="tel" value={artisanPhone} placeholder="e.g. 0550123456" onChange={(event) => setArtisanPhone(event.target.value)} />
+                    <span className="mb-2 block">{text.artisanPhone}</span>
+                    <input className="auth-input w-full" type="tel" aria-label={text.artisanPhone} value={artisanPhone} placeholder={text.phonePlaceholder} onChange={(event) => setArtisanPhone(event.target.value)} />
                   </label>
                   <Button className="self-end" type="button" variant="outline" disabled={productsLoading || !artisanPhone.trim()} onClick={() => void loadValidatedProducts("")}>
-                    {productsLoading ? "Searching…" : "Find products"}
+                    {productsLoading ? text.searching : text.findProducts}
                   </Button>
                 </div>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <label className="block text-sm">
-                    <span className="mb-2 block">Workshop</span>
-                    <Combobox className="w-full" options={workshops} value={workshopId} onChange={(next) => { setWorkshopId(next); setCreateForm({ ...createForm, productCode: "" }); }} placeholder="Select a workshop" emptyMessage="Search an artisan first" ariaLabel="Workshop" disabled={!workshops.length} />
+                    <span className="mb-2 block">{text.workshop}</span>
+                    <Combobox className="w-full" options={workshops} value={workshopId} onChange={(next) => { setWorkshopId(next); setCreateForm({ ...createForm, productCode: "" }); }} placeholder={text.selectWorkshop} emptyMessage={text.searchArtisanFirst} ariaLabel={text.workshop} disabled={!workshops.length} />
                   </label>
                   <label className="block text-sm">
-                    <span className="mb-2 block">Product code or name</span>
+                    <span className="mb-2 block">{text.productCode}</span>
                     <Combobox className="w-full" options={productOptions} value={createForm.productCode} onChange={(next) => {
                       const product = validatedProducts.find((item) => item.productCode === next);
                       setCreateForm({ ...createForm, productCode: next, supplierName: product?.artisanName ?? createForm.supplierName });
-                    }} placeholder="Select an approved product" emptyMessage="Select a workshop first" ariaLabel="Product code or name" disabled={!productOptions.length} />
+                    }} placeholder={text.selectProduct} emptyMessage={text.selectWorkshopFirst} ariaLabel={text.productCode} disabled={!productOptions.length} />
                   </label>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">

@@ -14,5 +14,6 @@ var (
 	ErrEmailExists        = domain.ErrEmailExists
 	ErrInvalidToken       = domain.ErrInvalidToken
 	ErrUserInactive       = domain.ErrUserInactive
+	ErrEmailUnverified    = domain.ErrEmailUnverified
 	ErrValidation         = domain.ErrValidation
 )

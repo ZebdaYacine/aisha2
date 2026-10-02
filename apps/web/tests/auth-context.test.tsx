@@ -76,6 +76,8 @@ describe("authentication state", () => {
   });
 
   it("clears the local session when signing out", async () => {
+    window.localStorage.setItem("aisha-demo-cart", "cached-cart");
+    window.sessionStorage.setItem("temporary-form", "cached-form");
     const fetchMock = jest.fn().mockImplementation(async (input: RequestInfo | URL) => {
       return String(input).endsWith("/logout") ? jsonResponse(null, 204) : jsonResponse(user);
     });
@@ -103,6 +105,8 @@ describe("authentication state", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
 
     await waitFor(() => expect(screen.queryByText(user.displayName)).not.toBeInTheDocument());
+    expect(window.localStorage.getItem("aisha-demo-cart")).toBeNull();
+    expect(window.sessionStorage.getItem("temporary-form")).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", {
       method: "POST",
       credentials: "same-origin",

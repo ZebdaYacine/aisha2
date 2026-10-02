@@ -81,7 +81,7 @@ func TestDevelopmentSeedIsIdempotent(t *testing.T) {
 		{"approved artisans", `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE r.code='artisan'`, 7},
 		{"moderators", `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE r.code='moderator'`, 3},
 		{"warehouse agents", `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE r.code='warehouse_agent'`, 2},
-		{"customers", `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE r.code='customer'`, 10},
+		{"customers", `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE r.code='customer'`, 20},
 		{"development orders", `SELECT count(*) FROM orders WHERE order_number LIKE 'AISHA-DEV-%'`, 20},
 		{"submitted artisan applications", `SELECT count(*) FROM artisan_profiles WHERE status='SUBMITTED'`, 5},
 		{"development workshops", `SELECT count(*) FROM workshops`, 10},

@@ -30,6 +30,7 @@ type Config struct {
 	SMTPUser                string
 	SMTPPassword            string
 	SMTPFrom                string
+	WebBaseURL              string
 	UploadMaxBytes          int64
 	ProductMediaMaxBytes    int64
 	ArtisanDocumentMaxBytes int64
@@ -111,6 +112,7 @@ func Load() (Config, error) {
 		SMTPUser:                smtpUser,
 		SMTPPassword:            smtpPassword,
 		SMTPFrom:                smtpFrom,
+		WebBaseURL:              strings.TrimRight(env("WEB_BASE_URL", "http://localhost:3033"), "/"),
 		UploadMaxBytes:          uploadMaxBytes,
 		ProductMediaMaxBytes:    productMediaMaxBytes,
 		ArtisanDocumentMaxBytes: artisanDocumentMaxBytes,

@@ -130,8 +130,8 @@ export function AdminDashboardShell({
   if (hasCapability(user, "inventory.read")) links.push(["inventory", "/admin/inventory", text.inventory]);
   if (hasCapability(user, "admin.media.read")) links.push(["media", "/admin/media", text.media]);
   if (hasCapability(user, "admin.audit.read")) links.push(["audit", "/admin/audit", text.audit]);
-  if (hasCapability(user, "admin.users.write")) links.push(["categories", "/admin/categories", text.categories]);
-  if (hasCapability(user, "admin.users.read")) links.push(["orders", "/admin/orders", text.orders]);
+  if (hasCapability(user, "admin.categories.read")) links.push(["categories", "/admin/categories", text.categories]);
+  if (hasCapability(user, "admin.orders.read")) links.push(["orders", "/admin/orders", text.orders]);
   const signOut = async () => {
     if (loggingOut) return;
     setLoggingOut(true);

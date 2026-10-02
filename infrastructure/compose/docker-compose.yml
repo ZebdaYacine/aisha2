@@ -80,6 +80,7 @@ services:
       MINIO_ARTISAN_BUCKET: ${MINIO_ARTISAN_BUCKET:-artisan-private}
 
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3033,http://127.0.0.1:3033,http://167.86.79.16}
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:3033}
 
       AUTH_SIGNING_KEY: ${AUTH_SIGNING_KEY:-aisha-development-signing-key-change-me}
       AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-10}

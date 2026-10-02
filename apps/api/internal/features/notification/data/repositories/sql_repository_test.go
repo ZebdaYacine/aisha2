@@ -11,7 +11,9 @@ func TestWorkflowAudienceRoles(t *testing.T) {
 		{event: "PRODUCT_SUBMITTED", want: 2},
 		{event: "WAREHOUSE_RECEPTION_INSPECTED", want: 2},
 		{event: "ORDER_CHECKOUT_CREATED", want: 2},
+		{event: "PAYMENT_CONFIRMED", want: 2},
 		{event: "PRODUCT_MODERATION_DECIDED", want: 0},
+		{event: "USER_REGISTERED", want: 0},
 	}
 	for _, test := range tests {
 		if got := len(audienceRoles(test.event)); got != test.want {
@@ -34,5 +36,22 @@ func TestPaymentWorkflowEventsHaveTemplates(t *testing.T) {
 		if !ok || title == "" || body != "notifications.payment.body" {
 			t.Errorf("templateFor(%q) = %q, %q, %v", event, title, body, ok)
 		}
+	}
+}
+
+func TestAccountLifecycleEventsHaveTemplates(t *testing.T) {
+	for _, event := range []string{"USER_REGISTERED", "PASSWORD_RESET_REQUESTED"} {
+		title, body, ok := templateFor(event)
+		if !ok || title == "" || body != "notifications.account.body" {
+			t.Errorf("templateFor(%q) = %q, %q, %v", event, title, body, ok)
+		}
+	}
+	for _, event := range []string{"USER_ACCOUNT_UPDATED", "FUTURE_WORKFLOW_EVENT"} {
+		if _, _, ok := templateFor(event); !ok {
+			t.Fatalf("%s should use the generic notification template", event)
+		}
+	}
+	if _, _, ok := templateFor(""); ok {
+		t.Fatal("empty workflow event should not create a notification")
 	}
 }

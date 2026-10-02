@@ -237,6 +237,7 @@ Suggested migration sequence:
 
 ```text
 POST   /api/v1/auth/register
+GET    /api/v1/auth/activate?token=<single-use-token>
 POST   /api/v1/auth/login
 POST   /api/v1/auth/refresh
 POST   /api/v1/auth/logout
@@ -244,6 +245,12 @@ POST   /api/v1/auth/forgot-password
 POST   /api/v1/auth/reset-password
 GET    /api/v1/me
 ```
+
+Registration stores only a hash of the single-use email-verification token and
+publishes an outbox email containing the configured `WEB_BASE_URL` activation
+link. The activation endpoint consumes the token transactionally, marks the
+email as verified, creates a session, and lets the web page redirect the user
+to their account.
 
 ### Notifications
 
@@ -264,9 +271,14 @@ administrators for review queues, warehouse agents for stock transitions, and th
 customer/artisan/fulfilment participants of an order.
 
 When SMTP is configured, the same committed workflow notifications are sent to each
-recipient's account email through the transactional mail adapter. Hostinger's implicit
-TLS mode is used for port 465; delivery failures are logged without exposing SMTP
-credentials or blocking the in-app/WebSocket notification.
+recipient's account email through the transactional mail adapter. Registration,
+artisan application and moderation, payment, warehouse, inventory, order, account,
+and future workflow events use the same outbox path. Hostinger's implicit TLS mode
+is used for port 465; delivery failures are retried with backoff without exposing
+SMTP credentials. Email bodies are responsive HTML messages with inline-safe CSS,
+event summaries, and an allowlisted set of business details. Internal identifiers
+such as user, payment, product, workshop, actor, and aggregate IDs are excluded
+from email content; they remain available only to protected internal workflows.
 
 ### Public Catalogue
 
@@ -364,8 +376,12 @@ POST   /api/v1/webhooks/shipments/:provider
 
 The current MVP uses an internal manual development adapter. Payment
 confirmation never accepts card data and only succeeds when the locked
-server-side payment amount and order total match. A real provider/webhook
-adapter may be added later without changing the order contract.
+server-side payment amount and order total match. Confirmation commits held
+reservations with their committed timestamp, marks the order PAID, records a
+manual provider reference, and emits a PAYMENT_CONFIRMED outbox event for the
+customer plus warehouse/admin recipients. The notification worker delivers
+the in-app event and configured SMTP email; a real provider/webhook adapter
+may be added later without changing the order contract.
 ```
 
 ### Custom Orders

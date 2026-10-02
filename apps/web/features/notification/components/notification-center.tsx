@@ -76,6 +76,8 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.inventory.adjusted.title": "Inventory adjusted",
     "notifications.account.statusChanged.title": "Account status changed",
     "notifications.account.rolesChanged.title": "Account roles changed",
+    "notifications.account.registered.title": "Welcome to AISHA",
+    "notifications.account.passwordReset.title": "Password reset requested",
   },
   fr: {
     "notifications.artisanApplication.title": "Mise à jour de la demande artisan",
@@ -119,6 +121,8 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.inventory.adjusted.title": "Stock ajusté",
     "notifications.account.statusChanged.title": "Statut du compte modifié",
     "notifications.account.rolesChanged.title": "Rôles du compte modifiés",
+    "notifications.account.registered.title": "Bienvenue sur AISHA",
+    "notifications.account.passwordReset.title": "Réinitialisation du mot de passe demandée",
   },
   ar: {
     "notifications.artisanApplication.title": "تحديث طلب الحرفي",
@@ -162,6 +166,8 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.inventory.adjusted.title": "تم تعديل المخزون",
     "notifications.account.statusChanged.title": "تغيرت حالة الحساب",
     "notifications.account.rolesChanged.title": "تغيرت أدوار الحساب",
+    "notifications.account.registered.title": "مرحباً بك في AISHA",
+    "notifications.account.passwordReset.title": "تم طلب إعادة تعيين كلمة المرور",
   },
   es: {
     "notifications.artisanApplication.title": "Actualización de la solicitud artesanal",
@@ -205,6 +211,8 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.inventory.adjusted.title": "Inventario ajustado",
     "notifications.account.statusChanged.title": "Estado de la cuenta cambiado",
     "notifications.account.rolesChanged.title": "Roles de la cuenta cambiados",
+    "notifications.account.registered.title": "Te damos la bienvenida a AISHA",
+    "notifications.account.passwordReset.title": "Restablecimiento de contraseña solicitado",
   },
 };
 

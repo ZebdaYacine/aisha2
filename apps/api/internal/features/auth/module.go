@@ -8,8 +8,8 @@ import (
 
 type Service = application.Service
 
-func NewService(repository Repository, notifier ResetNotifier, secret string) *Service {
-	return application.NewService(repository, notifier, secret)
+func NewService(repository Repository, notifier ResetNotifier, secret string, webBaseURLs ...string) *Service {
+	return application.NewService(repository, notifier, secret, webBaseURLs...)
 }
 
 func Is(err, target error) bool { return errors.Is(err, target) }

@@ -16,6 +16,36 @@ type AuthContextValue = {
   logout: () => Promise<void>;
 };
 
+async function clearBrowserSession() {
+  try {
+    window.localStorage.clear();
+  } catch {
+    // Storage can be unavailable in privacy-restricted browsers.
+  }
+  try {
+    window.sessionStorage.clear();
+  } catch {
+    // Storage can be unavailable in privacy-restricted browsers.
+  }
+  try {
+    document.cookie.split(";").forEach((cookie) => {
+      const name = cookie.split("=")[0]?.trim();
+      if (name) document.cookie = `${name}=; Max-Age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+    });
+  } catch {
+    // HttpOnly cookies are cleared by the server logout route.
+  }
+  try {
+    if ("caches" in window) {
+      const cacheNames = await window.caches.keys();
+      await Promise.all(cacheNames.map((name) => window.caches.delete(name)));
+    }
+  } catch {
+    // Cache API can be unavailable or denied by the browser.
+  }
+  window.dispatchEvent(new Event("aisha:session-cleared"));
+}
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -64,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // The local state must still be cleared when the network is unavailable.
     } finally {
+      await clearBrowserSession();
       setAuthenticatedUser(null);
     }
   }, [setAuthenticatedUser]);

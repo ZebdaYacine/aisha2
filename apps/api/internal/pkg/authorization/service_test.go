@@ -106,3 +106,26 @@ func TestBackOfficeRoleBoundaries(t *testing.T) {
 		})
 	}
 }
+
+func TestAdministratorHasFullOperationalAccess(t *testing.T) {
+	service, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	principal := auth.Principal{UserID: "admin-1", Roles: []string{"administrator"}}
+	for _, permission := range [][2]string{
+		{"/api/v1/admin/artisan-applications", "read"},
+		{"/api/v1/admin/artisan-applications/application-1", "write"},
+		{"/api/v1/admin/product-submissions", "write"},
+		{"/api/v1/warehouse/receptions", "write"},
+		{"/api/v1/warehouse/inventory", "write"},
+		{"/api/v1/admin/categories", "write"},
+		{"/api/v1/admin/orders", "read"},
+		{"/api/v1/admin/orders/order-1/returns", "write"},
+		{"/api/v1/notifications", "read"},
+	} {
+		if err := service.Authorize(context.Background(), principal, permission[0], permission[1]); err != nil {
+			t.Fatalf("administrator permission %s:%s denied: %v", permission[0], permission[1], err)
+		}
+	}
+}

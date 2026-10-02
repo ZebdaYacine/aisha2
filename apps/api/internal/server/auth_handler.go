@@ -120,6 +120,18 @@ func (h *AuthHandler) ResetPassword(c fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
+func (h *AuthHandler) Activate(c fiber.Ctx) error {
+	user, tokens, err := h.service.ActivateEmail(c.Context(), c.Query("token"))
+	if err != nil {
+		return authAPIError(err)
+	}
+	response, err := h.userResponse(c.Context(), user)
+	if err != nil {
+		return authAPIError(err)
+	}
+	return c.JSON(AuthenticationResponse{User: response, Tokens: tokenResponseFrom(tokens)})
+}
+
 func (h *AuthHandler) bindAndValidate(c fiber.Ctx, request any) error {
 	if err := c.Bind().Body(request); err != nil {
 		return NewAPIError(CodeValidationError, "The request body is invalid.", nil)
@@ -176,6 +188,8 @@ func authAPIError(err error) error {
 		return NewAPIError(CodeInvalidCredentials, "The credentials are invalid.", nil)
 	case errors.Is(err, auth.ErrUserInactive):
 		return NewAPIError(CodeForbidden, "This account is not active.", nil)
+	case errors.Is(err, auth.ErrEmailUnverified):
+		return NewAPIError(CodeForbidden, "Please activate your email address before signing in.", nil)
 	default:
 		return WrapAPIError(err, CodeInternalError, "An unexpected error occurred.")
 	}

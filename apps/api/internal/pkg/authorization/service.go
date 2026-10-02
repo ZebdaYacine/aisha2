@@ -124,6 +124,12 @@ var defaultPolicies = [][]string{
 	{"warehouse_agent", "/api/v1/warehouse/inventory", "write"},
 	{"administrator", "/api/v1/warehouse/inventory", "read"},
 	{"administrator", "/api/v1/warehouse/inventory", "write"},
+	// Administrators are the platform superuser. Keep this explicit wildcard
+	// fallback after the scoped policies so every current and future protected
+	// operational route remains available to the administrator role while all
+	// non-administrator role boundaries stay unchanged.
+	{"administrator", "/api/v1/*", "read"},
+	{"administrator", "/api/v1/*", "write"},
 	{"artisan", "/api/v1/warehouse/inventory", "read"},
 }
 

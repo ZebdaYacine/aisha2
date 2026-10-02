@@ -1,7 +1,7 @@
 "use client";
 import { Heart, Plus } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, type PointerEvent } from "react";
 import { LocalizedLink } from "@/core/components/shared/localized-link";
 import { localized } from "@/features/catalogue/format";
 import type { Product } from "@/features/catalogue/types";
@@ -15,6 +15,8 @@ import { toast } from "sonner";
 
 export function ProductCard({ product, locale, copy }: { product: Product; locale: Locale; copy: StoreCopy }) {
   const [saved, setSaved] = useState(false);
+  const [imageOrigin, setImageOrigin] = useState("50% 50%");
+  const [imageHovered, setImageHovered] = useState(false);
   const cart = useOptionalCart();
   const toggleWishlist = async () => {
     try {
@@ -26,10 +28,18 @@ export function ProductCard({ product, locale, copy }: { product: Product; local
       toast.error(copy.wishlistError);
     }
   };
+  const trackImagePointer = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType && event.pointerType !== "mouse") return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = bounds.width ? Math.min(100, Math.max(0, ((event.clientX - bounds.left) / bounds.width) * 100)) : 50;
+    const y = bounds.height ? Math.min(100, Math.max(0, ((event.clientY - bounds.top) / bounds.height) * 100)) : 50;
+    setImageOrigin(`${x}% ${y}%`);
+    setImageHovered(true);
+  };
   return <article className="group min-w-0">
-    <div className="product-media relative isolate aspect-[4/5] overflow-hidden rounded-xl border border-border bg-muted">
+    <div className="product-media relative isolate aspect-[4/5] overflow-hidden rounded-xl border border-border bg-muted" onPointerMove={trackImagePointer} onPointerLeave={() => setImageHovered(false)}>
       <LocalizedLink className="block h-full w-full" locale={locale} href={`/products/${product.slug}`} aria-label={localized(product.name, locale)}>
-        <Image src={product.images[0]} alt={localized(product.name, locale)} fill sizes="(max-width:640px) 50vw,(max-width:1024px) 33vw,25vw" className="product-card-image pointer-events-none object-cover transition duration-500 group-hover:scale-[1.025]" />
+        <Image src={product.images[0]} alt={localized(product.name, locale)} fill sizes="(max-width:640px) 50vw,(max-width:1024px) 33vw,25vw" className="product-card-image pointer-events-none object-cover transition duration-500 group-hover:scale-[1.025]" style={{ transformOrigin: imageOrigin, transform: imageHovered ? "scale(1.2)" : undefined }} />
       </LocalizedLink>
       <div className="absolute start-3 top-3 flex flex-col items-start gap-1">{product.new && <Badge>{copy.newArrivals}</Badge>}{product.availability === "made_to_order" && <Badge className="bg-foreground text-background">{copy.madeToOrder}</Badge>}</div>
       {product.availability === "low_stock" && <Badge className="bg-destructive text-destructive-foreground">{copy.lowStock}</Badge>}
