@@ -2,9 +2,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Eye } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/core/components/ui/button";
+import { IconAction } from "@/core/components/ui/icon-action";
 import { Combobox } from "@/core/components/ui/combobox";
 import { StatusBadge } from "@/core/components/ui/status-badge";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
@@ -204,16 +206,14 @@ export function ProductModeration({ locale = "en" }: { locale?: Locale }) {
                       {item.priceMinor} {item.currency}
                     </td>
                     <td className={adminTableCellClass}>
-                      <Button
-                        type="button"
-                        variant="outline"
+                      <IconAction
+                        icon={<Eye size={17} />}
+                        label="Details"
                         onClick={() => {
                           setSelected(item);
                           setReason("");
                         }}
-                      >
-                        Details
-                      </Button>
+                      />
                     </td>
                   </tr>
                 ))}
@@ -225,10 +225,11 @@ export function ProductModeration({ locale = "en" }: { locale?: Locale }) {
               </p>
             )}
           </AdminTableScroll>
-          <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="mt-4 flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto"
               disabled={loading || page <= 1}
               onClick={() => void load(page - 1)}
             >
@@ -240,6 +241,7 @@ export function ProductModeration({ locale = "en" }: { locale?: Locale }) {
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto"
               disabled={loading || page >= pageCount}
               onClick={() => void load(page + 1)}
             >

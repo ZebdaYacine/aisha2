@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { LocalizedLink } from "@/core/components/shared/localized-link";
 import { Button } from "@/core/components/ui/button";
 import { Combobox, MultiCombobox } from "@/core/components/ui/combobox";
+import { IconAction } from "@/core/components/ui/icon-action";
 import { StatusBadge } from "@/core/components/ui/status-badge";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
 import { formatFullDate, formatFullDateTime } from "@/core/lib/format";
@@ -599,7 +601,7 @@ export function AdminControlPanel({
               className="min-w-0"
               eyebrow={text.users}
               title={text.users}
-              action={canManageUsers ? <Button type="button" onClick={() => openAccountEditor()}>{text.createUser}</Button> : undefined}
+              action={canManageUsers ? <IconAction icon={<Plus size={18} />} label={text.createUser} onClick={() => openAccountEditor()} /> : undefined}
               summary={pageLabel}
             >
               <AdminTableScroll>
@@ -632,9 +634,9 @@ export function AdminControlPanel({
                           {formatFullDate(item.createdAt, locale)}
                         </td>
                         <td className={adminTableCellClass}>
-                          <Button
-                            type="button"
-                            variant="outline"
+                          <IconAction
+                            icon={<Eye size={17} />}
+                            label={text.details}
                             onClick={() => {
                               setSelectedUser(item);
                               setAccountForm({
@@ -645,9 +647,7 @@ export function AdminControlPanel({
                                 roles: item.roles,
                               });
                             }}
-                          >
-                            {text.details}
-                          </Button>
+                          />
                         </td>
                       </tr>
                     ))}
@@ -868,7 +868,7 @@ export function AdminControlPanel({
                     <td className={adminTableCellClass}>{event.targetType}</td>
                     <td className={`${adminTableCellClass} whitespace-nowrap text-xs text-muted-foreground`}>{formatFullDateTime(event.occurredAt, locale)}</td>
                     <td className={`${adminTableCellClass} max-w-xs truncate`}>{event.reason || "—"}</td>
-                    <td className={adminTableCellClass}><Button type="button" variant="outline" onClick={() => setSelectedAudit(event)}>{text.details}</Button></td>
+                    <td className={adminTableCellClass}><IconAction icon={<Eye size={17} />} label={text.details} onClick={() => setSelectedAudit(event)} /></td>
                   </tr>
                 ))}
                 {!loadingAudit && audit.length === 0 && <tr><td className="p-6 text-sm text-muted-foreground" colSpan={5}>{text.noAudit}</td></tr>}

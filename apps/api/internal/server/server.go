@@ -139,7 +139,7 @@ func newServer(cfg config.Config, healthService *health.Service, authService *au
 			ListProducts: productList(productHandler), CreateProduct: productCreate(productHandler), GetProduct: productGet(productHandler),
 			UpdateProduct: productUpdate(productHandler), SubmitProduct: productSubmit(productHandler), ArchiveProduct: productArchive(productHandler), UploadProductMedia: productUploadMedia(productHandler), DeleteProductMedia: productDeleteMedia(productHandler),
 			ArtisanDocuments: artisanDocumentsMine(artisanMediaHandler), UploadArtisanDocument: artisanDocumentUpload(artisanMediaHandler), ArtisanMedia: artisanMediaList(artisanMediaHandler), UploadArtisanMedia: artisanMediaUpload(artisanMediaHandler), ReplaceArtisanMedia: artisanMediaReplace(artisanMediaHandler), DeleteArtisanMedia: artisanMediaDelete(artisanMediaHandler),
-			Checkout: orderCheckout(orderHandler), ListOrders: orderList(orderHandler), GetOrder: orderGet(orderHandler), CancelOrder: orderCancel(orderHandler), SellerOrders: orderSeller(orderHandler),
+			Checkout: orderCheckout(orderHandler), Payment: orderPayment(orderHandler), ConfirmPayment: orderConfirmPayment(orderHandler), ListOrders: orderList(orderHandler), GetOrder: orderGet(orderHandler), CancelOrder: orderCancel(orderHandler), SellerOrders: orderSeller(orderHandler),
 			WarehouseReceptions: warehouseList(warehouseHandler), WarehouseReceptionCreate: warehouseCreate(warehouseHandler), WarehouseInspect: warehouseInspect(warehouseHandler), WarehouseReceptionEvidence: warehouseUploadEvidence(warehouseHandler), WarehouseReceptionEvidenceList: warehouseListEvidence(warehouseHandler), Inventory: inventoryList(inventoryHandler), InventoryAdjust: inventoryAdjust(inventoryHandler),
 			WarehouseProducts: warehouseProducts(warehouseHandler),
 			Cart:              cartList(cartHandler), CartAdd: cartAdd(cartHandler), CartSet: cartSet(cartHandler), CartRemove: cartRemove(cartHandler), CartMerge: cartMerge(cartHandler), Wishlist: wishlistList(wishlistHandler), WishlistAdd: wishlistAdd(wishlistHandler), WishlistRemove: wishlistRemove(wishlistHandler),
@@ -175,6 +175,18 @@ func orderCheckout(h *OrderHandler) fiber.Handler {
 		return nil
 	}
 	return h.Checkout
+}
+func orderPayment(h *OrderHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.Payment
+}
+func orderConfirmPayment(h *OrderHandler) fiber.Handler {
+	if h == nil {
+		return nil
+	}
+	return h.ConfirmPayment
 }
 func orderList(h *OrderHandler) fiber.Handler {
 	if h == nil {

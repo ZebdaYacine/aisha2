@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { FormErrorSummary } from "@/core/components/forms/form-error-summary";
 import { Button } from "@/core/components/ui/button";
+import { UploadProgress } from "@/core/components/ui/upload-progress";
 
 const copy = {
   en: { title: "Artisan application", submit: "Submit application", name: "Public display name", workshop: "Workshop name", wilaya: "Wilaya", location: "Workshop address", email: "Contact email", phone: "Contact phone", categories: "Craft categories", bio: "Biography", private: "Keep contact private", public: "Make contact public", files: "Application files", filesHelp: "Add at least one supporting document and one profile image or video before submitting.", document: "Supporting document", documentType: "Document type", media: "Profile media", mediaType: "Media type", identity: "Identity document", registration: "Business registration", proof: "Proof of address", image: "Image", video: "Video", chooseFile: "Choose file", existing: "Already uploaded", filesRequired: "A workshop, document, and profile media are required before submission.", uploadFailed: "The files could not be uploaded. Your draft was saved; please try again.", invalid: "Please correct the highlighted fields.", categoriesUnavailable: "Craft categories are temporarily unavailable." },
@@ -18,6 +19,12 @@ const copy = {
 } as const;
 
 type Locale = keyof typeof copy;
+const uploadingLabels: Record<Locale, string> = {
+  en: "Uploading files…",
+  fr: "Importation des fichiers…",
+  ar: "جارٍ رفع الملفات…",
+  es: "Subiendo archivos…",
+};
 type Category = { id: string; name: string };
 type Values = {
   publicDisplayName: string;
@@ -206,6 +213,7 @@ export function ApplicationForm({ locale, profile }: { locale: Locale; profile?:
         <label className="block"><span className="mb-2 block text-sm">{t.document}</span><select className="auth-input mb-3" value={documentType} onChange={(event) => setDocumentType(event.target.value)}><option value="IDENTITY">{t.identity}</option><option value="BUSINESS_REGISTRATION">{t.registration}</option><option value="PROOF_OF_ADDRESS">{t.proof}</option></select><input className="block w-full text-sm" type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => setDocumentFile(event.target.files?.[0])} />{existingDocuments > 0 && <span className="mt-2 block text-xs text-muted-foreground">{t.existing}: {existingDocuments}</span>}</label>
         <label className="block"><span className="mb-2 block text-sm">{t.media}</span><select className="auth-input mb-3" value={mediaKind} onChange={(event) => setMediaKind(event.target.value)}><option value="IMAGE">{t.image}</option><option value="VIDEO">{t.video}</option></select><input className="block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp,video/mp4" onChange={(event) => setMediaFile(event.target.files?.[0])} />{existingMedia > 0 && <span className="mt-2 block text-xs text-muted-foreground">{t.existing}: {existingMedia}</span>}</label>
       </fieldset> : null}
+      {isSubmitting && <UploadProgress label={uploadingLabels[locale]} />}
       <Button disabled={isSubmitting} type="submit">{t.submit}</Button>
     </form>
   );

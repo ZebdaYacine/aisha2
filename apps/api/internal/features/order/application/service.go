@@ -19,15 +19,19 @@ type CartItem = domain.CartItem
 type Order = domain.Order
 type SellerItem = domain.SellerItem
 type Return = domain.Return
+type PaymentAttempt = domain.PaymentAttempt
+type FulfilmentOrder = domain.FulfilmentOrder
+type ShipmentInput = domain.ShipmentInput
 type Authorizer = domain.Authorizer
 
 var (
-	ErrValidation          = domain.ErrValidation
-	ErrNotFound            = domain.ErrNotFound
-	ErrOutOfStock          = domain.ErrOutOfStock
-	ErrPriceChanged        = domain.ErrPriceChanged
-	ErrInvalidTransition   = domain.ErrInvalidTransition
-	ErrIdempotencyConflict = domain.ErrIdempotencyConflict
+	ErrValidation            = domain.ErrValidation
+	ErrNotFound              = domain.ErrNotFound
+	ErrOutOfStock            = domain.ErrOutOfStock
+	ErrPriceChanged          = domain.ErrPriceChanged
+	ErrPaymentAmountMismatch = domain.ErrPaymentAmountMismatch
+	ErrInvalidTransition     = domain.ErrInvalidTransition
+	ErrIdempotencyConflict   = domain.ErrIdempotencyConflict
 )
 
 func NewService(r domain.Repository, a domain.Authorizer) *Service {
@@ -98,6 +102,77 @@ func (s *Service) RecordReturn(ctx context.Context, p auth.Principal, id, reason
 		return domain.Return{}, domain.ErrValidation
 	}
 	return s.repository.RecordReturn(ctx, p.UserID, id, strings.TrimSpace(reason))
+}
+func (s *Service) Payment(ctx context.Context, p auth.Principal, id string) (domain.PaymentAttempt, error) {
+	if err := s.authorizer.Authorize(ctx, p, "/api/v1/payments", "read"); err != nil {
+		return domain.PaymentAttempt{}, err
+	}
+	if uuid.Validate(id) != nil {
+		return domain.PaymentAttempt{}, domain.ErrValidation
+	}
+	return s.repository.GetPayment(ctx, p.UserID, id)
+}
+func (s *Service) ConfirmPayment(ctx context.Context, p auth.Principal, id, key string) (domain.Order, error) {
+	if err := s.authorizer.Authorize(ctx, p, "/api/v1/payments", "write"); err != nil {
+		return domain.Order{}, err
+	}
+	if uuid.Validate(id) != nil || strings.TrimSpace(key) == "" || len(strings.TrimSpace(key)) > 200 {
+		return domain.Order{}, domain.ErrValidation
+	}
+	return s.repository.ConfirmPayment(ctx, p.UserID, id, strings.TrimSpace(key))
+}
+func (s *Service) FailPayment(ctx context.Context, p auth.Principal, id, reason string) (domain.Order, error) {
+	if err := s.authorizer.Authorize(ctx, p, "/api/v1/payments", "write"); err != nil {
+		return domain.Order{}, err
+	}
+	if uuid.Validate(id) != nil || strings.TrimSpace(reason) == "" {
+		return domain.Order{}, domain.ErrValidation
+	}
+	return s.repository.FailPayment(ctx, p.UserID, id, strings.TrimSpace(reason))
+}
+func (s *Service) ListFulfilment(ctx context.Context, p auth.Principal, page, size int) ([]domain.FulfilmentOrder, int, error) {
+	if err := s.authorizer.Authorize(ctx, p, "/api/v1/warehouse/orders", "read"); err != nil {
+		return nil, 0, err
+	}
+	page, size = normalizePage(page, size)
+	return s.repository.ListFulfilment(ctx, size, (page-1)*size)
+}
+func (s *Service) Prepare(ctx context.Context, p auth.Principal, id string) (domain.Order, error) {
+	if err := s.authorizer.Authorize(ctx, p, "/api/v1/warehouse/orders", "write"); err != nil {
+		return domain.Order{}, err
+	}
+	if uuid.Validate(id) != nil {
+		return domain.Order{}, domain.ErrValidation
+	}
+	return s.repository.Prepare(ctx, p.UserID, id)
+}
+func (s *Service) Ship(ctx context.Context, p auth.Principal, id string, input domain.ShipmentInput) (domain.Order, error) {
+	if err := s.authorizer.Authorize(ctx, p, "/api/v1/warehouse/orders", "write"); err != nil {
+		return domain.Order{}, err
+	}
+	if uuid.Validate(id) != nil || strings.TrimSpace(input.Carrier) == "" || strings.TrimSpace(input.TrackingReference) == "" || len(input.Carrier) > 120 || len(input.TrackingReference) > 160 {
+		return domain.Order{}, domain.ErrValidation
+	}
+	input.Carrier, input.TrackingReference = strings.TrimSpace(input.Carrier), strings.TrimSpace(input.TrackingReference)
+	return s.repository.Ship(ctx, p.UserID, id, input)
+}
+func (s *Service) Deliver(ctx context.Context, p auth.Principal, id string) (domain.Order, error) {
+	if err := s.authorizer.Authorize(ctx, p, "/api/v1/warehouse/orders", "write"); err != nil {
+		return domain.Order{}, err
+	}
+	if uuid.Validate(id) != nil {
+		return domain.Order{}, domain.ErrValidation
+	}
+	return s.repository.Deliver(ctx, p.UserID, id)
+}
+func (s *Service) Refund(ctx context.Context, p auth.Principal, id string, amount int64, key, reason string) (domain.Order, error) {
+	if err := s.authorizer.Authorize(ctx, p, "/api/v1/admin/orders/*/refunds", "write"); err != nil {
+		return domain.Order{}, err
+	}
+	if uuid.Validate(id) != nil || amount <= 0 || strings.TrimSpace(key) == "" || strings.TrimSpace(reason) == "" {
+		return domain.Order{}, domain.ErrValidation
+	}
+	return s.repository.Refund(ctx, p.UserID, id, amount, strings.TrimSpace(key), strings.TrimSpace(reason))
 }
 func normalizePage(p, s int) (int, int) {
 	if p < 1 {

@@ -36,7 +36,13 @@ export function HomeHero({ locale, messages }: { locale: Locale; messages: Messa
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/55 via-transparent to-transparent" />
         <div className="absolute inset-x-6 bottom-7 z-10 flex items-end justify-between text-background sm:inset-x-10 sm:bottom-10">
           <p className="max-w-xs font-serif text-2xl sm:text-3xl">{messages.home.heroEyebrow}</p>
-          <ArrowDown aria-hidden="true" className="animate-none" strokeWidth={1.25} />
+          <a
+            href="#story"
+            aria-label={messages.navigation.story}
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center transition hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background"
+          >
+            <ArrowDown aria-hidden="true" className="animate-bounce" strokeWidth={1.25} />
+          </a>
         </div>
       </div>
     </section>

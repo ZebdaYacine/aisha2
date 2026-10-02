@@ -53,6 +53,28 @@ func (h *OrderHandler) Checkout(c fiber.Ctx) error {
 	}
 	return c.Status(fiber.StatusCreated).JSON(checkoutResponse{Order: o})
 }
+func (h *OrderHandler) Payment(c fiber.Ctx) error {
+	p, e := customerPrincipal(c)
+	if e != nil {
+		return e
+	}
+	payment, e := h.service.Payment(c.Context(), p, c.Params("id"))
+	if e != nil {
+		return orderAPIError(e)
+	}
+	return c.JSON(payment)
+}
+func (h *OrderHandler) ConfirmPayment(c fiber.Ctx) error {
+	p, e := customerPrincipal(c)
+	if e != nil {
+		return e
+	}
+	o, e := h.service.ConfirmPayment(c.Context(), p, c.Params("id"), c.Get("Idempotency-Key"))
+	if e != nil {
+		return orderAPIError(e)
+	}
+	return c.JSON(o)
+}
 func (h *OrderHandler) List(c fiber.Ctx) error {
 	p, e := customerPrincipal(c)
 	if e != nil {
@@ -127,6 +149,8 @@ func orderAPIError(e error) error {
 		return NewAPIError(CodeOutOfStock, "The requested quantity is no longer available.", nil)
 	case errors.Is(e, order.ErrPriceChanged):
 		return NewAPIError(CodeConflict, "The product price changed.", nil)
+	case errors.Is(e, order.ErrPaymentAmountMismatch):
+		return NewAPIError(CodePaymentAmountMismatch, "The payment amount does not match the order.", nil)
 	case errors.Is(e, order.ErrIdempotencyConflict):
 		return NewAPIError(CodeIdempotencyConflict, "The idempotency key cannot be reused for another request.", nil)
 	case errors.Is(e, order.ErrInvalidTransition):

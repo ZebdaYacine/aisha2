@@ -2,10 +2,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Eye } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/core/components/ui/button";
 import { Combobox } from "@/core/components/ui/combobox";
+import { IconAction } from "@/core/components/ui/icon-action";
 import { StatusBadge } from "@/core/components/ui/status-badge";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
 import { formatFullDateTime } from "@/core/lib/format";
@@ -130,7 +132,7 @@ export function InventoryOperations({ locale = "en" }: { locale?: Locale }) {
                 <td className="px-4 py-4">{item.reserved}</td><td className="px-4 py-4">{item.onHand}</td>
                 <td className="px-4 py-4 text-xs">Q {item.quarantined} · D {item.damaged}<br />R {item.rejected} · S {item.shipped}</td>
                 <td className="px-4 py-4">{formatFullDateTime(item.updatedAt, locale)}</td>
-                <td className="px-4 py-4"><Button type="button" variant="outline" onClick={() => setSelected(item)}>Details</Button></td>
+                <td className="px-4 py-4"><IconAction icon={<Eye size={17} />} label={common.details} onClick={() => setSelected(item)} /></td>
               </tr>)}
               {items.length === 0 && <tr><td className="px-4 py-8 text-muted-foreground" colSpan={8}>{common.noResults}</td></tr>}
             </tbody>

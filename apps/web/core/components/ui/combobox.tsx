@@ -66,7 +66,7 @@ export function Combobox({
   };
 
   return (
-    <div ref={rootRef} className={cn("relative", className)}>
+    <div ref={rootRef} className={cn("relative min-w-0", open && "z-50", className)}>
       <div className="relative">
         <input
           id={id}
@@ -75,7 +75,7 @@ export function Combobox({
           aria-controls={`${id}-options`}
           aria-expanded={open}
           aria-autocomplete="list"
-          className="auth-input pe-10"
+          className="auth-input min-w-0 pe-10"
           value={query}
           placeholder={placeholder}
           disabled={disabled}
@@ -128,14 +128,14 @@ export function Combobox({
         <ul
           id={`${id}-options`}
           role="listbox"
-          className="absolute inset-x-0 top-[calc(100%+0.35rem)] z-50 max-h-60 overflow-y-auto border border-border bg-background p-1 shadow-lg"
+          className="absolute inset-x-0 top-[calc(100%+0.35rem)] z-[60] max-h-[min(16rem,40vh)] touch-pan-y overscroll-contain overflow-y-auto rounded-md border border-border bg-background p-1 shadow-lg"
         >
           {filtered.length ? (
             filtered.map((option) => (
               <li key={option.value} role="option" aria-selected={option.value === value}>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2 text-start text-sm hover:bg-muted"
+                  className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-start text-sm hover:bg-muted"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => choose(option)}
                 >

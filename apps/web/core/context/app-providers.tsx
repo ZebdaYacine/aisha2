@@ -17,7 +17,16 @@ export function AppProviders({ children, locale, copy }: { children: ReactNode; 
         <CartProvider>
           {children}
           <CartDrawer locale={locale} copy={copy} />
-          <Toaster position="top-center" richColors closeButton />
+          <Toaster
+            position="top-center"
+            richColors
+            closeButton
+            toastOptions={{
+              classNames: {
+                toast: "w-[calc(100vw-2rem)] max-w-md",
+              },
+            }}
+          />
         </CartProvider>
       </AuthProvider>
     </ThemeProvider>

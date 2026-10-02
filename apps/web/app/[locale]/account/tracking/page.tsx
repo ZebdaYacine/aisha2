@@ -27,7 +27,7 @@ export default async function TrackingPage({
                 <p className="font-medium">{copy.order} {order.id}</p>
                 <p className="mt-2 text-sm text-muted-foreground">{copy[order.status]}</p>
               </div>
-              <LocalizedLink locale={locale} href={`/account/orders/${order.id}`} className="border-b border-foreground pb-1 text-sm">
+              <LocalizedLink locale={locale} href={`/account/orders/${order.id}`} className="inline-flex min-h-11 items-center self-start border-b border-foreground pb-1 text-sm sm:self-auto">
                 {copy.track}
               </LocalizedLink>
             </article>

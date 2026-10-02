@@ -101,14 +101,14 @@ export function AddressManager({ copy, locale }: { copy: StoreCopy; locale: Loca
     <div className="mt-8 grid gap-8 xl:grid-cols-2">
       <div className="space-y-4">
         {items.length ? items.map((item) => (
-          <article key={item.id} className="border border-border bg-card p-5">
-            <div className="flex justify-between gap-4"><strong>{item.fullName}</strong>{item.isDefault && <span className="text-xs text-primary">{text.default}</span>}</div>
+          <article key={item.id} className="min-w-0 border border-border bg-card p-5">
+            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2"><strong className="min-w-0 break-words">{item.fullName}</strong>{item.isDefault && <span className="shrink-0 text-xs text-primary">{text.default}</span>}</div>
             <address className="mt-2 not-italic text-muted-foreground">{item.line1}<br />{item.line2 && <>{item.line2}<br /></>}{item.postalCode} {item.city}<br />{item.country}</address>
-            <div className="mt-4 flex gap-2"><Button variant="outline" type="button" onClick={() => { setEditing(item.id); setForm(item); }}>{text.edit}</Button><Button variant="outline" type="button" onClick={() => void remove(item.id)}>{text.delete}</Button></div>
+            <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" type="button" onClick={() => { setEditing(item.id); setForm(item); }}>{text.edit}</Button><Button variant="outline" type="button" onClick={() => void remove(item.id)}>{text.delete}</Button></div>
           </article>
         )) : <EmptyState title={copy.emptyAddresses} body={copy.emptyAddressesBody} />}
       </div>
-      <form onSubmit={save} className="space-y-3 border border-border p-5" aria-busy={submitting}>
+      <form onSubmit={save} className="min-w-0 space-y-3 border border-border p-5" aria-busy={submitting}>
         {fields.map((field) => <label className="block" key={field}><span className="mb-1 block text-sm">{copy[field]}</span><input required={field !== "phone" && field !== "line2"} className="auth-input" value={form[field]} onChange={(event) => setForm({ ...form, [field]: event.target.value })} /></label>)}
         <label className="flex gap-2"><input type="checkbox" checked={form.isDefault} onChange={(event) => setForm({ ...form, isDefault: event.target.checked })} />{text.default}</label>
         <Button disabled={submitting} type="submit">{editing ? text.update : text.add} {copy.address}</Button>

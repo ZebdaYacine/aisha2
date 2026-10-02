@@ -34,6 +34,8 @@ type AuthenticatedRoutes struct {
 	ReplaceArtisanMedia            fiber.Handler
 	DeleteArtisanMedia             fiber.Handler
 	Checkout                       fiber.Handler
+	Payment                        fiber.Handler
+	ConfirmPayment                 fiber.Handler
 	ListOrders                     fiber.Handler
 	GetOrder                       fiber.Handler
 	CancelOrder                    fiber.Handler
@@ -106,6 +108,8 @@ func RegisterAuthenticated(api fiber.Router, r AuthenticatedRoutes) {
 	add(api, "PATCH", "/artisan/profile/media/:id", r.Authenticate, authorize(r, "/api/v1/artisan/profile/media", "write"), r.ReplaceArtisanMedia)
 	add(api, "DELETE", "/artisan/profile/media/:id", r.Authenticate, authorize(r, "/api/v1/artisan/profile/media", "write"), r.DeleteArtisanMedia)
 	add(api, "POST", "/checkout", r.Authenticate, authorize(r, "/api/v1/checkout", "write"), r.Checkout)
+	add(api, "GET", "/payments/:id", r.Authenticate, authorize(r, "/api/v1/payments", "read"), r.Payment)
+	add(api, "POST", "/payments/:id/confirm", r.Authenticate, authorize(r, "/api/v1/payments", "write"), r.ConfirmPayment)
 	add(api, "GET", "/orders/seller", r.Authenticate, authorize(r, "/api/v1/orders/seller", "read"), r.SellerOrders)
 	add(api, "GET", "/orders", r.Authenticate, authorize(r, "/api/v1/orders", "read"), r.ListOrders)
 	add(api, "GET", "/orders/:id", r.Authenticate, authorize(r, "/api/v1/orders", "read"), r.GetOrder)

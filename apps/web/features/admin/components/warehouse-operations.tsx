@@ -2,11 +2,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Eye, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/core/components/ui/button";
 import { Combobox } from "@/core/components/ui/combobox";
+import { IconAction } from "@/core/components/ui/icon-action";
+import { Modal } from "@/core/components/ui/modal";
 import { StatusBadge } from "@/core/components/ui/status-badge";
+import { UploadProgress } from "@/core/components/ui/upload-progress";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
 import type { Locale } from "@/core/lib/i18n";
 
@@ -64,6 +68,7 @@ const statuses: Array<"" | ReceptionStatus> = [
 export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
   const [items, setItems] = useState<Reception[]>([]);
   const [selected, setSelected] = useState<Reception | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   useEscapeKey(() => setSelected(null), selected !== null);
   const [status, setStatus] = useState<"" | ReceptionStatus>(
     "RECEIVED_PENDING_INSPECTION",
@@ -164,6 +169,7 @@ export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
     void load();
   }, [load]);
 
+
   const createReception = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaving(true);
@@ -192,6 +198,7 @@ export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
       setValidatedProducts([]);
       setArtisanPhone("");
       setWorkshopId("");
+      setCreateOpen(false);
       selectItem(reception);
       toast.success("Reception recorded — complete the inspection to publish stock");
       await load(1, status);
@@ -259,6 +266,7 @@ export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
   };
 
   const selectItem = (item: Reception) => {
+    setCreateOpen(false);
     setSelected(item);
     setInspection({
       acceptedQuantity: String(item.receivedQuantity),
@@ -270,99 +278,40 @@ export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
   };
 
   return (
-    <div className="space-y-8">
-      <form onSubmit={createReception} className="border border-border p-5">
-        <div className="mb-5">
-          <p className="text-xs uppercase tracking-widest text-primary">Receive stock</p>
-          <h2 className="mt-2 font-serif text-3xl">New reception</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Received units remain unavailable until an inspection is committed.
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="md:col-span-2 border border-border bg-muted/20 p-4">
-            <p className="text-sm font-medium">Find a validated product</p>
-            <p className="mt-1 text-xs text-muted-foreground">Search by artisan phone, choose the workshop, then select the moderator-approved product code.</p>
-            <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
-              <label className="block text-sm">
-                <span className="mb-2 block">Artisan phone</span>
-                <input className="auth-input w-full" type="tel" value={artisanPhone} placeholder="e.g. 0550123456" onChange={(event) => setArtisanPhone(event.target.value)} />
-              </label>
-              <Button className="self-end" type="button" variant="outline" disabled={productsLoading || !artisanPhone.trim()} onClick={() => void loadValidatedProducts("")}>
-                {productsLoading ? "Searching…" : "Find products"}
-              </Button>
-            </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <label className="block text-sm">
-                <span className="mb-2 block">Workshop</span>
-                <Combobox className="w-full" options={workshops} value={workshopId} onChange={(next) => { setWorkshopId(next); setCreateForm({ ...createForm, productCode: "" }); }} placeholder="Select a workshop" emptyMessage="Search an artisan first" ariaLabel="Workshop" disabled={!workshops.length} />
-              </label>
-              <label className="block text-sm">
-                <span className="mb-2 block">Product code or name</span>
-                <Combobox className="w-full" options={productOptions} value={createForm.productCode} onChange={(next) => {
-                  const product = validatedProducts.find((item) => item.productCode === next);
-                  setCreateForm({ ...createForm, productCode: next, supplierName: product?.artisanName ?? createForm.supplierName });
-                }} placeholder="Select an approved product" emptyMessage="Select a workshop first" ariaLabel="Product code or name" disabled={!productOptions.length} />
-              </label>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <span>{workshopProducts.length} approved product(s) in this workshop</span>
-              {productsLoading && <span>Refreshing…</span>}
-            </div>
-            {selectedProduct && <p className="mt-3 text-xs text-muted-foreground">{selectedProduct.artisanName} · {selectedProduct.artisanPhone} · {selectedProduct.workshopName} · <span className="font-medium text-foreground">{selectedProduct.productCode}</span> · {selectedProduct.availableQuantity} available</p>}
+    <div className="space-y-6">
+      <section className="rounded border border-border bg-card p-4 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+          <Button type="button" className="order-first shrink-0" onClick={() => setCreateOpen(true)}>
+            <Plus aria-hidden="true" size={17} />
+            New reception
+          </Button>
+          <div className="min-w-0">
+            <p className="text-xs uppercase tracking-[0.18em] text-primary">Warehouse intake</p>
+            <h2 className="mt-1 font-serif text-3xl">Reception ledger</h2>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              Record approved artisan stock, then inspect the batch before it becomes available to customers.
+            </p>
           </div>
-          {[
-            ["receivedQuantity", "Received quantity", "number"],
-            ["referenceKey", "Reception reference", "text"],
-            ["supplierName", "Supplier or artisan", "text"],
-            ["parcelReference", "Parcel or batch reference", "text"],
-          ].map(([key, label, type]) => (
-            <label key={key} className="block text-sm">
-              <span className="mb-2 block">{label}</span>
-              <input
-                className="auth-input w-full"
-                type={type}
-                min={type === "number" ? 1 : undefined}
-                required={key === "receivedQuantity" || key === "referenceKey"}
-                value={createForm[key as keyof typeof createForm]}
-                onChange={(event) =>
-                  setCreateForm({ ...createForm, [key]: event.target.value })
-                }
-              />
-            </label>
-          ))}
-          <label className="block text-sm md:col-span-2">
-            <span className="mb-2 block">Notes</span>
-            <textarea
-              className="auth-input min-h-24 w-full"
-              value={createForm.notes}
-              onChange={(event) => setCreateForm({ ...createForm, notes: event.target.value })}
+        </div>
+        <div className="mt-6 flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-end sm:justify-between">
+          <label className="block w-full text-sm sm:max-w-xs">
+            <span className="mb-2 block">Reception status</span>
+            <Combobox
+              className="w-full"
+              options={[{ value: "", label: "All receptions" }, ...statuses.filter(Boolean).map((value) => ({ value, label: value.replaceAll("_", " ") }))]}
+              value={status}
+              onChange={(next) => {
+                const nextStatus = next as "" | ReceptionStatus;
+                setStatus(nextStatus);
+                setPage(1);
+                void load(1, nextStatus);
+              }}
+              ariaLabel="Reception status"
             />
           </label>
+          <span className="text-sm text-muted-foreground">{total} reception(s)</span>
         </div>
-        <Button className="mt-5" type="submit" disabled={saving || !createForm.productCode}>
-          Record reception
-        </Button>
-      </form>
-
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <label className="block text-sm">
-          <span className="mb-2 block">Reception status</span>
-          <Combobox
-            className="min-w-64"
-            options={[{ value: "", label: "All receptions" }, ...statuses.filter(Boolean).map((value) => ({ value, label: value.replaceAll("_", " ") }))]}
-            value={status}
-            onChange={(next) => {
-              const nextStatus = next as "" | ReceptionStatus;
-              setStatus(nextStatus);
-              setPage(1);
-              void load(1, nextStatus);
-            }}
-            ariaLabel="Reception status"
-          />
-        </label>
-        <span className="text-sm text-muted-foreground">{total} reception(s)</span>
-      </div>
+      </section>
 
       {loading ? (
         <p className="border border-border p-5 text-sm text-muted-foreground" role="status">
@@ -370,7 +319,15 @@ export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
         </p>
       ) : (
         <>
-          <div className="overflow-x-auto border border-border">
+          <section className="rounded border border-border bg-card p-3 shadow-sm sm:p-5">
+            <div className="mb-4 flex items-end justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-primary">Stock movement</p>
+                <h3 className="mt-1 font-serif text-2xl">Recent receptions</h3>
+              </div>
+              <p className="hidden text-xs text-muted-foreground sm:block">Scroll horizontally to view all columns</p>
+            </div>
+          <div className="max-w-full touch-pan-x overflow-x-auto overscroll-x-contain rounded border border-border">
             <table className="w-full min-w-[60rem] text-start text-sm">
               <thead className="border-b border-border bg-muted/40">
                 <tr>
@@ -390,21 +347,111 @@ export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
                     <td className="px-4 py-4">{item.receivedQuantity}</td>
                     <td className="px-4 py-4">{item.referenceKey}</td>
                     <td className="px-4 py-4"><StatusBadge status={item.status} locale={locale} /></td>
-                    <td className="px-4 py-4"><Button type="button" variant="outline" onClick={() => selectItem(item)}>Details</Button></td>
+                    <td className="px-4 py-4"><IconAction icon={<Eye size={17} />} label="Details" onClick={() => selectItem(item)} /></td>
                   </tr>
                 ))}
                 {items.length === 0 && <tr><td className="px-4 py-8 text-muted-foreground" colSpan={6}>No receptions found.</td></tr>}
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between text-sm">
+          <div className="mt-4 flex flex-col-reverse items-start gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <span>Page {page} of {pageCount}</span>
             <div className="flex gap-2">
               <Button type="button" variant="outline" disabled={page <= 1} onClick={() => void load(page - 1)}>Previous</Button>
               <Button type="button" variant="outline" disabled={page >= pageCount} onClick={() => void load(page + 1)}>Next</Button>
             </div>
           </div>
+          </section>
         </>
+      )}
+
+      {createOpen && (
+        <Modal
+          label="New reception"
+          closeLabel="Close new reception"
+          onClose={() => setCreateOpen(false)}
+          panelClassName="mx-auto my-4 min-h-0 max-h-[calc(100svh-2rem)] max-w-4xl overflow-y-auto border border-border p-4 shadow-2xl sm:p-6"
+        >
+          <form onSubmit={createReception}>
+            <div className="mb-6 border-b border-border pb-5 pe-10">
+              <p className="text-xs uppercase tracking-[0.18em] text-primary">Receive stock</p>
+              <h2 className="mt-2 font-serif text-3xl">New reception</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Received units remain unavailable until an inspection is committed.
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded border border-primary/30 bg-secondary/30 p-4 md:col-span-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">Find a validated product</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Search by artisan phone, choose the workshop, then select the moderator-approved product code.</p>
+                  </div>
+                  <span className="rounded-full bg-background px-3 py-1 text-[0.6875rem] uppercase tracking-wider text-muted-foreground">Step 1</span>
+                </div>
+                <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+                  <label className="block text-sm">
+                    <span className="mb-2 block">Artisan phone</span>
+                    <input className="auth-input w-full" type="tel" value={artisanPhone} placeholder="e.g. 0550123456" onChange={(event) => setArtisanPhone(event.target.value)} />
+                  </label>
+                  <Button className="self-end" type="button" variant="outline" disabled={productsLoading || !artisanPhone.trim()} onClick={() => void loadValidatedProducts("")}>
+                    {productsLoading ? "Searching…" : "Find products"}
+                  </Button>
+                </div>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="mb-2 block">Workshop</span>
+                    <Combobox className="w-full" options={workshops} value={workshopId} onChange={(next) => { setWorkshopId(next); setCreateForm({ ...createForm, productCode: "" }); }} placeholder="Select a workshop" emptyMessage="Search an artisan first" ariaLabel="Workshop" disabled={!workshops.length} />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-2 block">Product code or name</span>
+                    <Combobox className="w-full" options={productOptions} value={createForm.productCode} onChange={(next) => {
+                      const product = validatedProducts.find((item) => item.productCode === next);
+                      setCreateForm({ ...createForm, productCode: next, supplierName: product?.artisanName ?? createForm.supplierName });
+                    }} placeholder="Select an approved product" emptyMessage="Select a workshop first" ariaLabel="Product code or name" disabled={!productOptions.length} />
+                  </label>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span>{workshopProducts.length} approved product(s) in this workshop</span>
+                  {productsLoading && <span>Refreshing…</span>}
+                </div>
+                {selectedProduct && <p className="mt-3 rounded bg-background px-3 py-2 text-xs text-muted-foreground">{selectedProduct.artisanName} · {selectedProduct.artisanPhone} · {selectedProduct.workshopName} · <span className="font-medium text-foreground">{selectedProduct.productCode}</span> · {selectedProduct.availableQuantity} available</p>}
+              </div>
+              <div className="md:col-span-2">
+                <p className="mb-1 text-sm font-medium">Reception details</p>
+                <p className="text-xs text-muted-foreground">Add the quantity and traceability information for this delivery.</p>
+              </div>
+              {[
+                ["receivedQuantity", "Received quantity", "number"],
+                ["referenceKey", "Reception reference", "text"],
+                ["supplierName", "Supplier or artisan", "text"],
+                ["parcelReference", "Parcel or batch reference", "text"],
+              ].map(([key, label, type]) => (
+                <label key={key} className="block text-sm">
+                  <span className="mb-2 block">{label}</span>
+                  <input
+                    className="auth-input w-full"
+                    type={type}
+                    min={type === "number" ? 1 : undefined}
+                    required={key === "receivedQuantity" || key === "referenceKey"}
+                    value={createForm[key as keyof typeof createForm]}
+                    onChange={(event) => setCreateForm({ ...createForm, [key]: event.target.value })}
+                  />
+                </label>
+              ))}
+              <label className="block text-sm md:col-span-2">
+                <span className="mb-2 block">Notes</span>
+                <textarea className="auth-input min-h-24 w-full" value={createForm.notes} onChange={(event) => setCreateForm({ ...createForm, notes: event.target.value })} />
+              </label>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-3 border-t border-border pt-5 sm:flex-row sm:justify-end">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={saving || !createForm.productCode}>
+                {saving ? "Recording…" : "Record reception"}
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {selected && (
@@ -423,7 +470,7 @@ export function WarehouseOperations({ locale = "en" }: { locale?: Locale }) {
             <div className="mt-6 border-t border-border pt-5">
               <h3 className="font-medium">Evidence</h3>
               <div className="mt-3 flex flex-wrap gap-2">{selected.evidence.map((file) => file.url ? <a className="underline" key={file.id} href={file.url} target="_blank" rel="noreferrer">{file.originalFilename || file.mediaType}</a> : <span key={file.id}>{file.originalFilename}</span>)}</div>
-              {selected.status === "RECEIVED_PENDING_INSPECTION" && <div className="mt-4 flex flex-wrap items-center gap-3"><input aria-label="Inspection evidence" type="file" accept="image/*,application/pdf,video/mp4" onChange={(event) => setEvidence(event.target.files?.[0] ?? null)} />{evidence && <span className="text-xs text-muted-foreground">{evidence.name} will be uploaded with the inspection</span>}</div>}
+              {selected.status === "RECEIVED_PENDING_INSPECTION" && <div className="mt-4 space-y-3"><div className="flex flex-wrap items-center gap-3"><input aria-label="Inspection evidence" type="file" accept="image/*,application/pdf,video/mp4" onChange={(event) => setEvidence(event.target.files?.[0] ?? null)} />{evidence && <span className="text-xs text-muted-foreground">{evidence.name} will be uploaded with the inspection</span>}</div>{saving && <UploadProgress label="Uploading evidence and submitting inspection…" />}</div>}
             </div>
             {selected.status === "RECEIVED_PENDING_INSPECTION" ? (
               <div className="mt-6 border-t border-border pt-5">

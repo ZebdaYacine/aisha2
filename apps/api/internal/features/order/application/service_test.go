@@ -31,6 +31,30 @@ func (orderRepo) Cancel(context.Context, string, string) (domain.Order, error) {
 func (orderRepo) RecordReturn(context.Context, string, string, string) (domain.Return, error) {
 	return domain.Return{}, nil
 }
+func (orderRepo) GetPayment(context.Context, string, string) (domain.PaymentAttempt, error) {
+	return domain.PaymentAttempt{}, nil
+}
+func (orderRepo) ConfirmPayment(context.Context, string, string, string) (domain.Order, error) {
+	return domain.Order{}, nil
+}
+func (orderRepo) FailPayment(context.Context, string, string, string) (domain.Order, error) {
+	return domain.Order{}, nil
+}
+func (orderRepo) ListFulfilment(context.Context, int, int) ([]domain.FulfilmentOrder, int, error) {
+	return nil, 0, nil
+}
+func (orderRepo) Prepare(context.Context, string, string) (domain.Order, error) {
+	return domain.Order{}, nil
+}
+func (orderRepo) Ship(context.Context, string, string, domain.ShipmentInput) (domain.Order, error) {
+	return domain.Order{}, nil
+}
+func (orderRepo) Deliver(context.Context, string, string) (domain.Order, error) {
+	return domain.Order{}, nil
+}
+func (orderRepo) Refund(context.Context, string, string, int64, string, string) (domain.Order, error) {
+	return domain.Order{}, nil
+}
 func TestCheckoutRejectsDuplicateLinesAndMissingIdempotencyKey(t *testing.T) {
 	s := NewService(orderRepo{}, orderAuth{})
 	p := auth.Principal{UserID: "u"}

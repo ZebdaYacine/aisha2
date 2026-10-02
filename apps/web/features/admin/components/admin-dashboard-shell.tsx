@@ -180,7 +180,7 @@ export function AdminDashboardShell({
         </div>
       </header>
       <nav
-        className="-mx-1 flex max-w-full flex-nowrap gap-2 overflow-x-auto px-1 pb-2"
+        className="horizontal-tab-scroll -mx-1 flex max-w-full flex-nowrap gap-2 overflow-x-auto px-1 pb-2"
         aria-label={text.title}
         role="tablist"
       >

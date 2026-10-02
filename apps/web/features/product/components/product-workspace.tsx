@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Archive, Eye, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import type { Category } from "@/features/catalogue/types";
 import { Button } from "@/core/components/ui/button";
 import { Combobox } from "@/core/components/ui/combobox";
+import { IconAction } from "@/core/components/ui/icon-action";
 import { Modal } from "@/core/components/ui/modal";
 import { StatusBadge } from "@/core/components/ui/status-badge";
+import { UploadProgress } from "@/core/components/ui/upload-progress";
 import { commonCopy } from "@/core/lib/common-copy";
 import { catalogue } from "@/features/catalogue/api";
 import {
@@ -257,6 +260,7 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
   const [editorLocale, setEditorLocale] = useState<ProductLocale>(locale);
   const [form, setForm] = useState<ProductInput>(() => blankProduct(locale));
   const [busy, setBusy] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
   const mediaInput = useRef<HTMLInputElement>(null);
 
   const closeDialog = (force = false) => {
@@ -398,6 +402,7 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
       toast.error(text.mediaLimit);
       return;
     }
+    setUploadingMedia(true);
     setBusy(true);
     try {
       const media = await uploadProductMedia(selected.id, file, file.name);
@@ -408,6 +413,7 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
+      setUploadingMedia(false);
       setBusy(false);
     }
   };
@@ -436,18 +442,16 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
           </p>
           <h2 className="mt-2 font-serif text-3xl">{text.title}</h2>
         </div>
-        <Button type="button" variant="outline" onClick={() => openEditor()}>
-          {text.create}
-        </Button>
+        <IconAction icon={<Plus size={18} />} label={text.create} onClick={() => openEditor()} />
       </div>
       <div className="mt-6">
-        <div className="overflow-x-auto rounded-lg border border-border xl:col-span-2">
+        <div className="max-w-full touch-pan-x overflow-x-auto rounded-lg border border-border xl:col-span-2">
           {items.length ? <table className="w-full min-w-[1080px] text-sm">
             <thead className="bg-muted/40"><tr><th className="px-4 py-3 text-start font-medium">{text.details}</th><th className="px-4 py-3 text-start font-medium">{text.product}</th><th className="px-4 py-3 text-start font-medium">{text.workshop}</th><th className="px-4 py-3 text-start font-medium">{text.status}</th><th className="px-4 py-3 text-start font-medium">{text.tablePrice}</th><th className="px-4 py-3 text-start font-medium">{text.quantity}</th><th className="px-4 py-3 text-start font-medium">{text.orderTotal}</th><th className="px-4 py-3 text-start font-medium">{text.mediaCount}</th><th className="px-4 py-3 text-start font-medium">{text.approvalCode}</th></tr></thead>
             <tbody>{items.map((item) => {
               const name = item.translations.find((translation) => translation.locale === locale)?.name || item.translations[0]?.name || "—";
               return <tr className="border-t border-border align-top" key={item.id}>
-                <td className="px-4 py-3"><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="min-h-10 px-3" onClick={() => { setDetailsItem(item); setDialog("details"); }}>{text.details}</Button><Button type="button" variant="outline" className="min-h-10 px-3" onClick={() => openEditor(item)}>{text.update}</Button>{item.status !== "ARCHIVED" && <Button type="button" variant="destructive" className="min-h-10 px-3" disabled={busy} onClick={() => { setPendingArchive(item); setDialog("archive"); }}>{text.archive}</Button>}</div></td>
+                <td className="px-4 py-3"><div className="flex flex-wrap gap-2"><IconAction icon={<Eye size={17} />} label={text.details} onClick={() => { setDetailsItem(item); setDialog("details"); }} /><IconAction icon={<Pencil size={17} />} label={text.update} onClick={() => openEditor(item)} />{item.status !== "ARCHIVED" && <IconAction icon={<Archive size={17} />} label={text.archive} variant="destructive" disabled={busy} onClick={() => { setPendingArchive(item); setDialog("archive"); }} />}</div></td>
                 <td className="px-4 py-3 font-medium">{name}</td><td className="px-4 py-3">{item.workshopName || "—"}</td><td className="px-4 py-3"><StatusBadge status={item.status} locale={locale} /></td><td className="px-4 py-3">{item.priceMinor} {item.currency}</td><td className="px-4 py-3">{item.plannedQuantity || 1}</td><td className="px-4 py-3">{item.orderTotalMinor || item.priceMinor} {item.currency}</td><td className="px-4 py-3">{item.media.length}/4</td><td className="px-4 py-3 font-mono text-xs">{item.productCode || "—"}</td>
               </tr>;
             })}</tbody>
@@ -641,6 +645,7 @@ export function ProductWorkspace({ locale }: { locale: ProductLocale }) {
                 {busy ? text.uploading : text.upload}
               </Button>
             </div>
+            {uploadingMedia && <UploadProgress label={text.uploading} />}
           </div>
           <div className="flex flex-wrap gap-3">
             <Button

@@ -18,7 +18,7 @@ describe("international foundation", () => {
   });
 
   it("does not fall back to English for public-storefront interaction copy", () => {
-    const keys = ["featuredBody", "madeToOrderBody", "newsletter", "subscribe", "featuredSort", "priceLow", "priceHigh", "apply", "tryAgain", "searchHint", "previous", "next", "trustOrigin", "trustQuality", "artisanStory", "quality", "origin", "delivery"] as const;
+    const keys = ["featuredBody", "madeToOrderBody", "newsletter", "subscribe", "featuredSort", "priceLow", "priceHigh", "apply", "tryAgain", "searchHint", "previous", "next", "trustOrigin", "trustQuality", "artisanStory", "brandStory", "brandStoryTitle", "brandStoryBody", "brandStoryMission", "brandStoryModel", "brandStoryCta", "quality", "origin", "delivery"] as const;
     const english = storeCopy("en");
     for (const locale of ["fr", "ar", "es"] as const) {
       const copy = storeCopy(locale);

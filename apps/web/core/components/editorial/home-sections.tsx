@@ -1,5 +1,4 @@
 import {
-  ArrowUpRight,
   Earth,
   HandHeart,
   PackageCheck,
@@ -40,7 +39,7 @@ export function HomeSections({
   const regionalProducts = products.filter((product, index, items) => items.findIndex((candidate) => localized(candidate.region, locale) === localized(product.region, locale)) === index).slice(0, 4);
   return (
     <>
-      <section className="section-space" id="categories">
+      <section className="section-space scroll-mt-24" id="categories">
         <Container>
           <SectionHeading
             eyebrow={messages.home.categoriesEyebrow}
@@ -58,7 +57,7 @@ export function HomeSections({
           </div>
         </Container>
       </section>
-      <section className="section-space bg-muted" id="collection">
+      <section className="section-space scroll-mt-24 bg-muted" id="collection">
         <Container>
           <SectionHeading
             eyebrow={messages.home.collectionEyebrow}
@@ -83,7 +82,7 @@ export function HomeSections({
           </div>
         </Container>
       </section>
-      <section className="section-space" id="regions">
+      <section className="section-space scroll-mt-24" id="regions">
         <Container>
           <SectionHeading eyebrow={copy.region} title={copy.discoverRegions} body={copy.featuredBody} />
           <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -95,46 +94,39 @@ export function HomeSections({
           </div>
         </Container>
       </section>
-      {artisans[0] && <section
-        className="grid bg-foreground text-background lg:grid-cols-2"
+      <section
+        className="scroll-mt-24 grid bg-foreground text-background lg:grid-cols-2"
         id="artisans"
       >
         <div className="relative min-h-[28rem] lg:min-h-[42rem]">
           <Image
-            src={artisans[0].image}
-            alt={`${artisans[0].name}, ${artisans[0].workshop}`}
+            src="/images/aisha/Algeria art.jpg"
+            alt={copy.brandStoryTitle}
             fill
             sizes="(max-width:1024px) 100vw,50vw"
             className="object-cover opacity-85"
           />
         </div>
-        <div className="flex items-center px-6 py-16 sm:px-12 lg:px-20">
+        <div id="story" className="scroll-mt-24 flex items-center px-6 py-16 sm:px-12 lg:px-20">
           <div className="max-w-xl">
             <p className="text-xs uppercase tracking-[.2em] text-accent">
-              {copy.artisanStory}
+              {copy.brandStory}
             </p>
-            <h2 className="mt-5 font-serif text-5xl leading-tight">
-              {artisans[0].name}
-            </h2>
-            <p className="mt-2 text-background/65">
-              {localized(artisans[0].region, locale)} ·{" "}
-              {localized(artisans[0].craft, locale)}
-            </p>
-            <blockquote className="mt-8 font-serif text-2xl leading-relaxed">
-              “{localized(artisans[0].biography, locale)}”
-            </blockquote>
+            <h2 className="mt-5 font-serif text-5xl leading-tight">{copy.brandStoryTitle}</h2>
+            <p className="mt-8 leading-7 text-background/75">{copy.brandStoryBody}</p>
+            <p className="mt-5 leading-7 text-background/75">{copy.brandStoryMission}</p>
+            <p className="mt-5 leading-7 text-background/75">{copy.brandStoryModel}</p>
             <ButtonLink
               className="mt-9 border-background text-background hover:bg-background hover:text-foreground"
               variant="outline"
-              href={`/${locale}/artisans/${artisans[0].slug}`}
+              href={`/${locale}/artisans`}
             >
-              {copy.exploreArtisan}
-              <ArrowUpRight className="rtl:-scale-x-100" size={17} />
+              {copy.brandStoryCta}
             </ButtonLink>
           </div>
         </div>
-      </section>}
-      <section className="section-space">
+      </section>
+      <section className="section-space scroll-mt-24">
         <Container>
           <SectionHeading
             eyebrow={copy.promotional}

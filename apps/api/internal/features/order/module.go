@@ -14,12 +14,13 @@ type Return = application.Return
 type Authorizer = application.Authorizer
 
 var (
-	ErrValidation          = application.ErrValidation
-	ErrNotFound            = application.ErrNotFound
-	ErrOutOfStock          = application.ErrOutOfStock
-	ErrPriceChanged        = application.ErrPriceChanged
-	ErrInvalidTransition   = application.ErrInvalidTransition
-	ErrIdempotencyConflict = application.ErrIdempotencyConflict
+	ErrValidation            = application.ErrValidation
+	ErrNotFound              = application.ErrNotFound
+	ErrOutOfStock            = application.ErrOutOfStock
+	ErrPriceChanged          = application.ErrPriceChanged
+	ErrPaymentAmountMismatch = application.ErrPaymentAmountMismatch
+	ErrInvalidTransition     = application.ErrInvalidTransition
+	ErrIdempotencyConflict   = application.ErrIdempotencyConflict
 )
 
 func NewService(pool *pgxpool.Pool, a Authorizer) *Service {

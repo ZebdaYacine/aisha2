@@ -3,9 +3,11 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
+import { Eye } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/core/components/ui/button";
+import { IconAction } from "@/core/components/ui/icon-action";
 import { StatusBadge } from "@/core/components/ui/status-badge";
 import type { Locale } from "@/core/lib/i18n";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
@@ -96,7 +98,7 @@ export function ArtisanMembershipReview({ locale = "en" }: { locale?: Locale }) 
       <AdminTableScroll>
         <table className={adminTableClass}>
           <thead className={adminTableHeadClass}><tr><th className="px-4 py-3 font-medium">Artisan</th><th className="px-4 py-3 font-medium">Shop</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Actions</th></tr></thead>
-          <tbody className="divide-y divide-border">{applications.map((item) => <tr className="transition-colors hover:bg-muted/30" key={item.id}><td className={adminTableCellClass}>{item.publicDisplayName}<span className="block text-xs text-muted-foreground">{item.wilaya}</span></td><td className={adminTableCellClass}>{item.workshopName || "—"}</td><td className={adminTableCellClass}><StatusBadge status={item.membershipStatus} locale={locale} /></td><td className={adminTableCellClass}><Button type="button" variant="outline" onClick={() => setSelected(item)}>Details</Button></td></tr>)}</tbody>
+          <tbody className="divide-y divide-border">{applications.map((item) => <tr className="transition-colors hover:bg-muted/30" key={item.id}><td className={adminTableCellClass}>{item.publicDisplayName}<span className="block text-xs text-muted-foreground">{item.wilaya}</span></td><td className={adminTableCellClass}>{item.workshopName || "—"}</td><td className={adminTableCellClass}><StatusBadge status={item.membershipStatus} locale={locale} /></td><td className={adminTableCellClass}><IconAction icon={<Eye size={17} />} label="Details" onClick={() => setSelected(item)} /></td></tr>)}</tbody>
         </table>
         {applications.length === 0 && <p className="p-6 text-sm text-muted-foreground">No approved artisans found.</p>}
       </AdminTableScroll>

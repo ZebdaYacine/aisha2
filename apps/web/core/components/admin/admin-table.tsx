@@ -22,7 +22,7 @@ export function AdminTablePanel({
 }) {
   return (
     <section className={cn("space-y-4", className)}>
-      <div className="flex flex-wrap items-start gap-4 rounded border border-border bg-card p-4">
+      <div className="flex flex-col gap-4 rounded border border-border bg-card p-4 sm:flex-row sm:items-start">
         {action && <div className="order-first shrink-0">{action}</div>}
         <div className="min-w-0 flex-1">
           {eyebrow && <p className="text-xs uppercase tracking-[0.18em] text-primary">{eyebrow}</p>}
@@ -37,7 +37,7 @@ export function AdminTablePanel({
 }
 
 export function AdminTableScroll({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("w-full overflow-x-auto overscroll-x-contain rounded border border-border", className)}>{children}</div>;
+  return <div className={cn("w-full max-w-full touch-pan-x overflow-x-auto overscroll-x-contain rounded border border-border", className)}>{children}</div>;
 }
 
 export const adminTableClass = "w-full min-w-[48rem] text-start text-sm";

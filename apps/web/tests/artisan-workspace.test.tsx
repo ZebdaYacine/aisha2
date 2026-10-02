@@ -21,13 +21,13 @@ describe("artisan management tables", () => {
 
     render(<WorkshopsPanel locale="en" profile={{ membershipStatus: "ACTIVE", status: "APPROVED" }} />);
 
-    await waitFor(() => expect(screen.getByText("Amina Studio")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByText("Amina Studio").length).toBeGreaterThan(0));
     expect(screen.getByRole("button", { name: "Add workshop" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Details" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Update" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Details" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Update" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Delete" }).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Details" })[0]);
     expect(screen.getByRole("dialog", { name: "Details" })).toHaveTextContent("Kasbah");
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Details" })).not.toBeInTheDocument();

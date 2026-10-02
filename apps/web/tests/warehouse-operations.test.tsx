@@ -68,6 +68,7 @@ describe("warehouse operations", () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     render(<WarehouseOperations />);
+    fireEvent.click(screen.getByRole("button", { name: "New reception" }));
     fireEvent.change(screen.getByLabelText("Artisan phone"), { target: { value: "0550123456" } });
     fireEvent.click(screen.getByRole("button", { name: "Find products" }));
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Workshop" })).not.toBeDisabled());
@@ -115,6 +116,7 @@ describe("warehouse operations", () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     render(<WarehouseOperations />);
+    fireEvent.click(screen.getByRole("button", { name: "New reception" }));
     fireEvent.change(screen.getByLabelText("Artisan phone"), { target: { value: "0550123456" } });
     fireEvent.click(screen.getByRole("button", { name: "Find products" }));
     await waitFor(() => expect(screen.getByRole("combobox", { name: "Workshop" })).not.toBeDisabled());
@@ -126,10 +128,10 @@ describe("warehouse operations", () => {
     fireEvent.change(screen.getByLabelText("Received quantity"), { target: { value: "5" } });
 
     const submit = screen.getByRole("button", { name: "Record reception" });
+    await waitFor(() => expect(submit).not.toBeDisabled());
     fireEvent.click(submit);
 
-    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
-    expect(screen.getByText("Inspect batch")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Inspect batch")).toBeInTheDocument());
     expect(fetchMock).toHaveBeenCalledWith("/api/warehouse/receptions", expect.objectContaining({ method: "POST" }));
   });
 });

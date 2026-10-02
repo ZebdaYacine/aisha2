@@ -2,9 +2,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Eye } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/core/components/ui/button";
+import { IconAction } from "@/core/components/ui/icon-action";
 import { StatusBadge } from "@/core/components/ui/status-badge";
 import { useEscapeKey } from "@/core/hooks/use-escape-key";
 import { hasCapability } from "@/features/auth/types";
@@ -156,16 +158,14 @@ export function ArtisanReview({ locale = "en" }: { locale?: Locale }) {
                   <StatusBadge status={item.status} locale={locale} />
                 </td>
                 <td className={adminTableCellClass}>
-                  <Button
-                    type="button"
-                    variant="outline"
+                  <IconAction
+                    icon={<Eye size={17} />}
+                    label="Details"
                     onClick={() => {
                       setReason("");
                       void openDetails(item);
                     }}
-                  >
-                    Details
-                  </Button>
+                  />
                 </td>
               </tr>
             ))}

@@ -2,9 +2,11 @@
 "use client";
 
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { Eye, Pencil, Plus, Power, Trash2 } from "lucide-react";
 
 import { Button } from "@/core/components/ui/button";
 import { Combobox } from "@/core/components/ui/combobox";
+import { IconAction } from "@/core/components/ui/icon-action";
 import { Modal } from "@/core/components/ui/modal";
 import { StatusBadge } from "@/core/components/ui/status-badge";
 import { wilayaOptions } from "@/core/lib/location-options";
@@ -127,7 +129,7 @@ export function WorkshopsPanel({ locale, profile }: { locale: Locale; profile: P
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><h2 id="workshops-title" className="font-serif text-2xl">{t.title}</h2><p className="mt-1 text-sm text-muted-foreground">{t.verification}: {verification || "—"}</p></div>
         {!activeMembership && <span className="rounded-full bg-muted px-3 py-1 text-xs"><StatusBadge status={profile.membershipStatus ?? "NOT_STARTED"} locale={locale} /></span>}
-        {activeMembership && <Button type="button" onClick={() => { setForm(blank); setEditing(null); setDialog("create"); }}>{t.add}</Button>}
+        {activeMembership && <IconAction icon={<Plus size={18} />} label={t.add} onClick={() => { setForm(blank); setEditing(null); setDialog("create"); }} />}
       </div>
       {!activeMembership && !blockedMembership ? (
         <form className="mt-6 space-y-4" onSubmit={activate}>
@@ -138,16 +140,39 @@ export function WorkshopsPanel({ locale, profile }: { locale: Locale; profile: P
       ) : (
         <>
           {workshops.length === 0 ? <p className="mt-6 text-sm text-muted-foreground">{t.empty}</p> : (
-            <div className="mt-6 overflow-x-auto rounded-lg border border-border">
+            <>
+            <div className="mt-6 hidden max-w-full touch-pan-x overflow-x-auto rounded-lg border border-border md:block">
               <table className="w-full min-w-[760px] text-sm">
                 <thead className="bg-muted/40 text-start"><tr><th className="px-4 py-3 text-start font-medium">{t.details}</th><th className="px-4 py-3 text-start font-medium">{t.name}</th><th className="px-4 py-3 text-start font-medium">{t.wilaya}</th><th className="px-4 py-3 text-start font-medium">{t.products}</th><th className="px-4 py-3 text-start font-medium">{t.visibility}</th><th className="px-4 py-3 text-start font-medium">{t.status}</th></tr></thead>
                 <tbody>{workshops.map((workshop) => <tr className="border-t border-border align-top" key={workshop.id}>
-                  <td className="px-4 py-3"><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" className="min-h-10 px-3" onClick={() => { setFocused(workshop); setDialog("details"); }}>{t.details}</Button><Button type="button" variant="outline" className="min-h-10 px-3" disabled={busy} onClick={() => { setEditing(workshop.id); setForm(formFrom(workshop)); setDialog("edit"); }}>{t.update}</Button>{!workshop.isDefault && <Button type="button" variant="destructive" className="min-h-10 px-3" disabled={busy} onClick={() => { setPendingDelete(workshop); setDialog("delete"); }}>{t.delete}</Button>}</div></td>
+                  <td className="px-4 py-3"><div className="flex flex-wrap gap-2"><IconAction icon={<Eye size={17} />} label={t.details} onClick={() => { setFocused(workshop); setDialog("details"); }} /><IconAction icon={<Pencil size={17} />} label={t.update} disabled={busy} onClick={() => { setEditing(workshop.id); setForm(formFrom(workshop)); setDialog("edit"); }} />{!workshop.isDefault && <IconAction icon={<Trash2 size={17} />} label={t.delete} variant="destructive" disabled={busy} onClick={() => { setPendingDelete(workshop); setDialog("delete"); }} />}</div></td>
                   <td className="px-4 py-3 font-medium">{workshop.name}{workshop.isDefault && <span className="ms-2 text-xs text-muted-foreground">{t.default}</span>}</td>
-                  <td className="px-4 py-3">{workshop.wilaya || "—"}</td><td className="px-4 py-3">{workshop.productCount}</td><td className="px-4 py-3">{workshop.isPublic ? t.publicValue : t.privateValue}</td><td className="px-4 py-3"><StatusBadge status={workshop.status} locale={locale} /><Button type="button" variant="ghost" className="mt-2 block min-h-9 px-0" disabled={busy} onClick={() => void setStatus(workshop)}>{workshop.status === "ACTIVE" ? t.active : t.inactive}</Button></td>
+                  <td className="px-4 py-3">{workshop.wilaya || "—"}</td><td className="px-4 py-3">{workshop.productCount}</td><td className="px-4 py-3">{workshop.isPublic ? t.publicValue : t.privateValue}</td><td className="px-4 py-3"><div className="flex items-center gap-2"><StatusBadge status={workshop.status} locale={locale} /><IconAction icon={<Power size={17} />} label={workshop.status === "ACTIVE" ? t.active : t.inactive} variant="ghost" disabled={busy} onClick={() => void setStatus(workshop)} /></div></td>
                 </tr>)}</tbody>
               </table>
             </div>
+            <div className="mt-6 grid gap-3 md:hidden">
+              {workshops.map((workshop) => <article className="rounded-lg border border-border bg-card p-4" key={workshop.id}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate font-medium">{workshop.name}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{workshop.wilaya || workshop.location || "—"}</p>
+                  </div>
+                  <StatusBadge status={workshop.status} locale={locale} />
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-y border-border py-3 text-sm">
+                  <div><dt className="text-muted-foreground">{t.products}</dt><dd className="mt-1">{workshop.productCount}</dd></div>
+                  <div><dt className="text-muted-foreground">{t.visibility}</dt><dd className="mt-1">{workshop.isPublic ? t.publicValue : t.privateValue}</dd></div>
+                </dl>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <IconAction icon={<Eye size={17} />} label={t.details} onClick={() => { setFocused(workshop); setDialog("details"); }} />
+                  <IconAction icon={<Pencil size={17} />} label={t.update} disabled={busy} onClick={() => { setEditing(workshop.id); setForm(formFrom(workshop)); setDialog("edit"); }} />
+                  {!workshop.isDefault && <IconAction icon={<Trash2 size={17} />} label={t.delete} variant="destructive" disabled={busy} onClick={() => { setPendingDelete(workshop); setDialog("delete"); }} />}
+                  <IconAction icon={<Power size={17} />} label={workshop.status === "ACTIVE" ? t.active : t.inactive} variant="ghost" disabled={busy} onClick={() => void setStatus(workshop)} />
+                </div>
+              </article>)}
+            </div>
+            </>
           )}
         </>
       )}

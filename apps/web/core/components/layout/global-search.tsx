@@ -2,7 +2,7 @@
 import { Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { Product, Artisan, Category } from "@/features/catalogue/types";
+import type { Product, Artisan, Category, Workshop } from "@/features/catalogue/types";
 import { localized } from "@/features/catalogue/format";
 import type { Locale } from "@/core/lib/i18n";
 import type { StoreCopy } from "@/core/lib/store-copy";
@@ -14,12 +14,14 @@ export function GlobalSearch({
   products,
   artisans,
   categories,
+  workshops,
 }: {
   locale: Locale;
   copy: StoreCopy;
   products?: Product[];
   artisans?: Artisan[];
   categories?: Category[];
+  workshops?: Workshop[];
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -27,9 +29,10 @@ export function GlobalSearch({
     products: products ?? [],
     artisans: artisans ?? [],
     categories: categories ?? [],
+    workshops: workshops ?? [],
   });
   const [loadState, setLoadState] = useState<"idle" | "loading" | "loaded" | "failed">(
-    products || artisans || categories ? "loaded" : "idle",
+    products || artisans || categories || workshops ? "loaded" : "idle",
   );
 
   async function openSearch() {
@@ -47,13 +50,52 @@ export function GlobalSearch({
     }
   }
 
-  const { products: loadedProducts, artisans: loadedArtisans, categories: loadedCategories } = catalogue;
+  const { products: loadedProducts, artisans: loadedArtisans, categories: loadedCategories, workshops: loadedWorkshops } = catalogue;
   const q = query.toLowerCase();
-  const matches = q
-    ? loadedProducts
-        .filter((p) => localized(p.name, locale).toLowerCase().includes(q))
-        .slice(0, 4)
+  const searchTerms = q.split(/\s+/).filter(Boolean);
+  const searchable = (values: string[]) => values.some((value) => {
+    const normalized = value.toLowerCase();
+    return searchTerms.some((term) => normalized.includes(term));
+  });
+  const productMatches = q
+    ? loadedProducts.filter((product) => searchable([
+        localized(product.name, locale),
+        localized(product.summary, locale),
+        localized(product.story, locale),
+        product.artisanName ?? "",
+        product.workshop ?? "",
+        localized(product.region, locale),
+        localized(product.materials, locale),
+        localized(product.method, locale),
+        product.categorySlug,
+      ])).slice(0, 4)
     : loadedProducts.slice(0, 3);
+  const artisanMatches = q
+    ? loadedArtisans.filter((artisan) => searchable([
+        artisan.name,
+        artisan.workshop,
+        localized(artisan.biography, locale),
+        localized(artisan.craft, locale),
+        localized(artisan.region, locale),
+      ])).slice(0, 3)
+    : [];
+  const workshopMatches = q
+    ? loadedWorkshops.filter((workshop) => searchable([
+        workshop.name,
+        workshop.description,
+        workshop.wilaya,
+        workshop.location,
+        workshop.craft,
+        workshop.artisanName,
+      ])).slice(0, 3)
+    : [];
+  const categoryMatches = q
+    ? loadedCategories.filter((category) => searchable([
+        localized(category.name, locale),
+        localized(category.description, locale),
+        category.slug,
+      ])).slice(0, 3)
+    : [];
   return (
     <>
       <button
@@ -103,7 +145,7 @@ export function GlobalSearch({
                   {copy.searchResults}
                 </h2>
                 <div className="mt-4 divide-y divide-border">
-                  {matches.map((product) => (
+                  {productMatches.map((product) => (
                     <LocalizedLink
                       onClick={() => setOpen(false)}
                       className="block py-4 font-serif text-2xl hover:text-primary"
@@ -111,23 +153,25 @@ export function GlobalSearch({
                       href={`/products/${product.slug}`}
                       key={product.slug}
                     >
-                      {localized(product.name, locale)}
+                      {localized(product.name, locale)} · {copy.products}
                     </LocalizedLink>
                   ))}
-                  {q &&
-                    loadedArtisans
-                      .filter((a) => a.name.toLowerCase().includes(q))
-                      .map((artisan) => (
-                        <LocalizedLink
-                          onClick={() => setOpen(false)}
-                          className="block py-4"
-                          locale={locale}
-                          href={`/artisans/${artisan.slug}`}
-                          key={artisan.slug}
-                        >
-                          {artisan.name} · {copy.artisan}
-                        </LocalizedLink>
-                      ))}
+                  {artisanMatches.map((artisan) => (
+                    <LocalizedLink onClick={() => setOpen(false)} className="block py-4" locale={locale} href={`/artisans/${artisan.slug}`} key={`artisan-${artisan.slug}`}>
+                      {artisan.name} · {copy.artisan}
+                    </LocalizedLink>
+                  ))}
+                  {workshopMatches.map((workshop) => (
+                    <LocalizedLink onClick={() => setOpen(false)} className="block py-4" locale={locale} href={`/workshops/${workshop.slug}`} key={`workshop-${workshop.slug}`}>
+                      {workshop.name} · {copy.workshop}
+                    </LocalizedLink>
+                  ))}
+                  {categoryMatches.map((category) => (
+                    <LocalizedLink onClick={() => setOpen(false)} className="block py-4" locale={locale} href={`/categories/${category.slug}`} key={`category-${category.slug}`}>
+                      {localized(category.name, locale)} · {copy.categories}
+                    </LocalizedLink>
+                  ))}
+                  {q && !productMatches.length && !artisanMatches.length && !workshopMatches.length && !categoryMatches.length && <p className="py-4 text-sm text-muted-foreground">{copy.noResults}</p>}
                 </div>
                 <LocalizedLink
                   onClick={() => setOpen(false)}

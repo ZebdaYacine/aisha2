@@ -394,3 +394,277 @@ func (r *PostgresRepository) RecordReturn(ctx context.Context, actor, id, reason
 	}
 	return out, nil
 }
+
+// GetPayment returns payment metadata only for an order owned by the caller.
+func (r *PostgresRepository) GetPayment(ctx context.Context, userID, paymentID string) (domain.PaymentAttempt, error) {
+	var payment domain.PaymentAttempt
+	err := r.pool.QueryRow(ctx, `
+		SELECT p.id,p.provider,COALESCE(p.provider_reference,''),p.status,p.amount_minor,p.currency,COALESCE(p.failure_reason,'')
+		FROM payment_attempts p JOIN orders o ON o.id=p.order_id
+		WHERE p.id=$1 AND o.user_id=$2`, paymentID, userID).
+		Scan(&payment.ID, &payment.Provider, &payment.ProviderReference, &payment.Status, &payment.AmountMinor, &payment.Currency, &payment.FailureReason)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.PaymentAttempt{}, domain.ErrNotFound
+	}
+	return payment, err
+}
+
+// ConfirmPayment is the internal manual development adapter. It trusts only
+// the server-side order total, commits held reservations, and is idempotent
+// when the customer clicks the payment action more than once.
+func (r *PostgresRepository) ConfirmPayment(ctx context.Context, userID, paymentID, _ string) (domain.Order, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Order{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var orderID, paymentStatus, orderStatus, paymentCurrency, orderCurrency string
+	var paymentAmount, orderTotal int64
+	err = tx.QueryRow(ctx, `
+		SELECT p.order_id,p.status,p.amount_minor,p.currency,o.status,o.total_minor,o.currency
+		FROM payment_attempts p JOIN orders o ON o.id=p.order_id
+		WHERE p.id=$1 AND o.user_id=$2
+		FOR UPDATE OF p,o`, paymentID, userID).
+		Scan(&orderID, &paymentStatus, &paymentAmount, &paymentCurrency, &orderStatus, &orderTotal, &orderCurrency)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Order{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.Order{}, err
+	}
+	if paymentStatus == "CONFIRMED" && orderStatus == "PAID" {
+		_ = tx.Rollback(ctx)
+		return r.GetMine(ctx, userID, orderID)
+	}
+	if paymentStatus != "PENDING" || orderStatus != "PENDING_PAYMENT" {
+		return domain.Order{}, domain.ErrInvalidTransition
+	}
+	if paymentAmount != orderTotal || strings.TrimSpace(paymentCurrency) != strings.TrimSpace(orderCurrency) {
+		return domain.Order{}, domain.ErrPaymentAmountMismatch
+	}
+	providerReference := "manual:" + paymentID
+	if _, err = tx.Exec(ctx, `UPDATE payment_attempts SET provider='manual',provider_reference=$2,status='CONFIRMED',failure_reason=NULL WHERE id=$1`, paymentID, providerReference); err != nil {
+		return domain.Order{}, err
+	}
+	if _, err = tx.Exec(ctx, `UPDATE stock_reservations SET status='COMMITTED' WHERE order_id=$1 AND status='HELD'`, orderID); err != nil {
+		return domain.Order{}, err
+	}
+	if _, err = tx.Exec(ctx, `UPDATE orders SET status='PAID',updated_at=CURRENT_TIMESTAMP WHERE id=$1`, orderID); err != nil {
+		return domain.Order{}, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO shipment_events(order_id,status) VALUES($1,'PAID') ON CONFLICT DO NOTHING`, orderID); err != nil {
+		return domain.Order{}, err
+	}
+	payload, _ := json.Marshal(map[string]any{"orderId": orderID, "paymentId": paymentID, "provider": "manual", "status": "CONFIRMED"})
+	if _, err = tx.Exec(ctx, `INSERT INTO audit_events(event_type,actor_user_id,target_type,target_id,new_state) VALUES($1,$2,$3,$4,$5)`, "PAYMENT_CONFIRMED", userID, "payment", paymentID, payload); err != nil {
+		return domain.Order{}, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES($1,$2,$3,$4)`, "PAYMENT_CONFIRMED", "order", orderID, payload); err != nil {
+		return domain.Order{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.Order{}, err
+	}
+	return r.GetMine(ctx, userID, orderID)
+}
+
+func (r *PostgresRepository) FailPayment(ctx context.Context, userID, paymentID, reason string) (domain.Order, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Order{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var orderID, paymentStatus, orderStatus string
+	err = tx.QueryRow(ctx, `SELECT p.order_id,p.status,o.status FROM payment_attempts p JOIN orders o ON o.id=p.order_id WHERE p.id=$1 AND o.user_id=$2 FOR UPDATE OF p,o`, paymentID, userID).Scan(&orderID, &paymentStatus, &orderStatus)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Order{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.Order{}, err
+	}
+	if paymentStatus == "FAILED" && orderStatus == "PAYMENT_FAILED" {
+		_ = tx.Rollback(ctx)
+		return r.GetMine(ctx, userID, orderID)
+	}
+	if paymentStatus != "PENDING" || orderStatus != "PENDING_PAYMENT" {
+		return domain.Order{}, domain.ErrInvalidTransition
+	}
+	rows, err := tx.Query(ctx, `SELECT id,product_id,quantity FROM stock_reservations WHERE order_id=$1 AND status='HELD' FOR UPDATE`, orderID)
+	if err != nil {
+		return domain.Order{}, err
+	}
+	type reservation struct {
+		id, productID string
+		quantity      int
+	}
+	var reservations []reservation
+	for rows.Next() {
+		var item reservation
+		if err = rows.Scan(&item.id, &item.productID, &item.quantity); err != nil {
+			rows.Close()
+			return domain.Order{}, err
+		}
+		reservations = append(reservations, item)
+	}
+	rows.Close()
+	for _, item := range reservations {
+		if _, err = tx.Exec(ctx, `UPDATE stock_reservations SET status='RELEASED',released_at=CURRENT_TIMESTAMP WHERE id=$1`, item.id); err != nil {
+			return domain.Order{}, err
+		}
+		if _, err = tx.Exec(ctx, `INSERT INTO inventory_movements(product_id,movement_type,quantity_delta,reference_key,reason,actor_user_id,stock_bucket) VALUES($1,'RELEASED',$2,$3,'payment failed',$4,'AVAILABLE') ON CONFLICT(reference_key) DO NOTHING`, item.productID, item.quantity, "release:payment:"+item.id, userID); err != nil {
+			return domain.Order{}, err
+		}
+	}
+	if _, err = tx.Exec(ctx, `UPDATE payment_attempts SET status='FAILED',failure_reason=$2 WHERE id=$1`, paymentID, strings.TrimSpace(reason)); err != nil {
+		return domain.Order{}, err
+	}
+	if _, err = tx.Exec(ctx, `UPDATE orders SET status='PAYMENT_FAILED',updated_at=CURRENT_TIMESTAMP WHERE id=$1`, orderID); err != nil {
+		return domain.Order{}, err
+	}
+	payload, _ := json.Marshal(map[string]any{"orderId": orderID, "paymentId": paymentID, "status": "FAILED", "reason": strings.TrimSpace(reason)})
+	if _, err = tx.Exec(ctx, `INSERT INTO audit_events(event_type,actor_user_id,target_type,target_id,new_state) VALUES($1,$2,$3,$4,$5)`, "PAYMENT_FAILED", userID, "payment", paymentID, payload); err != nil {
+		return domain.Order{}, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES($1,$2,$3,$4)`, "PAYMENT_FAILED", "order", orderID, payload); err != nil {
+		return domain.Order{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.Order{}, err
+	}
+	return r.GetMine(ctx, userID, orderID)
+}
+
+func (r *PostgresRepository) loadByID(ctx context.Context, id string) (domain.Order, error) {
+	var userID string
+	if err := r.pool.QueryRow(ctx, `SELECT user_id FROM orders WHERE id=$1`, id).Scan(&userID); errors.Is(err, pgx.ErrNoRows) {
+		return domain.Order{}, domain.ErrNotFound
+	} else if err != nil {
+		return domain.Order{}, err
+	}
+	return r.load(ctx, r.pool, userID, id)
+}
+
+func (r *PostgresRepository) ListFulfilment(ctx context.Context, limit, offset int) ([]domain.FulfilmentOrder, int, error) {
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM orders WHERE status IN ('PAID','PREPARING','READY_TO_SHIP')`).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := r.pool.Query(ctx, `SELECT o.id,o.order_number,o.status,o.currency,o.total_minor,COALESCE(u.email,''),o.created_at FROM orders o JOIN users u ON u.id=o.user_id WHERE o.status IN ('PAID','PREPARING','READY_TO_SHIP') ORDER BY o.created_at LIMIT $1 OFFSET $2`, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+	items := make([]domain.FulfilmentOrder, 0)
+	for rows.Next() {
+		var item domain.FulfilmentOrder
+		if err = rows.Scan(&item.ID, &item.OrderNumber, &item.Status, &item.Currency, &item.TotalMinor, &item.CustomerEmail, &item.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		items = append(items, item)
+	}
+	return items, total, rows.Err()
+}
+
+func (r *PostgresRepository) Prepare(ctx context.Context, actor, id string) (domain.Order, error) {
+	return r.transitionFulfilment(ctx, actor, id, "PAID", "PREPARING", "PREPARING", "")
+}
+
+func (r *PostgresRepository) Ship(ctx context.Context, actor, id string, input domain.ShipmentInput) (domain.Order, error) {
+	return r.transitionFulfilment(ctx, actor, id, "PREPARING", "SHIPPED", "SHIPPED", strings.TrimSpace(input.Carrier)+" / "+strings.TrimSpace(input.TrackingReference))
+}
+
+func (r *PostgresRepository) Deliver(ctx context.Context, actor, id string) (domain.Order, error) {
+	return r.transitionFulfilment(ctx, actor, id, "SHIPPED", "DELIVERED", "DELIVERED", "")
+}
+
+func (r *PostgresRepository) transitionFulfilment(ctx context.Context, actor, id, from, to, eventStatus, tracking string) (domain.Order, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Order{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var ownerID, status string
+	if err = tx.QueryRow(ctx, `SELECT user_id,status FROM orders WHERE id=$1 FOR UPDATE`, id).Scan(&ownerID, &status); errors.Is(err, pgx.ErrNoRows) {
+		return domain.Order{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.Order{}, err
+	}
+	if status != from {
+		return domain.Order{}, domain.ErrInvalidTransition
+	}
+	if _, err = tx.Exec(ctx, `UPDATE orders SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1`, id, to); err != nil {
+		return domain.Order{}, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO shipment_events(order_id,status,tracking_reference,actor_user_id) VALUES($1,$2,NULLIF($3,''),$4) ON CONFLICT DO NOTHING`, id, eventStatus, tracking, actor); err != nil {
+		return domain.Order{}, err
+	}
+	payload, _ := json.Marshal(map[string]any{"orderId": id, "status": to})
+	if _, err = tx.Exec(ctx, `INSERT INTO audit_events(event_type,actor_user_id,target_type,target_id,new_state) VALUES($1,$2,$3,$4,$5)`, "ORDER_"+to, actor, "order", id, payload); err != nil {
+		return domain.Order{}, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES($1,$2,$3,$4)`, "ORDER_"+to, "order", id, payload); err != nil {
+		return domain.Order{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.Order{}, err
+	}
+	return r.load(ctx, r.pool, ownerID, id)
+}
+
+func (r *PostgresRepository) Refund(ctx context.Context, actor, id string, amount int64, key, reason string) (domain.Order, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.Order{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var ownerID, orderStatus, paymentID, paymentStatus, currency string
+	var total, paymentAmount int64
+	err = tx.QueryRow(ctx, `SELECT o.user_id,o.status,p.id,p.status,p.amount_minor,p.currency,o.total_minor FROM orders o JOIN payment_attempts p ON p.order_id=o.id WHERE o.id=$1 ORDER BY p.created_at DESC LIMIT 1 FOR UPDATE OF o,p`, id).Scan(&ownerID, &orderStatus, &paymentID, &paymentStatus, &paymentAmount, &currency, &total)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Order{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.Order{}, err
+	}
+	if orderStatus != "PAID" && orderStatus != "PARTIALLY_REFUNDED" || paymentStatus != "CONFIRMED" && paymentStatus != "REFUND_PENDING" {
+		return domain.Order{}, domain.ErrInvalidTransition
+	}
+	var refunded int64
+	if err = tx.QueryRow(ctx, `SELECT COALESCE(SUM(amount_minor),0) FROM payment_refunds WHERE payment_attempt_id=$1`, paymentID).Scan(&refunded); err != nil {
+		return domain.Order{}, err
+	}
+	if amount <= 0 || amount > paymentAmount-refunded {
+		return domain.Order{}, domain.ErrPaymentAmountMismatch
+	}
+	var refundID string
+	err = tx.QueryRow(ctx, `INSERT INTO payment_refunds(payment_attempt_id,order_id,actor_user_id,idempotency_key,amount_minor,currency,reason) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(actor_user_id,idempotency_key) DO NOTHING RETURNING id`, paymentID, id, actor, key, amount, currency, reason).Scan(&refundID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		_ = tx.Rollback(ctx)
+		return r.loadByID(ctx, id)
+	}
+	if err != nil {
+		return domain.Order{}, err
+	}
+	newStatus := "PARTIALLY_REFUNDED"
+	if amount+refunded == paymentAmount {
+		newStatus = "REFUNDED"
+	}
+	if _, err = tx.Exec(ctx, `UPDATE payment_attempts SET status=$2 WHERE id=$1`, paymentID, map[string]string{"PARTIALLY_REFUNDED": "REFUND_PENDING", "REFUNDED": "REFUNDED"}[newStatus]); err != nil {
+		return domain.Order{}, err
+	}
+	if _, err = tx.Exec(ctx, `UPDATE orders SET status=$2,updated_at=CURRENT_TIMESTAMP WHERE id=$1`, id, newStatus); err != nil {
+		return domain.Order{}, err
+	}
+	payload, _ := json.Marshal(map[string]any{"orderId": id, "paymentId": paymentID, "refundId": refundID, "amountMinor": amount, "status": newStatus})
+	if _, err = tx.Exec(ctx, `INSERT INTO audit_events(event_type,actor_user_id,target_type,target_id,new_state) VALUES($1,$2,$3,$4,$5)`, "PAYMENT_REFUNDED", actor, "payment", paymentID, payload); err != nil {
+		return domain.Order{}, err
+	}
+	if _, err = tx.Exec(ctx, `INSERT INTO outbox_events(event_type,aggregate_type,aggregate_id,payload) VALUES($1,$2,$3,$4)`, "PAYMENT_REFUNDED", "order", id, payload); err != nil {
+		return domain.Order{}, err
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return domain.Order{}, err
+	}
+	return r.load(ctx, r.pool, ownerID, id)
+}

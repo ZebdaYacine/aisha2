@@ -86,6 +86,9 @@ const en = {
   required: "This field is required.",
   paymentPending:
     "Payment method will be provided by the secure backend checkout.",
+  payNow: "Confirm payment",
+  paymentConfirmed: "Payment confirmed",
+  paymentError: "We could not confirm the payment. Please try again.",
   shippingPending:
     "Eligible delivery methods and prices will be returned by the backend.",
   password: "Password",
@@ -158,6 +161,15 @@ const en = {
   trustDelivery: "Secure international delivery",
   artisanStory: "Hands behind every object",
   exploreArtisan: "Explore the workshop",
+  brandStory: "Our story",
+  brandStoryTitle: "A digital home for Algerian craft",
+  brandStoryBody:
+    "AISHA North-Africa Trésors is an e-commerce platform created to bring Algerian artisans and artists to the world through a thoughtful, multilingual marketplace.",
+  brandStoryMission:
+    "We introduce the maker, materials, making method, cultural context, and origin behind every object, helping customers buy with confidence and connection.",
+  brandStoryModel:
+    "Unlike dropshipping, AISHA receives products into its warehouses, checks their quality and conformity, then prepares them for delivery. Selected pieces can also be commissioned from the artisan.",
+  brandStoryCta: "Meet the artisans",
   promotional: "Made for you, made with time",
   emptyOrders: "No orders yet",
   emptyOrdersBody:
@@ -237,6 +249,9 @@ const fr: StoreCopy = {
   address: "Adresse de livraison",
   shippingMethod: "Mode de livraison",
   paymentMethod: "Mode de paiement",
+  payNow: "Confirmer le paiement",
+  paymentConfirmed: "Paiement confirmé",
+  paymentError: "Impossible de confirmer le paiement. Réessayez.",
   review: "Vérification",
   secureCheckout: "Paiement sécurisé",
   placeOrder: "Vérifier la commande",
@@ -338,6 +353,9 @@ const ar: StoreCopy = {
   address: "عنوان التوصيل",
   shippingMethod: "طريقة التوصيل",
   paymentMethod: "طريقة الدفع",
+  payNow: "تأكيد الدفع",
+  paymentConfirmed: "تم تأكيد الدفع",
+  paymentError: "تعذر تأكيد الدفع. يرجى المحاولة مرة أخرى.",
   review: "المراجعة",
   secureCheckout: "دفع آمن",
   placeOrder: "راجع الطلب",
@@ -439,6 +457,9 @@ const es: StoreCopy = {
   address: "Dirección de entrega",
   shippingMethod: "Método de envío",
   paymentMethod: "Método de pago",
+  payNow: "Confirmar pago",
+  paymentConfirmed: "Pago confirmado",
+  paymentError: "No se pudo confirmar el pago. Inténtalo de nuevo.",
   review: "Revisión",
   secureCheckout: "Pago seguro",
   placeOrder: "Revisar pedido",
@@ -526,6 +547,15 @@ const publicOverrides = {
     trustDelivery: "Livraison internationale sécurisée",
     artisanStory: "Les mains derrière chaque objet",
     exploreArtisan: "Découvrir l’atelier",
+    brandStory: "Notre histoire",
+    brandStoryTitle: "Une maison numérique pour l’artisanat algérien",
+    brandStoryBody:
+      "AISHA North-Africa Trésors est une plateforme e-commerce créée pour faire connaître les artisans et les artistes algériens dans le monde grâce à une marketplace multilingue et exigeante.",
+    brandStoryMission:
+      "Nous présentons le créateur, les matières, la méthode de fabrication, le contexte culturel et l’origine de chaque objet, pour acheter en confiance et avec un vrai lien.",
+    brandStoryModel:
+      "Contrairement au dropshipping, AISHA réceptionne les produits dans ses entrepôts, vérifie leur qualité et leur conformité, puis les prépare pour la livraison. Certaines pièces peuvent aussi être réalisées sur commande auprès de l’artisan.",
+    brandStoryCta: "Découvrir les artisans",
     promotional: "Fait pour vous, façonné avec le temps",
     quality: "Qualité contrôlée par AISHA",
     origin: "Fabriqué en Algérie",
@@ -566,6 +596,15 @@ const publicOverrides = {
     trustDelivery: "توصيل دولي آمن",
     artisanStory: "الأيدي وراء كل قطعة",
     exploreArtisan: "اكتشف الورشة",
+    brandStory: "قصتنا",
+    brandStoryTitle: "بيت رقمي للحرف الجزائرية",
+    brandStoryBody:
+      "عائشة نورث أفريكا تريزورز هي منصة تجارة إلكترونية أُنشئت لتعريف العالم بالحرفيين والفنانين الجزائريين عبر سوق رقمي متعدد اللغات.",
+    brandStoryMission:
+      "نعرّف بصانع كل قطعة وموادها وطريقة صنعها وسياقها الثقافي وأصلها، حتى يشتري العميل بثقة وبصلة حقيقية مع الحرفة.",
+    brandStoryModel:
+      "على خلاف البيع بنظام الشحن المباشر، تستقبل عائشة المنتجات في مستودعاتها وتفحص جودتها ومطابقتها قبل تجهيزها للتوصيل. كما يمكن طلب قطع مختارة حسب الطلب من الحرفي.",
+    brandStoryCta: "اكتشف الحرفيين",
     promotional: "مصنوع لك، وبعناية الوقت",
     quality: "جودة مفحوصة من عائشة",
     origin: "صُنع في الجزائر",
@@ -608,6 +647,15 @@ const publicOverrides = {
     trustDelivery: "Entrega internacional segura",
     artisanStory: "Las manos detrás de cada objeto",
     exploreArtisan: "Descubrir el taller",
+    brandStory: "Nuestra historia",
+    brandStoryTitle: "Un hogar digital para la artesanía argelina",
+    brandStoryBody:
+      "AISHA North-Africa Trésors es una plataforma de comercio electrónico creada para llevar al mundo a los artesanos y artistas argelinos mediante un marketplace cuidado y multilingüe.",
+    brandStoryMission:
+      "Presentamos al creador, los materiales, el método de elaboración, el contexto cultural y el origen de cada objeto para comprar con confianza y conexión.",
+    brandStoryModel:
+      "A diferencia del dropshipping, AISHA recibe los productos en sus almacenes, comprueba su calidad y conformidad, y después los prepara para el envío. Algunas piezas también pueden encargarse al artesano.",
+    brandStoryCta: "Conocer a los artesanos",
     promotional: "Hecho para ti, creado con tiempo",
     quality: "Calidad revisada por AISHA",
     origin: "Hecho en Argelia",

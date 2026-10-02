@@ -452,6 +452,21 @@ paths:
       parameters: [{name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 8, maxLength: 200}}]
       requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CheckoutRequest'}}}}
       responses: {'201': {description: Pending order created, content: {application/json: {schema: {$ref: '#/components/schemas/CheckoutResponse'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '409': {$ref: '#/components/responses/ConflictError'}}
+  /api/v1/payments/{id}:
+    get:
+      summary: Read a payment attempt owned by the authenticated customer
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/payments:read
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'200': {description: Payment attempt, content: {application/json: {schema: {$ref: '#/components/schemas/PaymentAttempt'}}}}, '401': {$ref: '#/components/responses/AuthenticationError'}, '404': {$ref: '#/components/responses/Error'}}
+  /api/v1/payments/{id}/confirm:
+    post:
+      summary: Confirm a payment with the internal manual development adapter
+      description: Confirms the server-trusted order total without sending card data to an external provider. The idempotency key makes repeated clicks safe.
+      security: [{bearerAuth: []}]
+      x-casbin-permission: /api/v1/payments:write
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}, {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 8, maxLength: 200}}]
+      responses: {'200': {description: Paid order, content: {application/json: {schema: {$ref: '#/components/schemas/Order'}}}}, '400': {$ref: '#/components/responses/ValidationError'}, '401': {$ref: '#/components/responses/AuthenticationError'}, '404': {$ref: '#/components/responses/Error'}, '409': {$ref: '#/components/responses/ConflictError'}}
   /api/v1/cart:
     get:
       summary: Read the authenticated customer's persisted cart
@@ -1451,7 +1466,7 @@ components:
       properties: {fullName: {type: string}, phone: {type: string}, line1: {type: string}, line2: {type: string}, city: {type: string}, postalCode: {type: string}, country: {type: string}}
     PaymentAttempt:
       type: object
-      properties: {id: {type: string, format: uuid}, status: {type: string}, amountMinor: {type: integer, format: int64}, currency: {type: string}}
+      properties: {id: {type: string, format: uuid}, provider: {type: string, example: manual}, providerReference: {type: string}, status: {type: string}, amountMinor: {type: integer, format: int64}, currency: {type: string}, failureReason: {type: string}}
     ShipmentEvent:
       type: object
       properties: {id: {type: string, format: uuid}, status: {type: string}, trackingReference: {type: string}, occurredAt: {type: string, format: date-time}}

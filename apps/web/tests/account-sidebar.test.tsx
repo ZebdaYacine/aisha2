@@ -8,6 +8,7 @@ import type { AuthUser } from "@/features/auth/types";
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ replace: jest.fn(), refresh: jest.fn() }),
+  usePathname: () => "/en/account",
 }));
 jest.mock("@/features/auth/viewmodel/auth-context", () => ({ useAuth: jest.fn() }));
 
@@ -50,7 +51,7 @@ describe("combined account navigation", () => {
     expect(screen.getByRole("link", { name: copy.addresses })).toHaveAttribute("href", "/en/account/addresses");
   });
 
-  it("shows the seller mode only from backend artisan capabilities", async () => {
+  it("keeps account mode controls out of the tab strip", async () => {
     renderSidebar({
       ...baseUser,
       artisanStatus: "ACTIVE",
@@ -59,11 +60,13 @@ describe("combined account navigation", () => {
     });
     const copy = storeCopy("en");
 
-    await waitFor(() => expect(screen.getByRole("link", { name: copy.artisanArea })).toHaveAttribute("href", "/en/artisan"));
+    await waitFor(() => expect(screen.getByRole("link", { name: copy.purchases })).toBeInTheDocument());
+    expect(screen.queryByRole("link", { name: copy.customerArea })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: copy.artisanArea })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: copy.purchases })).toHaveAttribute("href", "/en/account/orders");
   });
 
-  it("shares the customer switch, workshop management, and logout in artisan mode", async () => {
+  it("keeps workshop management while moving mode and logout actions to the profile menu", async () => {
     renderSidebar({
       ...baseUser,
       artisanStatus: "ACTIVE",
@@ -71,12 +74,13 @@ describe("combined account navigation", () => {
       capabilities: [...baseUser.capabilities, "artisan.account.read"],
     }, "en", "artisan");
     const copy = storeCopy("en");
-    await waitFor(() => expect(screen.getByRole("link", { name: copy.customerArea })).toHaveAttribute("href", "/en/account"));
+    await waitFor(() => expect(screen.getByRole("link", { name: copy.manageWorkshops })).toHaveAttribute("href", "/en/artisan#workshops"));
+    expect(screen.queryByRole("link", { name: copy.customerArea })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: copy.manageWorkshops })).toHaveAttribute("href", "/en/artisan#workshops");
-    expect(screen.getByRole("button", { name: copy.logout })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: copy.logout })).not.toBeInTheDocument();
   });
 
-  it("shows both persistent modes for an active artisan", async () => {
+  it("keeps the primary customer links available for an active artisan", async () => {
     renderSidebar({
       ...baseUser,
       artisanStatus: "ACTIVE",
@@ -85,11 +89,9 @@ describe("combined account navigation", () => {
     });
     const copy = storeCopy("en");
 
-    await waitFor(() => {
-      expect(screen.getByRole("link", { name: copy.customerArea })).toHaveAttribute("aria-current", "page");
-    });
-    expect(screen.getByRole("link", { name: copy.customerArea })).toHaveAttribute("href", "/en/account");
-    expect(screen.getByRole("link", { name: copy.artisanArea })).toHaveAttribute("href", "/en/artisan");
+    await waitFor(() => expect(screen.getByRole("link", { name: copy.profile })).toBeInTheDocument());
+    expect(screen.queryByRole("link", { name: copy.customerArea })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: copy.artisanArea })).not.toBeInTheDocument();
   });
 
   it("keeps customer mode and disables seller navigation for a suspended artisan", async () => {
@@ -107,8 +109,10 @@ describe("combined account navigation", () => {
 
     await waitFor(() => expect(screen.getByRole("link", { name: copy.purchases })).toBeInTheDocument());
     const navigation = screen.getByRole("navigation", { name: copy.account });
+    const scrollStrip = navigation.parentElement;
     expect(direction("ar")).toBe("rtl");
-    expect(navigation.className).toContain("overflow-x-auto");
+    expect(scrollStrip).toHaveClass("overflow-x-auto", "touch-pan-x");
+    expect(navigation.className).toContain("snap-x");
     expect(navigation.className).toContain("lg:flex-col");
   });
 

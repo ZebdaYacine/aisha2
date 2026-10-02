@@ -1,17 +1,22 @@
 "use client";
 
 import { Bell, CheckCheck, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { formatFullDateTime } from "@/core/lib/format";
 import type { Locale } from "@/core/lib/i18n";
 import { useOptionalAuth } from "@/features/auth/viewmodel/auth-context";
+import { hasCapability, type AuthUser } from "@/features/auth/types";
+
+type NotificationPayload = Record<string, unknown>;
 
 type NotificationItem = {
   id: string;
   eventType: string;
   titleKey: string;
   bodyKey: string;
+  payload?: NotificationPayload | null;
   readAt?: string | null;
   createdAt: string;
 };
@@ -242,6 +247,57 @@ function bodyFor(item: NotificationItem, locale: Locale) {
   return bodies[locale][item.bodyKey] ?? "A workflow update was recorded.";
 }
 
+function notificationPathFor(item: NotificationItem, locale: Locale, user: AuthUser | null) {
+  const eventType = item.eventType;
+
+  if (eventType.startsWith("ARTISAN_APPLICATION_") || eventType.startsWith("ARTISAN_VERIFICATION_")) {
+    if (hasCapability(user, "admin.artisan_applications.read")) return `/${locale}/admin/artisan-applications`;
+    if (user?.artisanEnabled && hasCapability(user, "artisan.account.read")) return `/${locale}/artisan`;
+    return `/${locale}/account`;
+  }
+
+  if (eventType.startsWith("ARTISAN_MEMBERSHIP_") || eventType.startsWith("WORKSHOP_")) {
+    if (user?.artisanEnabled && hasCapability(user, "artisan.account.read")) return `/${locale}/artisan`;
+    if (hasCapability(user, "admin.artisan_applications.read")) return `/${locale}/admin/artisan-applications`;
+    return `/${locale}/account`;
+  }
+
+  if (eventType === "PRODUCT_SUBMITTED" && hasCapability(user, "admin.product_moderation.read")) {
+    return `/${locale}/admin/moderation`;
+  }
+  if (eventType.startsWith("PRODUCT_")) {
+    if (user?.artisanEnabled && hasCapability(user, "artisan.account.read")) return `/${locale}/artisan`;
+    if (hasCapability(user, "admin.product_moderation.read")) return `/${locale}/admin/moderation`;
+    return `/${locale}/account`;
+  }
+
+  if (eventType.startsWith("WAREHOUSE_") || eventType === "RECEIVED_PENDING_INSPECTION" || eventType === "INSPECTED" || eventType === "INVENTORY_ACCEPTED") {
+    if (hasCapability(user, "warehouse.read") || hasCapability(user, "admin.audit.read")) return `/${locale}/admin/warehouse`;
+    return `/${locale}/account`;
+  }
+
+  if (eventType.startsWith("INVENTORY_")) {
+    if (hasCapability(user, "inventory.read")) return `/${locale}/admin/inventory`;
+    if (hasCapability(user, "warehouse.read")) return `/${locale}/admin/warehouse`;
+    return `/${locale}/account`;
+  }
+
+  if (eventType.startsWith("ORDER_")) {
+    const orderId = typeof item.payload?.orderId === "string" ? item.payload.orderId : "";
+    if (hasCapability(user, "admin.users.read")) return `/${locale}/admin/orders`;
+    if (hasCapability(user, "warehouse.read")) return `/${locale}/admin/warehouse`;
+    return orderId ? `/${locale}/account/orders/${encodeURIComponent(orderId)}` : `/${locale}/account/orders`;
+  }
+
+  if (eventType === "USER_STATUS_CHANGED" || eventType === "USER_ROLES_CHANGED") {
+    if (hasCapability(user, "admin.users.read")) return `/${locale}/admin/users`;
+    return `/${locale}/account/profile`;
+  }
+
+  if (hasCapability(user, "admin.audit.read")) return `/${locale}/admin/audit`;
+  return `/${locale}/account`;
+}
+
 function websocketURL() {
   if (process.env.NEXT_PUBLIC_API_WS_URL) return process.env.NEXT_PUBLIC_API_WS_URL;
   if (typeof window === "undefined") return "ws://localhost:8088/api/v1/notifications/ws";
@@ -251,12 +307,15 @@ function websocketURL() {
 
 export function NotificationCenter({ locale }: { locale: Locale }) {
   const auth = useOptionalAuth();
+  const authenticatedUser = auth?.user;
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
   const retryRef = useRef<number | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const text = useMemo(() => copy[locale], [locale]);
 
   const load = useCallback(async () => {
@@ -315,34 +374,64 @@ export function NotificationCenter({ locale }: { locale: Locale }) {
     };
   }, [auth?.status, load]);
 
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!panelRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
   const markRead = async (id: string) => {
     const item = items.find((value) => value.id === id);
     if (!item || item.readAt) return;
     setItems((current) => current.map((value) => value.id === id ? { ...value, readAt: new Date().toISOString() } : value));
     setUnread((count) => Math.max(0, count - 1));
-    await fetch(`/api/notifications/${encodeURIComponent(id)}/read`, { method: "POST" });
+    try {
+      await fetch(`/api/notifications/${encodeURIComponent(id)}/read`, { method: "POST" });
+    } catch {
+      // Keep the optimistic state when the notification service is briefly unavailable.
+    }
   };
 
   const markAllRead = async () => {
     setItems((current) => current.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
     setUnread(0);
-    await fetch("/api/notifications/read-all", { method: "POST" });
+    try {
+      await fetch("/api/notifications/read-all", { method: "POST" });
+    } catch {
+      // Keep the optimistic state when the notification service is briefly unavailable.
+    }
   };
 
-  if (!auth?.user) return null;
+  const openNotification = (item: NotificationItem) => {
+    setOpen(false);
+    router.push(notificationPathFor(item, locale, authenticatedUser ?? null));
+    void markRead(item.id);
+  };
+
+  if (!authenticatedUser) return null;
   return (
-    <div className="relative">
+    <div className="relative" ref={panelRef}>
       <button type="button" className="relative flex min-h-11 min-w-11 items-center justify-center" aria-label={text.label} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
         <Bell size={19} strokeWidth={1.5} />
         {unread > 0 && <span className="absolute end-0 top-1 min-w-4 rounded-full bg-foreground px-1 text-[0.625rem] text-background" aria-label={`${unread} unread`}>{unread > 99 ? "99+" : unread}</span>}
       </button>
-      {open && <div className="absolute end-0 top-12 z-[70] w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-border bg-background shadow-xl" role="dialog" aria-label={text.title}>
+      {open && <div className="fixed inset-x-3 top-20 z-[70] max-h-[calc(100svh-6rem)] overflow-hidden rounded-md border border-border bg-background shadow-xl sm:absolute sm:inset-x-auto sm:end-0 sm:top-12 sm:max-h-none sm:w-[min(22rem,calc(100vw-2rem))]" role="dialog" aria-label={text.title}>
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="font-serif text-xl">{text.title}{unread > 0 ? ` (${unread})` : ""}</h2>
           <button type="button" className="grid size-8 place-items-center" aria-label={text.close} onClick={() => setOpen(false)}><X size={16} /></button>
         </div>
         <div className="max-h-[min(28rem,65vh)] overflow-y-auto">
-          {loading ? <p className="px-4 py-8 text-sm text-muted-foreground">{text.loading}</p> : items.length === 0 ? <p className="px-4 py-8 text-sm text-muted-foreground">{text.empty}</p> : items.map((item) => <button key={item.id} type="button" className={`block w-full border-b border-border px-4 py-3 text-start transition-colors hover:bg-muted/40 ${item.readAt ? "" : "bg-muted/20"}`} onClick={() => void markRead(item.id)}>
+          {loading ? <p className="px-4 py-8 text-sm text-muted-foreground">{text.loading}</p> : items.length === 0 ? <p className="px-4 py-8 text-sm text-muted-foreground">{text.empty}</p> : items.map((item) => <button key={item.id} type="button" className={`block w-full border-b border-border px-4 py-3 text-start transition-colors hover:bg-muted/40 ${item.readAt ? "" : "bg-muted/20"}`} onClick={() => void openNotification(item)}>
             <span className="flex items-start justify-between gap-3"><strong className="text-sm">{titleFor(item, locale)}</strong>{!item.readAt && <span className="mt-1 size-2 shrink-0 rounded-full bg-primary" aria-label="Unread" />}</span>
             <span className="mt-1 block text-xs text-muted-foreground">{bodyFor(item, locale)}</span>
             <span className="mt-2 block text-[0.6875rem] text-muted-foreground">{formatFullDateTime(item.createdAt, locale)}</span>

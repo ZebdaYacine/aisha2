@@ -8,12 +8,13 @@ import (
 )
 
 var (
-	ErrValidation          = errors.New("order validation failed")
-	ErrNotFound            = errors.New("order not found")
-	ErrOutOfStock          = errors.New("product is out of stock")
-	ErrPriceChanged        = errors.New("product price changed")
-	ErrInvalidTransition   = errors.New("invalid order transition")
-	ErrIdempotencyConflict = errors.New("idempotency conflict")
+	ErrValidation            = errors.New("order validation failed")
+	ErrNotFound              = errors.New("order not found")
+	ErrOutOfStock            = errors.New("product is out of stock")
+	ErrPriceChanged          = errors.New("product price changed")
+	ErrPaymentAmountMismatch = errors.New("payment amount does not match order")
+	ErrInvalidTransition     = errors.New("invalid order transition")
+	ErrIdempotencyConflict   = errors.New("idempotency conflict")
 )
 
 type CartItem struct {
@@ -45,32 +46,35 @@ type OrderItem struct {
 	SubtotalMinor  int64  `json:"subtotalMinor"`
 }
 type PaymentAttempt struct {
-	ID          string `json:"id"`
-	Status      string `json:"status"`
-	AmountMinor int64  `json:"amountMinor"`
-	Currency    string `json:"currency"`
+	ID                string `json:"id"`
+	Provider          string `json:"provider"`
+	ProviderReference string `json:"providerReference,omitempty"`
+	Status            string `json:"status"`
+	AmountMinor       int64  `json:"amountMinor"`
+	Currency          string `json:"currency"`
+	FailureReason     string `json:"failureReason,omitempty"`
 }
 type ShipmentEvent struct {
-	ID               string    `json:"id"`
-	Status           string    `json:"status"`
-	TrackingReference string   `json:"trackingReference,omitempty"`
-	OccurredAt       time.Time `json:"occurredAt"`
+	ID                string    `json:"id"`
+	Status            string    `json:"status"`
+	TrackingReference string    `json:"trackingReference,omitempty"`
+	OccurredAt        time.Time `json:"occurredAt"`
 }
 type Order struct {
-	ID            string          `json:"id"`
-	OrderNumber   string          `json:"orderNumber"`
-	UserID        string          `json:"userId,omitempty"`
-	Status        string          `json:"status"`
-	Currency      string          `json:"currency"`
-	SubtotalMinor int64           `json:"subtotalMinor"`
-	ShippingMinor int64           `json:"shippingMinor"`
-	TotalMinor    int64           `json:"totalMinor"`
-	Address       AddressSnapshot `json:"address"`
-	Items         []OrderItem     `json:"items"`
-	Payment       *PaymentAttempt `json:"payment,omitempty"`
+	ID             string          `json:"id"`
+	OrderNumber    string          `json:"orderNumber"`
+	UserID         string          `json:"userId,omitempty"`
+	Status         string          `json:"status"`
+	Currency       string          `json:"currency"`
+	SubtotalMinor  int64           `json:"subtotalMinor"`
+	ShippingMinor  int64           `json:"shippingMinor"`
+	TotalMinor     int64           `json:"totalMinor"`
+	Address        AddressSnapshot `json:"address"`
+	Items          []OrderItem     `json:"items"`
+	Payment        *PaymentAttempt `json:"payment,omitempty"`
 	ShipmentEvents []ShipmentEvent `json:"shipmentEvents"`
-	CreatedAt     time.Time       `json:"createdAt"`
-	UpdatedAt     time.Time       `json:"updatedAt"`
+	CreatedAt      time.Time       `json:"createdAt"`
+	UpdatedAt      time.Time       `json:"updatedAt"`
 }
 type SellerItem struct {
 	OrderID       string    `json:"orderId"`
@@ -90,6 +94,21 @@ type Return struct {
 	Reason    string    `json:"reason"`
 	CreatedAt time.Time `json:"createdAt"`
 }
+type ShipmentInput struct {
+	Carrier           string `json:"carrier"`
+	TrackingReference string `json:"trackingReference"`
+}
+
+type FulfilmentOrder struct {
+	ID            string    `json:"id"`
+	OrderNumber   string    `json:"orderNumber"`
+	Status        string    `json:"status"`
+	Currency      string    `json:"currency"`
+	TotalMinor    int64     `json:"totalMinor"`
+	CustomerName  string    `json:"customerName"`
+	CustomerEmail string    `json:"customerEmail"`
+	CreatedAt     time.Time `json:"createdAt"`
+}
 type Repository interface {
 	Checkout(context.Context, string, string, []CartItem, string, string) (Order, error)
 	ListMine(context.Context, string, int, int) ([]Order, int, error)
@@ -97,6 +116,14 @@ type Repository interface {
 	ListSeller(context.Context, string, int, int) ([]SellerItem, int, error)
 	Cancel(context.Context, string, string) (Order, error)
 	RecordReturn(context.Context, string, string, string) (Return, error)
+	GetPayment(context.Context, string, string) (PaymentAttempt, error)
+	ConfirmPayment(context.Context, string, string, string) (Order, error)
+	FailPayment(context.Context, string, string, string) (Order, error)
+	ListFulfilment(context.Context, int, int) ([]FulfilmentOrder, int, error)
+	Prepare(context.Context, string, string) (Order, error)
+	Ship(context.Context, string, string, ShipmentInput) (Order, error)
+	Deliver(context.Context, string, string) (Order, error)
+	Refund(context.Context, string, string, int64, string, string) (Order, error)
 }
 type Authorizer interface {
 	Authorize(context.Context, auth.Principal, string, string) error

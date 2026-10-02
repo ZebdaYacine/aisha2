@@ -1,13 +1,25 @@
 import { expect, test } from "@playwright/test";
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("aisha:splash-seen-at", String(Date.now())));
+});
+
 test("browses catalogue and opens a product", async ({ page }) => {
   await page.goto("/en/products");
   await expect(
     page.getByRole("heading", { name: "Products", exact: true }),
   ).toBeVisible();
-  await page
+  const productLink = page
     .getByRole("link", { name: "Kabyle silver brooch", exact: true })
-    .last()
-    .click();
+    .first();
+  await expect(productLink).toHaveAttribute(
+    "href",
+    "/en/products/kabyle-silver-brooch",
+  );
+  await Promise.all([
+    page.waitForURL(/\/en\/products\/kabyle-silver-brooch/),
+    productLink.click(),
+  ]);
   await expect(
     page.getByRole("heading", { name: "Kabyle silver brooch", level: 1 }),
   ).toBeVisible();
@@ -61,7 +73,7 @@ test("does not invent product availability before inventory is implemented", asy
 test("login maps rate limiting and protects account navigation", async ({ page }) => {
   await page.route("**/api/auth/login", async (route) => route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: { code: "RATE_LIMITED" } }) }));
   await page.goto("/en/login");
-  await page.getByLabel("Email address").fill("customer@example.com");
+  await page.getByLabel("Email or phone number").fill("customer@example.com");
   await page.getByLabel("Password").fill("a-secure-password");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.locator("#auth-login-errors")).toContainText("Too many attempts. Please wait and try again.");
@@ -73,7 +85,7 @@ test("login maps rate limiting and protects account navigation", async ({ page }
 test("successful login enters the protected account shell", async ({ page }) => {
   await page.route("**/api/auth/login", async (route) => route.fulfill({ status: 200, headers: { "set-cookie": "aisha_access=test-access; Path=/; HttpOnly; SameSite=Lax" }, contentType: "application/json", body: JSON.stringify({ user: { id: "user-1" } }) }));
   await page.goto("/en/login");
-  await page.getByLabel("Email address").fill("customer@example.com");
+  await page.getByLabel("Email or phone number").fill("customer@example.com");
   await page.getByLabel("Password").fill("a-secure-password");
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/en\/account$/);

@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Files, PackageOpen, Store } from "lucide-react";
+import { ChevronRight, Files, PackageOpen, Store } from "lucide-react";
 
 import { Skeleton } from "@/core/components/ui/skeleton";
 import { StatusBadge } from "@/core/components/ui/status-badge";
@@ -76,10 +76,20 @@ export function ArtisanWorkspace({ locale }: { locale: keyof typeof labels }) {
         <>
           <div className="mt-8 min-w-0 overflow-hidden rounded-2xl border border-border bg-card shadow-sm" id="workshops">
             <div className="border-b border-border bg-secondary/35 p-2" role="tablist" aria-label={t.heading}>
-              <div className="flex min-w-0 gap-2 overflow-x-auto overscroll-x-contain pb-1 md:grid md:grid-cols-3 md:overflow-visible md:pb-0">
-                <WorkspaceTabButton icon={<Store aria-hidden="true" size={18} />} description={t.workshopsDescription} active={activeTab === "workshops"} id="workshops-tab" controls="workshops-panel" onClick={() => setActiveTab("workshops")}>{t.workshops}</WorkspaceTabButton>
-                {profile && !suspended && sellerEnabled && <WorkspaceTabButton icon={<Files aria-hidden="true" size={18} />} description={t.privateFilesDescription} active={activeTab === "private-files"} id="private-files-tab" controls="private-files-panel" onClick={() => setActiveTab("private-files")}>{t.privateFiles}</WorkspaceTabButton>}
-                {!suspended && sellerEnabled && <WorkspaceTabButton icon={<PackageOpen aria-hidden="true" size={18} />} description={t.productAuthoringDescription} active={activeTab === "products"} id="products-tab" controls="products-panel" onClick={() => setActiveTab("products")}>{t.productAuthoring}</WorkspaceTabButton>}
+              <div className="relative min-w-0">
+                <div className="horizontal-tab-scroll w-full min-w-0 overflow-x-auto overscroll-x-contain md:overflow-visible">
+                  <div className="flex w-max min-w-full gap-2 pb-2 md:w-full md:grid md:grid-cols-3 md:pb-0">
+                    <WorkspaceTabButton icon={<Store aria-hidden="true" size={18} />} description={t.workshopsDescription} active={activeTab === "workshops"} id="workshops-tab" controls="workshops-panel" onClick={() => setActiveTab("workshops")}>{t.workshops}</WorkspaceTabButton>
+                    {profile && !suspended && sellerEnabled && <WorkspaceTabButton icon={<Files aria-hidden="true" size={18} />} description={t.privateFilesDescription} active={activeTab === "private-files"} id="private-files-tab" controls="private-files-panel" onClick={() => setActiveTab("private-files")}>{t.privateFiles}</WorkspaceTabButton>}
+                    {!suspended && sellerEnabled && <WorkspaceTabButton icon={<PackageOpen aria-hidden="true" size={18} />} description={t.productAuthoringDescription} active={activeTab === "products"} id="products-tab" controls="products-panel" onClick={() => setActiveTab("products")}>{t.productAuthoring}</WorkspaceTabButton>}
+                  </div>
+                </div>
+                <div className="mt-2 flex h-1.5 w-full overflow-hidden rounded-full bg-muted md:hidden" aria-hidden="true">
+                  <span className="h-full w-1/3 rounded-full bg-primary" />
+                </div>
+                <span className="pointer-events-none absolute end-0 top-0 flex h-20 w-10 items-center justify-end bg-gradient-to-l from-secondary via-secondary/90 to-transparent pe-1 text-primary rtl:bg-gradient-to-r md:hidden" aria-hidden="true">
+                  <ChevronRight size={16} />
+                </span>
               </div>
             </div>
             <div className="min-w-0 p-1 sm:p-3">
@@ -95,5 +105,5 @@ export function ArtisanWorkspace({ locale }: { locale: keyof typeof labels }) {
 }
 
 function WorkspaceTabButton({ active, id, controls, onClick, icon, description, children }: { active: boolean; id: string; controls: string; onClick: () => void; icon: React.ReactNode; description: string; children: React.ReactNode }) {
-  return <button type="button" role="tab" id={id} aria-controls={controls} aria-selected={active} onClick={onClick} className={`flex min-h-20 min-w-[16rem] flex-1 items-start gap-3 rounded-xl border p-4 text-start transition-colors md:min-w-0 ${active ? "border-primary bg-secondary text-foreground shadow-sm" : "border-border bg-card text-muted-foreground hover:border-primary/60 hover:bg-background hover:text-foreground"}`}><span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-full ${active ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>{icon}</span><span className="min-w-0"><span className="block text-sm font-semibold">{children}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span></span></button>;
+  return <button type="button" role="tab" id={id} aria-controls={controls} aria-selected={active} onClick={onClick} className={`flex min-h-20 min-w-[14rem] shrink-0 flex-1 items-start gap-3 rounded-xl border p-3 text-start transition-colors sm:min-w-[16rem] sm:p-4 md:min-w-0 ${active ? "border-primary bg-secondary text-foreground shadow-sm" : "border-border bg-card text-muted-foreground hover:border-primary/60 hover:bg-background hover:text-foreground"}`}><span className={`mt-0.5 grid size-9 shrink-0 place-items-center rounded-full ${active ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>{icon}</span><span className="min-w-0"><span className="block text-sm font-semibold">{children}</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">{description}</span></span></button>;
 }
