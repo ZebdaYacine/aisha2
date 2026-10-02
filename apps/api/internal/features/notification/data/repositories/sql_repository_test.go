@@ -27,3 +27,12 @@ func TestWarehouseWorkflowEventsHaveTemplates(t *testing.T) {
 		}
 	}
 }
+
+func TestPaymentWorkflowEventsHaveTemplates(t *testing.T) {
+	for _, event := range []string{"PAYMENT_CONFIRMED", "PAYMENT_FAILED", "PAYMENT_REFUNDED"} {
+		title, body, ok := templateFor(event)
+		if !ok || title == "" || body != "notifications.payment.body" {
+			t.Errorf("templateFor(%q) = %q, %q, %v", event, title, body, ok)
+		}
+	}
+}

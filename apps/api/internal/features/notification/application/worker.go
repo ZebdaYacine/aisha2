@@ -2,7 +2,10 @@ package application
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/aisha-platform/aisha/apps/api/internal/features/notification/domain"
@@ -12,21 +15,30 @@ type Publisher interface {
 	Publish(string, domain.Notification)
 }
 
+type Mailer interface {
+	Send(context.Context, string, string, string) error
+}
+
 type Worker struct {
 	repository domain.Repository
 	publisher  Publisher
 	interval   time.Duration
 	logger     *slog.Logger
+	mailer     Mailer
 }
 
-func NewWorker(repository domain.Repository, publisher Publisher, interval time.Duration, logger *slog.Logger) *Worker {
+func NewWorker(repository domain.Repository, publisher Publisher, interval time.Duration, logger *slog.Logger, mailers ...Mailer) *Worker {
 	if interval <= 0 {
 		interval = time.Second
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Worker{repository: repository, publisher: publisher, interval: interval, logger: logger}
+	var mailer Mailer
+	if len(mailers) > 0 {
+		mailer = mailers[0]
+	}
+	return &Worker{repository: repository, publisher: publisher, interval: interval, logger: logger, mailer: mailer}
 }
 
 func (w *Worker) Run(ctx context.Context) {
@@ -68,8 +80,44 @@ func (w *Worker) tick(ctx context.Context) {
 			if w.publisher != nil {
 				w.publisher.Publish(notification.RecipientUserID, notification)
 			}
+			if w.mailer != nil && strings.TrimSpace(notification.RecipientEmail) != "" {
+				if err := w.mailer.Send(ctx, notification.RecipientEmail, emailSubject(notification.EventType), emailBody(notification)); err != nil {
+					w.logger.Error("send notification email", "notification_id", notification.ID, "event_type", notification.EventType, "error", err)
+				}
+			}
 		}
 	}
+}
+
+func emailSubject(eventType string) string {
+	return "AISHA notification — " + humanizeEventType(eventType)
+}
+
+func emailBody(notification domain.Notification) string {
+	name := strings.TrimSpace(notification.RecipientName)
+	if name == "" {
+		name = "there"
+	}
+	body := fmt.Sprintf("Hello %s,\n\nA new AISHA workflow update is available.\n\nTransaction: %s\n", name, humanizeEventType(notification.EventType))
+	if len(notification.Payload) > 0 && string(notification.Payload) != "null" && string(notification.Payload) != "{}" {
+		var payload any
+		if err := json.Unmarshal(notification.Payload, &payload); err == nil {
+			if formatted, err := json.MarshalIndent(payload, "", "  "); err == nil {
+				body += "\nDetails:\n" + string(formatted) + "\n"
+			}
+		}
+	}
+	return body + "\nSign in to AISHA to review the latest status.\n"
+}
+
+func humanizeEventType(eventType string) string {
+	words := strings.Fields(strings.ReplaceAll(strings.ToLower(strings.TrimSpace(eventType)), "_", " "))
+	for index, word := range words {
+		if word != "" {
+			words[index] = strings.ToUpper(word[:1]) + word[1:]
+		}
+	}
+	return strings.Join(words, " ")
 }
 
 func backoff(attempt int) time.Duration {

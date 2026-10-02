@@ -84,6 +84,9 @@ func TestDevelopmentSeedIsIdempotent(t *testing.T) {
 		{"customers", `SELECT count(*) FROM user_roles ur JOIN roles r ON r.id=ur.role_id WHERE r.code='customer'`, 10},
 		{"development orders", `SELECT count(*) FROM orders WHERE order_number LIKE 'AISHA-DEV-%'`, 20},
 		{"submitted artisan applications", `SELECT count(*) FROM artisan_profiles WHERE status='SUBMITTED'`, 5},
+		{"development workshops", `SELECT count(*) FROM workshops`, 10},
+		{"development products", `SELECT count(*) FROM products`, 30},
+		{"development product categories", `SELECT count(DISTINCT category_id) FROM products`, 12},
 	}
 	for _, fixture := range fixtureCounts {
 		var got int

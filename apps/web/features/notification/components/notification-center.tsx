@@ -41,6 +41,7 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.workshop.title": "Workshop update",
     "notifications.product.title": "Product update",
     "notifications.order.title": "Order update",
+    "notifications.payment.title": "Payment update",
     "notifications.account.title": "Account update",
     "notifications.inventory.title": "Inventory update",
     "notifications.warehouse.title": "Warehouse update",
@@ -66,6 +67,9 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.order.checkout.title": "Order placed",
     "notifications.order.cancelled.title": "Order cancelled",
     "notifications.order.returnRecorded.title": "Order return recorded",
+    "notifications.payment.confirmed.title": "Payment confirmed",
+    "notifications.payment.failed.title": "Payment failed",
+    "notifications.payment.refunded.title": "Payment refunded",
     "notifications.warehouse.received.title": "Warehouse reception recorded",
     "notifications.warehouse.inspected.title": "Warehouse inspection completed",
     "notifications.warehouse.inventoryAccepted.title": "Inventory accepted",
@@ -80,6 +84,7 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.workshop.title": "Mise à jour de l'atelier",
     "notifications.product.title": "Mise à jour du produit",
     "notifications.order.title": "Mise à jour de la commande",
+    "notifications.payment.title": "Mise à jour du paiement",
     "notifications.account.title": "Mise à jour du compte",
     "notifications.inventory.title": "Mise à jour du stock",
     "notifications.warehouse.title": "Mise à jour de l'entrepôt",
@@ -105,6 +110,9 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.order.checkout.title": "Commande passée",
     "notifications.order.cancelled.title": "Commande annulée",
     "notifications.order.returnRecorded.title": "Retour de commande enregistré",
+    "notifications.payment.confirmed.title": "Paiement confirmé",
+    "notifications.payment.failed.title": "Paiement échoué",
+    "notifications.payment.refunded.title": "Paiement remboursé",
     "notifications.warehouse.received.title": "Réception d'entrepôt enregistrée",
     "notifications.warehouse.inspected.title": "Inspection d'entrepôt terminée",
     "notifications.warehouse.inventoryAccepted.title": "Stock accepté",
@@ -119,6 +127,7 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.workshop.title": "تحديث الورشة",
     "notifications.product.title": "تحديث المنتج",
     "notifications.order.title": "تحديث الطلب",
+    "notifications.payment.title": "تحديث الدفع",
     "notifications.account.title": "تحديث الحساب",
     "notifications.inventory.title": "تحديث المخزون",
     "notifications.warehouse.title": "تحديث المستودع",
@@ -144,6 +153,9 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.order.checkout.title": "تم إنشاء الطلب",
     "notifications.order.cancelled.title": "تم إلغاء الطلب",
     "notifications.order.returnRecorded.title": "تم تسجيل إرجاع الطلب",
+    "notifications.payment.confirmed.title": "تم تأكيد الدفع",
+    "notifications.payment.failed.title": "فشل الدفع",
+    "notifications.payment.refunded.title": "تم رد الدفع",
     "notifications.warehouse.received.title": "تم تسجيل استلام المستودع",
     "notifications.warehouse.inspected.title": "اكتمل فحص المستودع",
     "notifications.warehouse.inventoryAccepted.title": "تم قبول المخزون",
@@ -158,6 +170,7 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.workshop.title": "Actualización del taller",
     "notifications.product.title": "Actualización del producto",
     "notifications.order.title": "Actualización del pedido",
+    "notifications.payment.title": "Actualización del pago",
     "notifications.account.title": "Actualización de la cuenta",
     "notifications.inventory.title": "Actualización del inventario",
     "notifications.warehouse.title": "Actualización del almacén",
@@ -183,6 +196,9 @@ const titles: Record<Locale, Record<string, string>> = {
     "notifications.order.checkout.title": "Pedido realizado",
     "notifications.order.cancelled.title": "Pedido cancelado",
     "notifications.order.returnRecorded.title": "Devolución del pedido registrada",
+    "notifications.payment.confirmed.title": "Pago confirmado",
+    "notifications.payment.failed.title": "Pago fallido",
+    "notifications.payment.refunded.title": "Pago reembolsado",
     "notifications.warehouse.received.title": "Recepción de almacén registrada",
     "notifications.warehouse.inspected.title": "Inspección de almacén completada",
     "notifications.warehouse.inventoryAccepted.title": "Inventario aceptado",
@@ -200,6 +216,7 @@ const bodies: Record<Locale, Record<string, string>> = {
     "notifications.workshop.body": "A workshop workflow step was recorded.",
     "notifications.product.body": "A product workflow step was recorded.",
     "notifications.order.body": "An order workflow step was recorded.",
+    "notifications.payment.body": "A payment workflow step was recorded.",
     "notifications.account.body": "Your account settings were updated.",
     "notifications.inventory.body": "An inventory workflow step was recorded.",
     "notifications.warehouse.body": "A warehouse workflow step was recorded.",
@@ -211,6 +228,7 @@ const bodies: Record<Locale, Record<string, string>> = {
     "notifications.workshop.body": "Une étape du workflow de l'atelier a été enregistrée.",
     "notifications.product.body": "Une étape du workflow du produit a été enregistrée.",
     "notifications.order.body": "Une étape du workflow de la commande a été enregistrée.",
+    "notifications.payment.body": "Une étape du workflow du paiement a été enregistrée.",
     "notifications.account.body": "Les paramètres de votre compte ont été mis à jour.",
     "notifications.inventory.body": "Une étape du workflow du stock a été enregistrée.",
     "notifications.warehouse.body": "Une étape du workflow de l'entrepôt a été enregistrée.",
@@ -222,6 +240,7 @@ const bodies: Record<Locale, Record<string, string>> = {
     "notifications.workshop.body": "تم تسجيل مرحلة من سير عمل الورشة.",
     "notifications.product.body": "تم تسجيل مرحلة من سير عمل المنتج.",
     "notifications.order.body": "تم تسجيل مرحلة من سير عمل الطلب.",
+    "notifications.payment.body": "تم تسجيل مرحلة من سير عمل الدفع.",
     "notifications.account.body": "تم تحديث إعدادات حسابك.",
     "notifications.inventory.body": "تم تسجيل مرحلة من سير عمل المخزون.",
     "notifications.warehouse.body": "تم تسجيل مرحلة من سير عمل المستودع.",
@@ -233,6 +252,7 @@ const bodies: Record<Locale, Record<string, string>> = {
     "notifications.workshop.body": "Se registró una etapa del flujo del taller.",
     "notifications.product.body": "Se registró una etapa del flujo del producto.",
     "notifications.order.body": "Se registró una etapa del flujo del pedido.",
+    "notifications.payment.body": "Se registró una etapa del flujo del pago.",
     "notifications.account.body": "Se actualizaron los ajustes de tu cuenta.",
     "notifications.inventory.body": "Se registró una etapa del flujo del inventario.",
     "notifications.warehouse.body": "Se registró una etapa del flujo del almacén.",
@@ -283,6 +303,13 @@ function notificationPathFor(item: NotificationItem, locale: Locale, user: AuthU
   }
 
   if (eventType.startsWith("ORDER_")) {
+    const orderId = typeof item.payload?.orderId === "string" ? item.payload.orderId : "";
+    if (hasCapability(user, "admin.users.read")) return `/${locale}/admin/orders`;
+    if (hasCapability(user, "warehouse.read")) return `/${locale}/admin/warehouse`;
+    return orderId ? `/${locale}/account/orders/${encodeURIComponent(orderId)}` : `/${locale}/account/orders`;
+  }
+
+  if (eventType.startsWith("PAYMENT_")) {
     const orderId = typeof item.payload?.orderId === "string" ? item.payload.orderId : "";
     if (hasCapability(user, "admin.users.read")) return `/${locale}/admin/orders`;
     if (hasCapability(user, "warehouse.read")) return `/${locale}/admin/warehouse`;

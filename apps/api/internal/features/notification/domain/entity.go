@@ -14,6 +14,8 @@ var (
 
 type Notification struct {
 	RecipientUserID string          `json:"-"`
+	RecipientEmail  string          `json:"-"`
+	RecipientName   string          `json:"-"`
 	ID              string          `json:"id"`
 	EventType       string          `json:"eventType"`
 	TitleKey        string          `json:"titleKey"`

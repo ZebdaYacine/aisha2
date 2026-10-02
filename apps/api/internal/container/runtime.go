@@ -22,6 +22,7 @@ import (
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/authorization"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/cache"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/database"
+	"github.com/aisha-platform/aisha/apps/api/internal/pkg/email"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/health"
 	"github.com/aisha-platform/aisha/apps/api/internal/pkg/storage"
 	httpapi "github.com/aisha-platform/aisha/apps/api/internal/server"
@@ -95,7 +96,8 @@ func NewRuntime(ctx context.Context, cfg config.Config) (*Runtime, error) {
 	go reservationWorker.Run(workerCtx)
 	notificationHub := notification.NewHub()
 	notificationService := notification.NewService(pool)
-	notificationWorker := notification.NewWorker(pool, notificationHub, time.Second, slog.Default())
+	transactionalMailer := email.NewSMTP(cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPassword, cfg.SMTPFrom)
+	notificationWorker := notification.NewWorker(pool, notificationHub, time.Second, slog.Default(), transactionalMailer)
 	go notificationWorker.Run(workerCtx)
 	cartService := cart.NewService(pool, authorizationService)
 	wishlistService := wishlist.NewService(pool, authorizationService)

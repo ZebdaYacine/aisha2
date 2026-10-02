@@ -32,6 +32,32 @@ func TestLoadUsesFoundationDefaults(t *testing.T) {
 	if cfg.AuthRateLimitMax != 10 || cfg.AuthRateLimitWindow != 60*time.Second {
 		t.Fatalf("unexpected authentication rate limit: max=%d window=%s", cfg.AuthRateLimitMax, cfg.AuthRateLimitWindow)
 	}
+	if cfg.SMTPPort != 465 || cfg.SMTPHost != "" || cfg.SMTPPassword != "" {
+		t.Fatalf("unexpected SMTP defaults: %#v", cfg)
+	}
+}
+
+func TestLoadSupportsSMTPPasswordAliases(t *testing.T) {
+	t.Setenv("SMTP_HOST", "smtp.hostinger.com")
+	t.Setenv("SMTP_PORT", "465")
+	t.Setenv("SMTP_USER", "support-team@aichasouk.com")
+	t.Setenv("SMTP_PASS", "secret")
+	t.Setenv("MAIL_FROM", "Aicha Souk <support-team@aichasouk.com>")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SMTPPassword != "secret" || cfg.SMTPFrom != "Aicha Souk <support-team@aichasouk.com>" {
+		t.Fatalf("unexpected SMTP aliases: %#v", cfg)
+	}
+}
+
+func TestLoadRejectsPartialSMTPConfiguration(t *testing.T) {
+	t.Setenv("SMTP_HOST", "smtp.hostinger.com")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected partial SMTP configuration to fail")
+	}
 }
 
 func TestLoadRejectsInvalidAuthenticationRateLimit(t *testing.T) {

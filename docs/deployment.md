@@ -167,6 +167,12 @@ Jenkins secret environment file rather than in source control.
 
 Provide `.env.example` with no real values.
 
+Transactional email uses `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+`SMTP_PASSWORD`, and `SMTP_FROM`. For compatibility, `SMTP_PASS` is accepted as
+an alias for `SMTP_PASSWORD`, and `MAIL_FROM` as an alias for `SMTP_FROM`.
+Port `465` uses implicit TLS. Keep real values only in the ignored local `.env`
+or the Jenkins production secret-file credential; never commit them.
+
 ## 6. Local Development Commands
 
 Suggested Makefile targets:
@@ -192,9 +198,9 @@ Bootstrap:
 3. Run migrations.
 4. Create buckets.
 5. Seed the deterministic development roles, 23 role-scoped demo accounts, 20
-   orders, 5 submitted artisan applications, approved artisan workshops,
-   checked-in development photos, and categories (local development only; the
-   seed resets development data).
+   orders, 5 submitted artisan applications, 10 public workshops, 30 active
+   products across 12 categories, checked-in development photos, and accepted
+   stock (local development only; the seed resets development data).
 6. Start API, worker, and frontend.
 
 ## 7. Jenkins Pipeline

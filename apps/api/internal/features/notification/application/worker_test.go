@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,6 +46,18 @@ type workerPublisher struct {
 	item   domain.Notification
 }
 
+type workerMailer struct {
+	to      string
+	subject string
+	body    string
+	err     error
+}
+
+func (m *workerMailer) Send(_ context.Context, to, subject, body string) error {
+	m.to, m.subject, m.body = to, subject, body
+	return m.err
+}
+
 func (p *workerPublisher) Publish(userID string, item domain.Notification) {
 	p.userID = userID
 	p.item = item
@@ -82,5 +95,32 @@ func TestWorkerSchedulesRetryWhenDeliveryFails(t *testing.T) {
 	}
 	if len(repository.processed) != 0 {
 		t.Fatalf("unexpected processed events = %#v", repository.processed)
+	}
+}
+
+func TestWorkerSendsTransactionalEmailForDeliveredNotification(t *testing.T) {
+	repository := &workerRepository{
+		events: []domain.OutboxEvent{{ID: "event-3", AttemptCount: 1}},
+		items: []domain.Notification{{
+			RecipientUserID: "user-1",
+			RecipientEmail:  "nour@example.test",
+			RecipientName:   "Nour",
+			EventType:       "ORDER_CHECKOUT_CREATED",
+			Payload:         []byte(`{"orderNumber":"AIS-123"}`),
+		}},
+	}
+	mailer := &workerMailer{}
+	worker := NewWorker(repository, nil, time.Second, nil, mailer)
+
+	worker.tick(context.Background())
+
+	if mailer.to != "nour@example.test" {
+		t.Fatalf("recipient = %q", mailer.to)
+	}
+	if mailer.subject != "AISHA notification — Order Checkout Created" {
+		t.Fatalf("subject = %q", mailer.subject)
+	}
+	if !strings.Contains(mailer.body, "Hello Nour") || !strings.Contains(mailer.body, "AIS-123") {
+		t.Fatalf("body = %q", mailer.body)
 	}
 }

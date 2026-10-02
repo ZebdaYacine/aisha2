@@ -17,8 +17,8 @@ func NewService(pool *pgxpool.Pool) *Service {
 	return application.NewService(repositories.NewPostgresRepository(pool))
 }
 
-func NewWorker(pool *pgxpool.Pool, hub *Hub, interval time.Duration, logger *slog.Logger) *Worker {
-	return application.NewWorker(repositories.NewPostgresRepository(pool), hub, interval, logger)
+func NewWorker(pool *pgxpool.Pool, hub *Hub, interval time.Duration, logger *slog.Logger, mailer application.Mailer) *Worker {
+	return application.NewWorker(repositories.NewPostgresRepository(pool), hub, interval, logger, mailer)
 }
 
 func NewHub() *Hub { return application.NewHub() }

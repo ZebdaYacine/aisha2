@@ -263,6 +263,11 @@ Workflow events also fan out to the relevant operational peers: moderators and
 administrators for review queues, warehouse agents for stock transitions, and the
 customer/artisan/fulfilment participants of an order.
 
+When SMTP is configured, the same committed workflow notifications are sent to each
+recipient's account email through the transactional mail adapter. Hostinger's implicit
+TLS mode is used for port 465; delivery failures are logged without exposing SMTP
+credentials or blocking the in-app/WebSocket notification.
+
 ### Public Catalogue
 
 ```text

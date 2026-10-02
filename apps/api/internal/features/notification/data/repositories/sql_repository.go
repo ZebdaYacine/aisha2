@@ -13,6 +13,12 @@ import (
 
 type PostgresRepository struct{ pool *pgxpool.Pool }
 
+type recipient struct {
+	id    string
+	email string
+	name  string
+}
+
 func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
@@ -129,14 +135,16 @@ func (r *PostgresRepository) DeliverOutbox(ctx context.Context, event domain.Out
 			INSERT INTO notifications(recipient_user_id,event_type,title_key,body_key,payload,dedupe_key)
 			VALUES($1,$2,$3,$4,$5,$6)
 			ON CONFLICT (recipient_user_id,dedupe_key) DO NOTHING
-			RETURNING id,event_type,title_key,body_key,payload,read_at,created_at`, recipient, event.EventType, titleKey, bodyKey, event.Payload, event.ID).Scan(&item.ID, &item.EventType, &item.TitleKey, &item.BodyKey, &item.Payload, &item.ReadAt, &item.CreatedAt)
+			RETURNING id,event_type,title_key,body_key,payload,read_at,created_at`, recipient.id, event.EventType, titleKey, bodyKey, event.Payload, event.ID).Scan(&item.ID, &item.EventType, &item.TitleKey, &item.BodyKey, &item.Payload, &item.ReadAt, &item.CreatedAt)
 		if err == pgx.ErrNoRows {
 			continue
 		}
 		if err != nil {
 			return nil, err
 		}
-		item.RecipientUserID = recipient
+		item.RecipientUserID = recipient.id
+		item.RecipientEmail = recipient.email
+		item.RecipientName = recipient.name
 		items = append(items, item)
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -155,7 +163,7 @@ func (r *PostgresRepository) MarkOutboxFailed(ctx context.Context, id string, av
 	return err
 }
 
-func (r *PostgresRepository) recipients(ctx context.Context, event domain.OutboxEvent) ([]string, error) {
+func (r *PostgresRepository) recipients(ctx context.Context, event domain.OutboxEvent) ([]recipient, error) {
 	items, err := r.aggregateRecipients(ctx, event)
 	if err != nil {
 		return nil, err
@@ -170,42 +178,44 @@ func (r *PostgresRepository) recipients(ctx context.Context, event domain.Outbox
 	}
 	seen := make(map[string]struct{}, len(items)+len(peers))
 	for _, item := range items {
-		seen[item] = struct{}{}
+		seen[item.id] = struct{}{}
 	}
 	for _, peer := range peers {
-		if _, ok := seen[peer]; ok {
+		if _, ok := seen[peer.id]; ok {
 			continue
 		}
-		seen[peer] = struct{}{}
+		seen[peer.id] = struct{}{}
 		items = append(items, peer)
 	}
 	return items, nil
 }
 
-func (r *PostgresRepository) aggregateRecipients(ctx context.Context, event domain.OutboxEvent) ([]string, error) {
+func (r *PostgresRepository) aggregateRecipients(ctx context.Context, event domain.OutboxEvent) ([]recipient, error) {
 	var query string
 	switch event.AggregateType {
 	case "user":
-		query = `SELECT id::text FROM users WHERE id=$1`
+		query = `SELECT id::text,COALESCE(email,''),COALESCE(display_name,'') FROM users WHERE id=$1`
 	case "artisan_profile":
-		query = `SELECT user_id::text FROM artisan_profiles WHERE id=$1`
+		query = `SELECT u.id::text,COALESCE(u.email,''),COALESCE(u.display_name,'') FROM artisan_profiles a JOIN users u ON u.id=a.user_id WHERE a.id=$1`
 	case "artisan_membership":
-		query = `SELECT user_id::text FROM artisan_memberships WHERE id=$1`
+		query = `SELECT u.id::text,COALESCE(u.email,''),COALESCE(u.display_name,'') FROM artisan_memberships a JOIN users u ON u.id=a.user_id WHERE a.id=$1`
 	case "workshop":
-		query = `SELECT a.user_id::text FROM workshops w JOIN artisan_profiles a ON a.id=w.artisan_profile_id WHERE w.id=$1`
+		query = `SELECT u.id::text,COALESCE(u.email,''),COALESCE(u.display_name,'') FROM workshops w JOIN artisan_profiles a ON a.id=w.artisan_profile_id JOIN users u ON u.id=a.user_id WHERE w.id=$1`
 	case "product":
-		query = `SELECT a.user_id::text FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE p.id=$1`
+		query = `SELECT u.id::text,COALESCE(u.email,''),COALESCE(u.display_name,'') FROM products p JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN users u ON u.id=a.user_id WHERE p.id=$1`
 	case "order":
 		query = `
-			SELECT user_id::text FROM orders WHERE id=$1
+			SELECT u.id::text,COALESCE(u.email,''),COALESCE(u.display_name,'')
+			FROM orders o JOIN users u ON u.id=o.user_id WHERE o.id=$1
 			UNION
-			SELECT a.user_id::text
+			SELECT u.id::text,COALESCE(u.email,''),COALESCE(u.display_name,'')
 			FROM order_items oi
 			JOIN products p ON p.id=oi.product_id
 			JOIN artisan_profiles a ON a.id=p.artisan_profile_id
+			JOIN users u ON u.id=a.user_id
 			WHERE oi.order_id=$1`
 	case "warehouse_reception":
-		query = `SELECT a.user_id::text FROM warehouse_receptions r JOIN products p ON p.id=r.product_id JOIN artisan_profiles a ON a.id=p.artisan_profile_id WHERE r.id=$1`
+		query = `SELECT u.id::text,COALESCE(u.email,''),COALESCE(u.display_name,'') FROM warehouse_receptions r JOIN products p ON p.id=r.product_id JOIN artisan_profiles a ON a.id=p.artisan_profile_id JOIN users u ON u.id=a.user_id WHERE r.id=$1`
 	default:
 		return nil, nil
 	}
@@ -214,20 +224,20 @@ func (r *PostgresRepository) aggregateRecipients(ctx context.Context, event doma
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]string, 0, 1)
+	items := make([]recipient, 0, 1)
 	for rows.Next() {
-		var userID string
-		if err := rows.Scan(&userID); err != nil {
+		var item recipient
+		if err := rows.Scan(&item.id, &item.email, &item.name); err != nil {
 			return nil, err
 		}
-		items = append(items, userID)
+		items = append(items, item)
 	}
 	return items, rows.Err()
 }
 
-func (r *PostgresRepository) roleRecipients(ctx context.Context, roles ...string) ([]string, error) {
+func (r *PostgresRepository) roleRecipients(ctx context.Context, roles ...string) ([]recipient, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT DISTINCT u.id::text
+		SELECT DISTINCT u.id::text,COALESCE(u.email,''),COALESCE(u.display_name,'')
 		FROM users u
 		JOIN user_roles ur ON ur.user_id=u.id
 		JOIN roles r ON r.id=ur.role_id
@@ -237,13 +247,13 @@ func (r *PostgresRepository) roleRecipients(ctx context.Context, roles ...string
 		return nil, err
 	}
 	defer rows.Close()
-	items := make([]string, 0)
+	items := make([]recipient, 0)
 	for rows.Next() {
-		var userID string
-		if err := rows.Scan(&userID); err != nil {
+		var item recipient
+		if err := rows.Scan(&item.id, &item.email, &item.name); err != nil {
 			return nil, err
 		}
-		items = append(items, userID)
+		items = append(items, item)
 	}
 	return items, rows.Err()
 }
@@ -283,6 +293,9 @@ func templateFor(eventType string) (string, string, bool) {
 	if strings.HasPrefix(eventType, "ORDER_") {
 		return "notifications.order.title", "notifications.order.body", true
 	}
+	if strings.HasPrefix(eventType, "PAYMENT_") {
+		return "notifications.payment.title", "notifications.payment.body", true
+	}
 	switch eventType {
 	case "USER_STATUS_CHANGED", "USER_ROLES_CHANGED":
 		return "notifications.account.title", "notifications.account.body", true
@@ -303,6 +316,7 @@ func specificTemplateFor(eventType string) (string, string, bool) {
 		workshopBody           = "notifications.workshop.body"
 		productBody            = "notifications.product.body"
 		orderBody              = "notifications.order.body"
+		paymentBody            = "notifications.payment.body"
 		warehouseBody          = "notifications.warehouse.body"
 		inventoryBody          = "notifications.inventory.body"
 		accountBody            = "notifications.account.body"
@@ -352,6 +366,12 @@ func specificTemplateFor(eventType string) (string, string, bool) {
 		return "notifications.order.cancelled.title", orderBody, true
 	case "ORDER_RETURN_RECORDED":
 		return "notifications.order.returnRecorded.title", orderBody, true
+	case "PAYMENT_CONFIRMED":
+		return "notifications.payment.confirmed.title", paymentBody, true
+	case "PAYMENT_FAILED":
+		return "notifications.payment.failed.title", paymentBody, true
+	case "PAYMENT_REFUNDED":
+		return "notifications.payment.refunded.title", paymentBody, true
 	case "WAREHOUSE_RECEPTION_CREATED", "RECEIVED_PENDING_INSPECTION":
 		return "notifications.warehouse.received.title", warehouseBody, true
 	case "WAREHOUSE_RECEPTION_INSPECTED", "INSPECTED":

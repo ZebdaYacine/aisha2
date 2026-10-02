@@ -626,8 +626,8 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO artisan_media (id, artisan_profile_id, media_kind, object_key, original_filename, media_type, size_bytes, checksum_sha256, sort_order, visibility, created_at) VALUES
     ('90000000-0000-0000-0000-000000000246', '90000000-0000-0000-0000-000000000223', 'IMAGE', '/images/aisha/A1.jpg', 'yacine-ceramics.jpg', 'image/jpeg', 160000, repeat('c', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000247', '90000000-0000-0000-0000-000000000224', 'IMAGE', '/images/aisha/C1.jpg', 'meriem-weaving.jpg', 'image/jpeg', 182400, repeat('d', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z'),
-    ('90000000-0000-0000-0000-000000000248', '90000000-0000-0000-0000-000000000225', 'IMAGE', '/images/aisha/plateu en bois 1.jpg', 'walid-copperwork.jpg', 'image/jpeg', 266984, repeat('e', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z')
+    ('90000000-0000-0000-0000-000000000247', '90000000-0000-0000-0000-000000000224', 'IMAGE', '/images/aisha/Algeria art.jpg', 'meriem-weaving.jpg', 'image/jpeg', 182400, repeat('d', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z'),
+    ('90000000-0000-0000-0000-000000000248', '90000000-0000-0000-0000-000000000225', 'IMAGE', '/images/aisha/Snapinsta.app_471934208_18033457835416001_4267644784453957928_n_1080.jpg', 'walid-copperwork.jpg', 'image/jpeg', 266984, repeat('e', 64), 0, 'PUBLIC', '2025-01-01T00:00:00Z')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO artisan_memberships (user_id, artisan_profile_id, status, activated_at) VALUES
@@ -641,6 +641,136 @@ SELECT id, 'VERIFIED', '90000000-0000-0000-0000-000000000001', '2025-01-02T00:00
 FROM artisan_memberships
 WHERE artisan_profile_id IN ('90000000-0000-0000-0000-000000000223', '90000000-0000-0000-0000-000000000224', '90000000-0000-0000-0000-000000000225')
 ON CONFLICT DO NOTHING;
+
+-- Development catalogue: exactly ten public workshops and thirty active
+-- products across all twelve seeded categories. The additional workshops are
+-- non-default locations owned by approved artisans; the four legacy product
+-- ids are restored because the order fixtures below reference them.
+INSERT INTO workshops (id, artisan_profile_id, name, description, wilaya, location_text, status, is_default, is_public) VALUES
+    ('90000000-0000-0000-0000-000000000236', '90000000-0000-0000-0000-000000000223', 'Yacine Ceramic Annex', 'A second studio for kiln work and hand-painted vessels.', 'Constantine', 'El Khroub', 'ACTIVE', false, true),
+    ('90000000-0000-0000-0000-000000000237', '90000000-0000-0000-0000-000000000224', 'Meriem Textile Room', 'A small weaving room for wool and linen collections.', 'Bouira', 'Sour El Ghozlane', 'ACTIVE', false, true),
+    ('90000000-0000-0000-0000-000000000238', '90000000-0000-0000-0000-000000000225', 'Walid Copper Studio', 'A finishing studio for engraved and polished copper pieces.', 'Tlemcen', 'Chetouane', 'ACTIVE', false, true)
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name, description = EXCLUDED.description, wilaya = EXCLUDED.wilaya,
+    location_text = EXCLUDED.location_text, status = EXCLUDED.status, is_default = EXCLUDED.is_default,
+    is_public = EXCLUDED.is_public, updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO workshop_translations (workshop_id, locale, name, description) VALUES
+    ('90000000-0000-0000-0000-000000000236', 'en', 'Yacine Ceramic Annex', 'A second studio for kiln work and hand-painted vessels.'),
+    ('90000000-0000-0000-0000-000000000236', 'fr', 'Annexe céramique Yacine', 'Un second atelier pour la cuisson et les pièces peintes à la main.'),
+    ('90000000-0000-0000-0000-000000000236', 'ar', 'ملحقة ياسين للخزف', 'ورشة ثانية للفخار والقطع المطلية يدوياً.'),
+    ('90000000-0000-0000-0000-000000000236', 'es', 'Anexo cerámico Yacine', 'Un segundo estudio para piezas de cerámica pintadas a mano.'),
+    ('90000000-0000-0000-0000-000000000237', 'en', 'Meriem Textile Room', 'A small weaving room for wool and linen collections.'),
+    ('90000000-0000-0000-0000-000000000237', 'fr', 'Salle textile Meriem', 'Une petite salle de tissage pour les collections en laine et en lin.'),
+    ('90000000-0000-0000-0000-000000000237', 'ar', 'قاعة مريم للنسيج', 'قاعة صغيرة لنسج مجموعات الصوف والكتان.'),
+    ('90000000-0000-0000-0000-000000000237', 'es', 'Sala textil Meriem', 'Una pequeña sala de tejido para colecciones de lana y lino.'),
+    ('90000000-0000-0000-0000-000000000238', 'en', 'Walid Copper Studio', 'A finishing studio for engraved and polished copper pieces.'),
+    ('90000000-0000-0000-0000-000000000238', 'fr', 'Atelier cuivre Walid', 'Un atelier de finition pour des pièces en cuivre gravées et polies.'),
+    ('90000000-0000-0000-0000-000000000238', 'ar', 'ورشة وليد للنحاس', 'ورشة لتشطيب القطع النحاسية المنقوشة والمصقولة.'),
+    ('90000000-0000-0000-0000-000000000238', 'es', 'Estudio de cobre Walid', 'Un estudio de acabado para piezas de cobre grabadas y pulidas.')
+ON CONFLICT (workshop_id, locale) DO UPDATE SET
+    name = EXCLUDED.name, description = EXCLUDED.description, updated_at = CURRENT_TIMESTAMP;
+
+UPDATE products
+SET product_code = 'AISHA-' || right(replace(id::text, '-', ''), 10),
+    planned_quantity = 12,
+    order_total_minor = price_minor * 12
+WHERE id = '90000000-0000-0000-0000-000000000050';
+
+WITH seed_catalog(product_id, workshop_id, artisan_profile_id, category_id, price_minor, planned_quantity, name_en, name_fr, name_ar, name_es, media_key) AS (VALUES
+    ('90000000-0000-0000-0000-000000000150'::uuid, '90000000-0000-0000-0000-000000000233'::uuid, '90000000-0000-0000-0000-000000000223'::uuid, '20000000-0000-0000-0000-000000000011'::uuid, 8900, 18, 'Constantine painted bowl', 'Bol peint de Constantine', 'وعاء مطلي من قسنطينة', 'Cuenco pintado de Constantina', '/images/aisha/654382945Y.jpg'),
+    ('90000000-0000-0000-0000-000000000151'::uuid, '90000000-0000-0000-0000-000000000234'::uuid, '90000000-0000-0000-0000-000000000224'::uuid, '20000000-0000-0000-0000-000000000005'::uuid, 24500, 10, 'Bouira woven runner', 'Chemin de table tissé de Bouira', 'مفرش منسوج من البويرة', 'Camino de mesa tejido de Bouira', '/images/aisha/C2.png'),
+    ('90000000-0000-0000-0000-000000000152'::uuid, '90000000-0000-0000-0000-000000000235'::uuid, '90000000-0000-0000-0000-000000000225'::uuid, '20000000-0000-0000-0000-000000000004'::uuid, 7600, 24, 'Tlemcen copper tray', 'Plateau en cuivre de Tlemcen', 'صينية نحاسية من تلمسان', 'Bandeja de cobre de Tremecén', '/images/aisha/plateu en bois 1.jpg'),
+    ('90000000-0000-0000-0000-000000000153'::uuid, '90000000-0000-0000-0000-000000000230'::uuid, '90000000-0000-0000-0000-000000000220'::uuid, '20000000-0000-0000-0000-000000000002'::uuid, 18200, 14, 'Algiers geometric serving board', 'Planche de service géométrique d Alger', 'لوح تقديم هندسي من الجزائر', 'Tabla geométrica de servir de Argel', '/images/aisha/133T695O4.jpg'),
+    ('90000000-0000-0000-0000-000000000400'::uuid, '90000000-0000-0000-0000-000000000231'::uuid, '90000000-0000-0000-0000-000000000221'::uuid, '20000000-0000-0000-0000-000000000012'::uuid, 12800, 16, 'Oran embroidered cushion', 'Coussin brodé d Oran', 'وسادة مطرزة من وهران', 'Cojín bordado de Orán', '/images/aisha/53567.png'),
+    ('90000000-0000-0000-0000-000000000401'::uuid, '90000000-0000-0000-0000-000000000232'::uuid, '90000000-0000-0000-0000-000000000222'::uuid, '20000000-0000-0000-0000-000000000003'::uuid, 15700, 15, 'Kabyle silver pendant', 'Pendentif kabyle en argent', 'قلادة فضية قبائلية', 'Colgante cabilio de plata', '/images/aisha/6.jpg'),
+    ('90000000-0000-0000-0000-000000000402'::uuid, '90000000-0000-0000-0000-000000000236'::uuid, '90000000-0000-0000-0000-000000000223'::uuid, '20000000-0000-0000-0000-000000000001'::uuid, 11200, 20, 'Blue ceramic wall tile', 'Carreau mural en céramique bleue', 'بلاطة جدارية خزفية زرقاء', 'Azulejo mural de cerámica azul', '/images/aisha/A1.jpg'),
+    ('90000000-0000-0000-0000-000000000403'::uuid, '90000000-0000-0000-0000-000000000237'::uuid, '90000000-0000-0000-0000-000000000224'::uuid, '20000000-0000-0000-0000-000000000007'::uuid, 6900, 30, 'Halfa market basket', 'Panier de marché en alfa', 'سلة سوق من الحلفاء', 'Cesta de mercado de esparto', '/images/aisha/M1.jpg'),
+    ('90000000-0000-0000-0000-000000000404'::uuid, '90000000-0000-0000-0000-000000000238'::uuid, '90000000-0000-0000-0000-000000000225'::uuid, '20000000-0000-0000-0000-000000000004'::uuid, 21400, 9, 'Engraved copper coffee set', 'Service à café en cuivre gravé', 'طقم قهوة نحاسي منقوش', 'Juego de café de cobre grabado', '/images/aisha/B1.jpg'),
+    ('90000000-0000-0000-0000-000000000405'::uuid, '90000000-0000-0000-0000-000000000230'::uuid, '90000000-0000-0000-0000-000000000220'::uuid, '20000000-0000-0000-0000-000000000010'::uuid, 9800, 22, 'Leather card wallet', 'Porte-cartes en cuir', 'محفظة بطاقات جلدية', 'Cartera de tarjetas de cuero', '/images/aisha/jewee.jpg'),
+    ('90000000-0000-0000-0000-000000000406'::uuid, '90000000-0000-0000-0000-000000000231'::uuid, '90000000-0000-0000-0000-000000000221'::uuid, '20000000-0000-0000-0000-000000000005'::uuid, 33500, 8, 'Oran wool wall hanging', 'Tissage mural en laine d Oran', 'نسيج جداري من صوف وهران', 'Tapiz mural de lana de Orán', '/images/aisha/C3.png'),
+    ('90000000-0000-0000-0000-000000000407'::uuid, '90000000-0000-0000-0000-000000000232'::uuid, '90000000-0000-0000-0000-000000000222'::uuid, '20000000-0000-0000-0000-000000000009'::uuid, 5200, 35, 'Béjaïa keepsake magnet', 'Aimant souvenir de Béjaïa', 'مغناطيس تذكاري من بجاية', 'Imán recuerdo de Béjaïa', '/images/aisha/C1.jpg'),
+    ('90000000-0000-0000-0000-000000000408'::uuid, '90000000-0000-0000-0000-000000000233'::uuid, '90000000-0000-0000-0000-000000000223'::uuid, '20000000-0000-0000-0000-000000000011'::uuid, 14600, 11, 'Hand-thrown serving dish', 'Plat de service tourné à la main', 'طبق تقديم مشغول يدوياً', 'Fuente de servir torneada a mano', '/images/aisha/C3.png'),
+    ('90000000-0000-0000-0000-000000000409'::uuid, '90000000-0000-0000-0000-000000000234'::uuid, '90000000-0000-0000-0000-000000000224'::uuid, '20000000-0000-0000-0000-000000000012'::uuid, 17500, 13, 'Festive embroidered pouch', 'Pochette brodée de fête', 'حقيبة صغيرة مطرزة للمناسبات', 'Bolsa bordada festiva', '/images/aisha/CP1.jpg'),
+    ('90000000-0000-0000-0000-000000000410'::uuid, '90000000-0000-0000-0000-000000000235'::uuid, '90000000-0000-0000-0000-000000000225'::uuid, '20000000-0000-0000-0000-000000000006'::uuid, 8300, 26, 'Tlemcen blue glass', 'Verre bleu de Tlemcen', 'كأس زجاجي أزرق من تلمسان', 'Vaso de vidrio azul de Tremecén', '/images/aisha/D1.jpg'),
+    ('90000000-0000-0000-0000-000000000411'::uuid, '90000000-0000-0000-0000-000000000236'::uuid, '90000000-0000-0000-0000-000000000223'::uuid, '20000000-0000-0000-0000-000000000008'::uuid, 18900, 7, 'Ceramic frame drum', 'Tambour sur cadre en céramique', 'طبل إطار خزفي', 'Tambor de marco de cerámica', '/images/aisha/B2.jpg'),
+    ('90000000-0000-0000-0000-000000000412'::uuid, '90000000-0000-0000-0000-000000000237'::uuid, '90000000-0000-0000-0000-000000000224'::uuid, '20000000-0000-0000-0000-000000000007'::uuid, 7400, 28, 'Palm fibre bread basket', 'Corbeille à pain en fibres de palmier', 'سلة خبز من ألياف النخيل', 'Cesta de pan de fibra de palma', '/images/aisha/output-onlinepngtools.png'),
+    ('90000000-0000-0000-0000-000000000413'::uuid, '90000000-0000-0000-0000-000000000238'::uuid, '90000000-0000-0000-0000-000000000225'::uuid, '20000000-0000-0000-0000-000000000003'::uuid, 26800, 6, 'Polished silver earrings', 'Boucles d oreilles en argent poli', 'أقراط فضية مصقولة', 'Pendientes de plata pulida', '/images/aisha/765432.jpg'),
+    ('90000000-0000-0000-0000-000000000414'::uuid, '90000000-0000-0000-0000-000000000230'::uuid, '90000000-0000-0000-0000-000000000220'::uuid, '20000000-0000-0000-0000-000000000002'::uuid, 10400, 18, 'Painted wooden tray', 'Plateau en bois peint', 'صينية خشبية مطلية', 'Bandeja de madera pintada', '/images/aisha/J1.jpg'),
+    ('90000000-0000-0000-0000-000000000415'::uuid, '90000000-0000-0000-0000-000000000231'::uuid, '90000000-0000-0000-0000-000000000221'::uuid, '20000000-0000-0000-0000-000000000005'::uuid, 28900, 9, 'Handwoven wool cushion', 'Coussin en laine tissé à la main', 'وسادة صوفية منسوجة يدوياً', 'Cojín de lana tejido a mano', '/images/aisha/Algeria art.jpg'),
+    ('90000000-0000-0000-0000-000000000416'::uuid, '90000000-0000-0000-0000-000000000232'::uuid, '90000000-0000-0000-0000-000000000222'::uuid, '20000000-0000-0000-0000-000000000009'::uuid, 6100, 32, 'Kabyle embroidered bookmark', 'Marque-page kabyle brodé', 'فاصل كتاب قبائلي مطرز', 'Marcapáginas cabilio bordado', '/images/aisha/Snapinsta.app_447895980_18152353162314221_3689087632318507403_n_1080.jpg'),
+    ('90000000-0000-0000-0000-000000000417'::uuid, '90000000-0000-0000-0000-000000000233'::uuid, '90000000-0000-0000-0000-000000000223'::uuid, '20000000-0000-0000-0000-000000000001'::uuid, 13200, 15, 'Constantine ceramic vase', 'Vase en céramique de Constantine', 'مزهرية خزفية من قسنطينة', 'Jarrón de cerámica de Constantina', '/images/aisha/Snapinsta.app_410159085_18133321372314221_4586148325445799764_n_1080.jpg'),
+    ('90000000-0000-0000-0000-000000000418'::uuid, '90000000-0000-0000-0000-000000000234'::uuid, '90000000-0000-0000-0000-000000000224'::uuid, '20000000-0000-0000-0000-000000000012'::uuid, 19600, 12, 'Linen embroidered tablecloth', 'Nappe en lin brodée', 'مفرش طاولة من الكتان المطرز', 'Mantel de lino bordado', '/images/aisha/Snapinsta.app_470795950_18209401987292380_4883742063971950135_n_1080.jpg'),
+    ('90000000-0000-0000-0000-000000000419'::uuid, '90000000-0000-0000-0000-000000000235'::uuid, '90000000-0000-0000-0000-000000000225'::uuid, '20000000-0000-0000-0000-000000000004'::uuid, 22500, 8, 'Copper incense holder', 'Brûle-parfum en cuivre', 'مبخرة نحاسية', 'Quemador de incienso de cobre', '/images/aisha/Snapinsta.app_455131776_903354394960467_3623373114008527603_n_1080.jpg'),
+    ('90000000-0000-0000-0000-000000000420'::uuid, '90000000-0000-0000-0000-000000000236'::uuid, '90000000-0000-0000-0000-000000000223'::uuid, '20000000-0000-0000-0000-000000000011'::uuid, 9900, 21, 'Hand-painted ceramic cup', 'Tasse en céramique peinte à la main', 'كوب خزفي مطلي يدوياً', 'Taza de cerámica pintada a mano', '/images/aisha/Snapinsta.app_470984486_18032514275416001_5509346141223573205_n_1080.jpg'),
+    ('90000000-0000-0000-0000-000000000421'::uuid, '90000000-0000-0000-0000-000000000237'::uuid, '90000000-0000-0000-0000-000000000224'::uuid, '20000000-0000-0000-0000-000000000007'::uuid, 5800, 40, 'Woven storage basket', 'Panier de rangement tissé', 'سلة تخزين منسوجة', 'Cesta de almacenamiento tejida', '/images/aisha/Snapinsta.app_409974168_18133323640314221_5974977855731823254_n_1080.jpg'),
+    ('90000000-0000-0000-0000-000000000422'::uuid, '90000000-0000-0000-0000-000000000238'::uuid, '90000000-0000-0000-0000-000000000225'::uuid, '20000000-0000-0000-0000-000000000010'::uuid, 14300, 17, 'Leather belt with brass buckle', 'Ceinture en cuir avec boucle en laiton', 'حزام جلدي بإبزيم نحاسي', 'Cinturón de cuero con hebilla de latón', '/images/aisha/Snapinsta.app_450074780_18155221924314221_934381476914220603_n_1080.jpg'),
+    ('90000000-0000-0000-0000-000000000423'::uuid, '90000000-0000-0000-0000-000000000230'::uuid, '90000000-0000-0000-0000-000000000220'::uuid, '20000000-0000-0000-0000-000000000002'::uuid, 11800, 19, 'Wooden spice box', 'Boîte à épices en bois', 'علبة توابل خشبية', 'Caja de especias de madera', '/images/aisha/Copy of 366366855_681414600673448_8672563481987395173_n.jpg'),
+    ('90000000-0000-0000-0000-000000000424'::uuid, '90000000-0000-0000-0000-000000000231'::uuid, '90000000-0000-0000-0000-000000000221'::uuid, '20000000-0000-0000-0000-000000000006'::uuid, 8700, 23, 'Hand-blown glass tumbler', 'Verre soufflé à la main', 'كأس زجاجي منفخ يدوياً', 'Vaso de vidrio soplado a mano', '/images/aisha/Plateaux Rond 🥏#plateaux #plateau #cuisine #decohome (3).jpg')
+),
+inserted_products AS (
+    INSERT INTO products (id, workshop_id, artisan_profile_id, category_id, product_code, product_type, status, price_minor, currency, materials, production_method, intended_use, dimensions, weight_grams, region_of_origin, planned_quantity, order_total_minor, created_at, updated_at, published_at)
+    SELECT s.product_id, s.workshop_id, s.artisan_profile_id, s.category_id,
+           'AISHA-' || right(replace(s.product_id::text, '-', ''), 10),
+           'ARTISAN_SPECIFIC', 'ACTIVE', s.price_minor, 'EUR', 'Locally sourced craft materials', 'Handmade in the workshop', 'Home and personal use', 'Development collection item', 220, 'Algeria', s.planned_quantity,
+           s.price_minor * s.planned_quantity, '2025-01-01T00:00:00Z', '2025-01-02T00:00:00Z', '2025-01-02T00:00:00Z'
+    FROM seed_catalog s
+    ON CONFLICT (id) DO UPDATE SET
+        workshop_id = EXCLUDED.workshop_id, artisan_profile_id = EXCLUDED.artisan_profile_id,
+        category_id = EXCLUDED.category_id, product_code = EXCLUDED.product_code,
+        status = EXCLUDED.status, price_minor = EXCLUDED.price_minor,
+        planned_quantity = EXCLUDED.planned_quantity, order_total_minor = EXCLUDED.order_total_minor,
+        updated_at = EXCLUDED.updated_at, published_at = EXCLUDED.published_at
+    RETURNING id
+),
+inserted_translations AS (
+    INSERT INTO product_translations (product_id, locale, name, description, story, cultural_context, created_at, updated_at)
+    SELECT s.product_id, l.locale,
+           CASE l.locale WHEN 'en' THEN s.name_en WHEN 'fr' THEN s.name_fr WHEN 'ar' THEN s.name_ar ELSE s.name_es END,
+           CASE l.locale WHEN 'en' THEN 'A handmade Algerian craft piece from a verified development workshop.' WHEN 'fr' THEN 'Une pièce artisanale algérienne fabriquée dans un atelier de développement vérifié.' WHEN 'ar' THEN 'قطعة حرفية جزائرية مصنوعة في ورشة تطوير موثوقة.' ELSE 'Una pieza artesanal argelina hecha en un taller de desarrollo verificado.' END,
+           CASE l.locale WHEN 'en' THEN 'Made slowly by hand with local materials.' WHEN 'fr' THEN 'Fabriquée lentement à la main avec des matériaux locaux.' WHEN 'ar' THEN 'مصنوعة يدوياً بعناية باستعمال مواد محلية.' ELSE 'Hecha a mano con materiales locales.' END,
+           CASE l.locale WHEN 'en' THEN 'A development catalogue sample.' WHEN 'fr' THEN 'Un échantillon du catalogue de développement.' WHEN 'ar' THEN 'عينة من كتالوج التطوير.' ELSE 'Una muestra del catálogo de desarrollo.' END,
+           '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z'
+    FROM seed_catalog s
+    CROSS JOIN (VALUES ('en'::varchar(5)), ('fr'::varchar(5)), ('ar'::varchar(5)), ('es'::varchar(5))) AS l(locale)
+    JOIN inserted_products p ON p.id = s.product_id
+    ON CONFLICT (product_id, locale) DO UPDATE SET
+        name = EXCLUDED.name, description = EXCLUDED.description, story = EXCLUDED.story,
+        cultural_context = EXCLUDED.cultural_context, updated_at = EXCLUDED.updated_at
+    RETURNING product_id
+)
+INSERT INTO product_media (id, product_id, media_kind, object_key, original_filename, media_type, size_bytes, width_pixels, height_pixels, checksum_sha256, alt_text, sort_order, visibility, created_at)
+SELECT md5(s.product_id::text || ':development-media')::uuid, s.product_id, 'IMAGE', s.media_key,
+       'development-' || right(replace(s.product_id::text, '-', ''), 6) || '.jpg',
+       CASE WHEN right(lower(s.media_key), 4) = '.png' THEN 'image/png' ELSE 'image/jpeg' END,
+       120000, 1080, 1080, repeat('9', 64), s.name_en, 0, 'PUBLIC', '2025-01-01T00:00:00Z'
+FROM seed_catalog s
+JOIN inserted_products p ON p.id = s.product_id
+ON CONFLICT (object_key) DO NOTHING;
+
+-- The product rows above are active catalogue fixtures, so give each one
+-- accepted development stock for customer availability and warehouse search.
+INSERT INTO inventory_movements (product_id, movement_type, quantity_delta, reference_key, reason)
+SELECT id, 'ACCEPTED', planned_quantity, 'development-catalogue:' || id::text, 'Accepted development catalogue stock'
+FROM products
+WHERE id IN (
+    '90000000-0000-0000-0000-000000000150', '90000000-0000-0000-0000-000000000151',
+    '90000000-0000-0000-0000-000000000152', '90000000-0000-0000-0000-000000000153',
+    '90000000-0000-0000-0000-000000000400', '90000000-0000-0000-0000-000000000401',
+    '90000000-0000-0000-0000-000000000402', '90000000-0000-0000-0000-000000000403',
+    '90000000-0000-0000-0000-000000000404', '90000000-0000-0000-0000-000000000405',
+    '90000000-0000-0000-0000-000000000406', '90000000-0000-0000-0000-000000000407',
+    '90000000-0000-0000-0000-000000000408', '90000000-0000-0000-0000-000000000409',
+    '90000000-0000-0000-0000-000000000410', '90000000-0000-0000-0000-000000000411',
+    '90000000-0000-0000-0000-000000000412', '90000000-0000-0000-0000-000000000413',
+    '90000000-0000-0000-0000-000000000414', '90000000-0000-0000-0000-000000000415',
+    '90000000-0000-0000-0000-000000000416', '90000000-0000-0000-0000-000000000417',
+    '90000000-0000-0000-0000-000000000418', '90000000-0000-0000-0000-000000000419',
+    '90000000-0000-0000-0000-000000000420', '90000000-0000-0000-0000-000000000421',
+    '90000000-0000-0000-0000-000000000422', '90000000-0000-0000-0000-000000000423',
+    '90000000-0000-0000-0000-000000000424'
+)
+ON CONFLICT (reference_key) DO NOTHING;
 
 -- Five submitted artisan applications are kept separate from the seven
 -- approved artisan accounts so the moderator queue has realistic work.

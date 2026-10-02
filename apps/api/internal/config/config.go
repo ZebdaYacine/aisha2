@@ -25,6 +25,11 @@ type Config struct {
 	MinIOPublicBucket       string
 	MinIOPrivateBucket      string
 	MinIOArtisanBucket      string
+	SMTPHost                string
+	SMTPPort                int
+	SMTPUser                string
+	SMTPPassword            string
+	SMTPFrom                string
 	UploadMaxBytes          int64
 	ProductMediaMaxBytes    int64
 	ArtisanDocumentMaxBytes int64
@@ -72,6 +77,18 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	smtpPort, err := positivePort("SMTP_PORT", 465)
+	if err != nil {
+		return Config{}, err
+	}
+	smtpPassword := env("SMTP_PASSWORD", env("SMTP_PASS", ""))
+	smtpFrom := env("SMTP_FROM", env("MAIL_FROM", ""))
+	smtpHost := env("SMTP_HOST", "")
+	smtpUser := env("SMTP_USER", "")
+	if (smtpHost != "" || smtpUser != "" || smtpPassword != "" || smtpFrom != "") &&
+		(smtpHost == "" || smtpUser == "" || smtpPassword == "" || smtpFrom == "") {
+		return Config{}, fmt.Errorf("SMTP_HOST, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM must be configured together")
+	}
 	cfg := Config{
 		AppName:                 env("APP_NAME", "AISHA"),
 		Environment:             env("APP_ENV", "development"),
@@ -89,6 +106,11 @@ func Load() (Config, error) {
 		MinIOPublicBucket:       env("MINIO_PUBLIC_BUCKET", "product-public"),
 		MinIOPrivateBucket:      env("MINIO_PRIVATE_BUCKET", "product-private"),
 		MinIOArtisanBucket:      env("MINIO_ARTISAN_BUCKET", "artisan-private"),
+		SMTPHost:                smtpHost,
+		SMTPPort:                smtpPort,
+		SMTPUser:                smtpUser,
+		SMTPPassword:            smtpPassword,
+		SMTPFrom:                smtpFrom,
 		UploadMaxBytes:          uploadMaxBytes,
 		ProductMediaMaxBytes:    productMediaMaxBytes,
 		ArtisanDocumentMaxBytes: artisanDocumentMaxBytes,
@@ -123,6 +145,14 @@ func positiveInt32(key string, fallback int32) (int32, error) {
 		return 0, fmt.Errorf("%s must be a positive integer", key)
 	}
 	return int32(value), nil
+}
+
+func positivePort(key string, fallback int) (int, error) {
+	value, err := strconv.Atoi(env(key, strconv.Itoa(fallback)))
+	if err != nil || value < 1 || value > 65535 {
+		return 0, fmt.Errorf("%s must be a valid TCP port", key)
+	}
+	return value, nil
 }
 
 func splitCSV(value string) []string {
