@@ -151,8 +151,14 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("AUTH_SIGNING_KEY must contain at least 32 characters")
 	}
 	if isProduction {
-		if strings.Contains(cfg.DatabaseURL, "aisha_dev") || cfg.MinIOSecretKey == "aisha_minio_dev" || cfg.AuthSigningKey == "aisha-development-signing-key-change-me" {
-			return Config{}, fmt.Errorf("development credentials are forbidden in production")
+		if strings.Contains(cfg.DatabaseURL, "aisha_dev") {
+			return Config{}, fmt.Errorf("POSTGRES_PASSWORD still uses the development database credential")
+		}
+		if cfg.MinIOSecretKey == "aisha_minio_dev" {
+			return Config{}, fmt.Errorf("MINIO_ROOT_PASSWORD still uses the development credential")
+		}
+		if cfg.AuthSigningKey == "aisha-development-signing-key-change-me" {
+			return Config{}, fmt.Errorf("AUTH_SIGNING_KEY still uses the development credential")
 		}
 	}
 	return cfg, nil

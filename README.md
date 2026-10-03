@@ -34,8 +34,10 @@ PostgreSQL and MinIO containers and volumes:
 ./script.sh
 ```
 
-Use `./script.sh --prod` to apply the production Compose overrides. The script
-does not remove volumes and applies pending migrations through a dedicated
+Use `./script.sh --prod` to explicitly apply the production Compose overrides;
+when the root `.env` contains `APP_ENV=production`, plain `./script.sh` detects
+that value and applies the same override automatically. The script does not
+remove volumes and applies pending migrations through a dedicated
 one-shot migration container before loading the idempotent development seed
 file and starting the API. In local development, loading the seed intentionally
 resets application data first so the demo environment stays deterministic; it
@@ -43,6 +45,10 @@ does not remove Docker volumes or affect production.
 
 The Compose files live under `infrastructure/compose`; `make up` is the
 equivalent command when running from the repository root.
+
+All Compose commands read the single repository-root `.env` file. Production
+settings therefore cannot accidentally start with the development Compose
+defaults.
 
 Endpoints:
 

@@ -30,6 +30,9 @@ on_error() {
     echo
     echo "Current container status:"
     "${COMPOSE[@]}" ps 2>/dev/null || true
+    echo
+    echo "Recent API logs:"
+    "${COMPOSE[@]}" logs --tail=80 api 2>/dev/null || true
   fi
 
   exit "$exit_code"
@@ -85,6 +88,65 @@ fi
 if [[ "$PRODUCTION" == true && ! -f "$COMPOSE_PROD_FILE" ]]; then
   error "Production Compose file not found: $COMPOSE_PROD_FILE"
   exit 1
+fi
+
+configured_environment="$(awk -F= '
+  $1 == "APP_ENV" {
+    value = $0
+    sub(/^[^=]*=/, "", value)
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+    if (value ~ /^".*"$/) {
+      sub(/^"/, "", value)
+      sub(/"$/, "", value)
+    }
+    print tolower(value)
+    exit
+  }
+' "$ENV_FILE" 2>/dev/null || true)"
+if [[ "$PRODUCTION" == false && ("$configured_environment" == "production" || "$configured_environment" == "prod") ]]; then
+  PRODUCTION=true
+  log "APP_ENV=production detected; applying the production Compose override"
+fi
+
+read_root_env_value() {
+  local key="$1"
+  awk -F= -v key="$key" '
+    $1 == key {
+      value = $0
+      sub(/^[^=]*=/, "", value)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      if (value ~ /^".*"$/) {
+        sub(/^"/, "", value)
+        sub(/"$/, "", value)
+      }
+      print value
+      exit
+    }
+  ' "$ENV_FILE" 2>/dev/null || true
+}
+
+if [[ "$PRODUCTION" == true ]]; then
+  if [[ ! -f "$ENV_FILE" ]]; then
+    error "Production deployment requires the repository-root .env file."
+    exit 2
+  fi
+
+  production_database_password="$(read_root_env_value POSTGRES_PASSWORD)"
+  production_minio_password="$(read_root_env_value MINIO_ROOT_PASSWORD)"
+  production_signing_key="$(read_root_env_value AUTH_SIGNING_KEY)"
+
+  if [[ -z "$production_database_password" || "$production_database_password" == "aisha_dev" || "$production_database_password" == "-aisha_dev" ]]; then
+    error "Set POSTGRES_PASSWORD in the root .env to the real production database password."
+    exit 2
+  fi
+  if [[ -z "$production_minio_password" || "$production_minio_password" == "aisha_minio_dev" || "$production_minio_password" == "replace-me-too" ]]; then
+    error "Set MINIO_ROOT_PASSWORD in the root .env to the real production MinIO password."
+    exit 2
+  fi
+  if [[ -z "$production_signing_key" || "$production_signing_key" == "aisha-development-signing-key-change-me" || ${#production_signing_key} -lt 32 ]]; then
+    error "Set AUTH_SIGNING_KEY in the root .env to a production value of at least 32 characters."
+    exit 2
+  fi
 fi
 
 if [[ "$PRODUCTION" == false && ! -f "$SEED_FILE" ]]; then
