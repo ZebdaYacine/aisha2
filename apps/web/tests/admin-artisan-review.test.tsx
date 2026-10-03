@@ -15,7 +15,7 @@ describe("admin artisan review media", () => {
     globalThis.fetch = jest.fn().mockImplementation(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/documents")) {
-        return jsonResponse([{ id: "document-1", documentType: "IDENTITY", originalFilename: "identity.jpg", mediaType: "image/jpeg", sizeBytes: 100, url: "/signed/identity" }]);
+        return jsonResponse([{ id: "document-1", documentType: "IDENTITY", originalFilename: "identity.jpg", mediaType: "image/jpeg", sizeBytes: 100, url: "/signed/identity", downloadUrl: "/signed/identity?download=1" }]);
       }
       if (url.includes("/media")) {
         return jsonResponse([{ id: "media-1", mediaKind: "IMAGE", originalFilename: "workshop.jpg", mediaType: "image/jpeg", sizeBytes: 200, url: "/signed/workshop" }]);
@@ -29,6 +29,9 @@ describe("admin artisan review media", () => {
 
     expect(await screen.findByText("identity.jpg")).toBeInTheDocument();
     expect(screen.getByText("workshop.jpg")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View identity.jpg" })).toHaveAttribute("target", "_blank");
+    expect(screen.getByRole("link", { name: "Download identity.jpg" })).toHaveAttribute("href", "/signed/identity?download=1");
+    expect(screen.getByRole("link", { name: "Download identity.jpg" })).toHaveAttribute("download", "identity.jpg");
     expect(globalThis.fetch).toHaveBeenCalledWith("/api/admin/artisan-applications/application-1/documents");
     expect(globalThis.fetch).toHaveBeenCalledWith("/api/admin/artisan-applications/application-1/media");
   });

@@ -1107,6 +1107,7 @@ components:
         sizeBytes: {type: integer, format: int64}
         createdAt: {type: string, format: date-time}
         url: {type: string, format: uri, description: Short-lived authorized download URL}
+        downloadUrl: {type: string, format: uri, description: Short-lived authorized URL that forces a file download}
     ArtisanMedia:
       type: object
       required: [id, mediaKind, originalFilename, mediaType, sizeBytes, visibility]
@@ -1120,6 +1121,7 @@ components:
         visibility: {type: string, enum: [PRIVATE, PUBLIC]}
         createdAt: {type: string, format: date-time}
         url: {type: string, format: uri}
+        downloadUrl: {type: string, format: uri, description: Short-lived authorized URL that forces a file download}
     PrivateUpload:
       type: object
       required: [file]

@@ -205,7 +205,10 @@ Bootstrap:
 5. Seed the deterministic development roles, 33 role-scoped demo accounts, 20
    orders, 5 submitted artisan applications, 10 public workshops, 30 active
    products across 12 categories, checked-in development photos, and accepted
-   stock (local development only; the seed resets development data).
+   stock (local development only; the seed resets development data). The
+   `minio-init` service also uploads the checked-in private PDF fixture to each
+   development application-document key, so signed document previews do not
+   point to missing MinIO objects after a fresh or reused local volume.
 6. Start API, worker, and frontend.
 
 ## 7. Jenkins Pipeline

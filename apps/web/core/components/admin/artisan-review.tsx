@@ -2,7 +2,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Eye } from "lucide-react";
+import { Download, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/core/components/ui/button";
@@ -35,6 +35,7 @@ type DocumentItem = {
   mediaType: string;
   sizeBytes: number;
   url?: string;
+  downloadUrl?: string;
 };
 type MediaItem = {
   id: string;
@@ -43,6 +44,7 @@ type MediaItem = {
   mediaType: string;
   sizeBytes: number;
   url?: string;
+  downloadUrl?: string;
 };
 
 export function ArtisanReview({ locale = "en" }: { locale?: Locale }) {
@@ -309,6 +311,8 @@ function MediaFileCard({
 }) {
   const isImage = item.mediaType.startsWith("image/");
   const isVideo = item.mediaType.startsWith("video/");
+  const filename = item.originalFilename || label;
+  const downloadUrl = item.downloadUrl || item.url;
   return (
     <article className="border border-border p-3">
       {item.url && isImage && (
@@ -318,9 +322,33 @@ function MediaFileCard({
       )}
       {item.url && isVideo && <video className="aspect-video w-full bg-muted object-cover" controls preload="metadata" src={item.url} />}
       {!isImage && !isVideo && <div className="flex aspect-video items-center justify-center bg-muted text-xs text-muted-foreground">{item.mediaType}</div>}
-      <p className="mt-3 truncate text-sm font-medium">{item.originalFilename || label}</p>
+      <p className="mt-3 truncate text-sm font-medium">{filename}</p>
       <p className="mt-1 text-xs text-muted-foreground">{label} · {item.mediaType} · {formatBytes(item.sizeBytes)}</p>
-      {item.url && <a className="mt-2 inline-block text-xs underline" href={item.url} target="_blank" rel="noreferrer">Open media</a>}
+      {item.url && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a
+            className="inline-flex min-h-9 items-center gap-2 rounded-md border border-border px-3 text-xs font-medium transition-colors hover:bg-muted"
+            href={item.url}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`View ${filename}`}
+            title={`View ${filename}`}
+          >
+            <Eye size={15} aria-hidden="true" />
+            View
+          </a>
+          <a
+            className="inline-flex min-h-9 items-center gap-2 rounded-md bg-foreground px-3 text-xs font-medium text-background transition-colors hover:bg-primary"
+            href={downloadUrl}
+            download={filename}
+            aria-label={`Download ${filename}`}
+            title={`Download ${filename}`}
+          >
+            <Download size={15} aria-hidden="true" />
+            Download
+          </a>
+        </div>
+      )}
     </article>
   );
 }

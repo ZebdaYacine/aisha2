@@ -238,6 +238,7 @@ func (s *MediaService) AdminMedia(ctx context.Context, p auth.Principal, id stri
 func (s *MediaService) documentURL(ctx context.Context, item domain.Document) (domain.Document, error) {
 	if strings.HasPrefix(item.ObjectKey, "/images/") {
 		item.URL = item.ObjectKey
+		item.DownloadURL = item.ObjectKey
 		return item, nil
 	}
 	if s.store == nil {
@@ -248,12 +249,21 @@ func (s *MediaService) documentURL(ctx context.Context, item domain.Document) (d
 		return item, err
 	}
 	item.URL = value.String()
+	item.DownloadURL = item.URL
+	if presigner, ok := s.store.(storage.DownloadPresigner); ok {
+		download, downloadErr := presigner.PresignedDownload(ctx, s.bucket, item.ObjectKey, item.OriginalFilename, 15*time.Minute)
+		if downloadErr != nil {
+			return item, downloadErr
+		}
+		item.DownloadURL = download.String()
+	}
 	return item, nil
 }
 
 func (s *MediaService) mediaURL(ctx context.Context, item domain.Media) (domain.Media, error) {
 	if item.Visibility == "PUBLIC" && strings.HasPrefix(item.ObjectKey, "/images/") {
 		item.URL = item.ObjectKey
+		item.DownloadURL = item.ObjectKey
 		return item, nil
 	}
 	if s.store == nil {
@@ -264,5 +274,13 @@ func (s *MediaService) mediaURL(ctx context.Context, item domain.Media) (domain.
 		return item, err
 	}
 	item.URL = value.String()
+	item.DownloadURL = item.URL
+	if presigner, ok := s.store.(storage.DownloadPresigner); ok {
+		download, downloadErr := presigner.PresignedDownload(ctx, s.bucket, item.ObjectKey, item.OriginalFilename, 15*time.Minute)
+		if downloadErr != nil {
+			return item, downloadErr
+		}
+		item.DownloadURL = download.String()
+	}
 	return item, nil
 }

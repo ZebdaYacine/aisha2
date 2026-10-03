@@ -38,6 +38,7 @@ type Document struct {
 	SizeBytes        int64     `json:"sizeBytes"`
 	CreatedAt        time.Time `json:"createdAt"`
 	URL              string    `json:"url,omitempty"`
+	DownloadURL      string    `json:"downloadUrl,omitempty"`
 }
 type Media struct {
 	ID               string    `json:"id"`
@@ -50,6 +51,7 @@ type Media struct {
 	Visibility       string    `json:"visibility"`
 	CreatedAt        time.Time `json:"createdAt"`
 	URL              string    `json:"url,omitempty"`
+	DownloadURL      string    `json:"downloadUrl,omitempty"`
 }
 type DocumentUploadInput struct {
 	DocumentType, ObjectKey, OriginalFilename, MediaType, Checksum string
