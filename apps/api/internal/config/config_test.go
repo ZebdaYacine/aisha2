@@ -56,8 +56,24 @@ func TestLoadUsesProductionWebBaseURLWhenUnset(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.WebBaseURL != "https://aishasouk.com" {
+	if cfg.WebBaseURL != "https://aichasouk.com" {
 		t.Fatalf("unexpected production web base URL: %q", cfg.WebBaseURL)
+	}
+}
+
+func TestLoadRejectsLocalProductionWebBaseURL(t *testing.T) {
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("WEB_BASE_URL", "http://localhost:3033")
+	t.Setenv("DATABASE_URL", "postgres://aisha:production-secret@postgres:5432/aisha?sslmode=disable")
+	t.Setenv("MINIO_SECRET_KEY", "production-minio-secret")
+	t.Setenv("AUTH_SIGNING_KEY", "production-signing-key-with-at-least-32-characters")
+	t.Setenv("SMTP_HOST", "smtp.hostinger.com")
+	t.Setenv("SMTP_USER", "support-team@aichasouk.com")
+	t.Setenv("SMTP_PASSWORD", "production-smtp-secret")
+	t.Setenv("SMTP_FROM", "Aicha Souk <support-team@aichasouk.com>")
+
+	if _, err := Load(); err == nil {
+		t.Fatal("expected a local production web base URL to fail")
 	}
 }
 

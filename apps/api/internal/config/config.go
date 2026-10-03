@@ -48,7 +48,7 @@ func Load() (Config, error) {
 	webBaseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("WEB_BASE_URL")), "/")
 	if webBaseURL == "" {
 		if isProduction {
-			webBaseURL = "https://aishasouk.com"
+			webBaseURL = "https://aichasouk.com"
 		} else {
 			webBaseURL = "http://localhost:3033"
 		}
@@ -103,6 +103,9 @@ func Load() (Config, error) {
 	}
 	if isProduction && (smtpHost == "" || smtpUser == "" || smtpPassword == "" || smtpFrom == "") {
 		return Config{}, fmt.Errorf("SMTP_HOST, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM are required in production")
+	}
+	if isProduction && isLocalWebBaseURL(webBaseURL) {
+		return Config{}, fmt.Errorf("WEB_BASE_URL must be a public production URL")
 	}
 	if smtpFrom != "" {
 		if parsed, parseErr := mail.ParseAddress(smtpFrom); parseErr != nil || parsed.Address == "" {
@@ -195,4 +198,9 @@ func env(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func isLocalWebBaseURL(value string) bool {
+	value = strings.ToLower(strings.TrimSpace(value))
+	return strings.Contains(value, "localhost") || strings.Contains(value, "127.0.0.1")
 }

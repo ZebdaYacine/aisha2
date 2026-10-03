@@ -178,8 +178,9 @@ real deliverable domain; reserved development domains such as `example.test`
 are intentionally rejected by mail providers.
 `WEB_BASE_URL` must point to the public frontend origin so registration emails
 link to the correct email-activation page. It defaults to
-`http://localhost:3033` in development and `https://aishasouk.com` in
-production; set it explicitly for staging or another public hostname.
+`http://localhost:3033` in development and `https://aichasouk.com` in
+production; set it explicitly for staging or another public hostname. A
+production deployment rejects localhost and loopback activation URLs.
 Port `465` uses implicit TLS. Keep real values only in the ignored local `.env`
 or the Jenkins production secret-file credential; never commit them.
 

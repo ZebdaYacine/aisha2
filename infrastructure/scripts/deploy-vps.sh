@@ -44,6 +44,10 @@ if ! grep -Eq "^[[:space:]]*APP_ENV[[:space:]]*=[[:space:]]*(production|prod)[[:
   echo "Production deployment requires APP_ENV=production" >&2
   exit 1
 fi
+if grep -Eiq '^[[:space:]]*WEB_BASE_URL[[:space:]]*=.*(localhost|127\.0\.0\.1)' "$ENV_FILE"; then
+  echo "Production WEB_BASE_URL cannot point to localhost or 127.0.0.1" >&2
+  exit 1
+fi
 require_env_value "SMTP_HOST"
 require_env_value "SMTP_USER"
 if ! (require_env_value "SMTP_PASSWORD" || require_env_value "SMTP_PASS"); then
