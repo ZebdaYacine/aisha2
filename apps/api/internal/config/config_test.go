@@ -47,6 +47,10 @@ func TestLoadUsesProductionWebBaseURLWhenUnset(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://aisha:production-secret@postgres:5432/aisha?sslmode=disable")
 	t.Setenv("MINIO_SECRET_KEY", "production-minio-secret")
 	t.Setenv("AUTH_SIGNING_KEY", "production-signing-key-with-at-least-32-characters")
+	t.Setenv("SMTP_HOST", "smtp.example.test")
+	t.Setenv("SMTP_USER", "mailer@example.test")
+	t.Setenv("SMTP_PASSWORD", "production-smtp-secret")
+	t.Setenv("SMTP_FROM", "AISHA <mailer@example.test>")
 
 	cfg, err := Load()
 	if err != nil {
@@ -54,6 +58,21 @@ func TestLoadUsesProductionWebBaseURLWhenUnset(t *testing.T) {
 	}
 	if cfg.WebBaseURL != "https://aishasouk.com" {
 		t.Fatalf("unexpected production web base URL: %q", cfg.WebBaseURL)
+	}
+}
+
+func TestLoadRejectsProductionWithoutSMTP(t *testing.T) {
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("DATABASE_URL", "postgres://aisha:production-secret@postgres:5432/aisha?sslmode=disable")
+	t.Setenv("MINIO_SECRET_KEY", "production-minio-secret")
+	t.Setenv("AUTH_SIGNING_KEY", "production-signing-key-with-at-least-32-characters")
+	t.Setenv("SMTP_HOST", "")
+	t.Setenv("SMTP_USER", "")
+	t.Setenv("SMTP_PASSWORD", "")
+	t.Setenv("SMTP_FROM", "")
+
+	if _, err := Load(); err == nil {
+		t.Fatal("expected production SMTP configuration to be required")
 	}
 }
 

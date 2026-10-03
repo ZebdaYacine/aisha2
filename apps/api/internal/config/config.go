@@ -100,6 +100,9 @@ func Load() (Config, error) {
 		(smtpHost == "" || smtpUser == "" || smtpPassword == "" || smtpFrom == "") {
 		return Config{}, fmt.Errorf("SMTP_HOST, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM must be configured together")
 	}
+	if isProduction && (smtpHost == "" || smtpUser == "" || smtpPassword == "" || smtpFrom == "") {
+		return Config{}, fmt.Errorf("SMTP_HOST, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM are required in production")
+	}
 	cfg := Config{
 		AppName:                 env("APP_NAME", "AISHA"),
 		Environment:             environment,

@@ -171,6 +171,11 @@ Provide `.env.example` with no real values.
 Transactional email uses `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
 `SMTP_PASSWORD`, and `SMTP_FROM`. For compatibility, `SMTP_PASS` is accepted as
 an alias for `SMTP_PASSWORD`, and `MAIL_FROM` as an alias for `SMTP_FROM`.
+Production startup fails when these SMTP values are missing, so registration
+cannot appear healthy while activation mail is silently disabled. The SMTP
+provider must also permit outbound sending and the recipient address must use a
+real deliverable domain; reserved development domains such as `example.test`
+are intentionally rejected by mail providers.
 `WEB_BASE_URL` must point to the public frontend origin so registration emails
 link to the correct email-activation page. It defaults to
 `http://localhost:3033` in development and `https://aishasouk.com` in
