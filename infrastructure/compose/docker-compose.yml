@@ -89,9 +89,9 @@ services:
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-465}
       SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-${SMTP_PASS:-}}
       SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_FROM: ${SMTP_FROM:-${MAIL_FROM:-}}
       MAIL_FROM: ${MAIL_FROM:-}
     ports:
       - "${API_PORT:-8088}:${API_PORT:-8088}"
