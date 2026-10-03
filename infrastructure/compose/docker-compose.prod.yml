@@ -1,7 +1,7 @@
 services:
   nginx:
     ports:
-      - "80:8080"
+      - "8089:8080"
   frontend:
     read_only: true
     tmpfs: [/tmp]
