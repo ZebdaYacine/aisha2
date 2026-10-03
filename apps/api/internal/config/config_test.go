@@ -92,6 +92,26 @@ func TestLoadSupportsSMTPPasswordAliases(t *testing.T) {
 	}
 }
 
+func TestLoadSupportsSMTPPasswordAliasesInProduction(t *testing.T) {
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("DATABASE_URL", "postgres://aisha:production-secret@postgres:5432/aisha?sslmode=disable")
+	t.Setenv("MINIO_SECRET_KEY", "production-minio-secret")
+	t.Setenv("AUTH_SIGNING_KEY", "production-signing-key-with-at-least-32-characters")
+	t.Setenv("SMTP_HOST", "smtp.hostinger.com")
+	t.Setenv("SMTP_PORT", "465")
+	t.Setenv("SMTP_USER", "support-team@aichasouk.com")
+	t.Setenv("SMTP_PASS", "production-smtp-secret")
+	t.Setenv("MAIL_FROM", "Aicha Souk <support-team@aichasouk.com>")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SMTPPassword != "production-smtp-secret" || cfg.SMTPFrom != "Aicha Souk <support-team@aichasouk.com>" {
+		t.Fatalf("unexpected production SMTP aliases: %#v", cfg)
+	}
+}
+
 func TestLoadRejectsPartialSMTPConfiguration(t *testing.T) {
 	t.Setenv("SMTP_HOST", "smtp.hostinger.com")
 	if _, err := Load(); err == nil {

@@ -183,6 +183,17 @@ production; set it explicitly for staging or another public hostname.
 Port `465` uses implicit TLS. Keep real values only in the ignored local `.env`
 or the Jenkins production secret-file credential; never commit them.
 
+For Hostinger, use the address values exactly as written: `support-team@...`
+must contain a literal `@` with no backslash. If outbound port 465 is blocked by
+the VPS provider, use `SMTP_PORT=587`; the API uses STARTTLS for port 587.
+The Hostinger mailbox must also be enabled for outbound sending. A valid SMTP
+password cannot bypass a provider-level sending suspension.
+
+The development seed intentionally uses `example.test` recipients. They are
+not deliverable addresses and providers reject them, so production email tests
+must use a real recipient address created through registration or an updated
+production test account.
+
 ## 6. Local Development Commands
 
 Suggested Makefile targets:

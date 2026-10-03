@@ -16,6 +16,49 @@ if [[ ! -f "$ENV_FILE" || ! -f "$COMPOSE_FILE" || ! -f "$COMPOSE_PROD_FILE" ]]; 
   exit 1
 fi
 
+require_env_value() {
+  local key="$1"
+  if ! awk -F= -v key="$key" '
+    $1 == key {
+      value = $0
+      sub(/^[^=]*=/, "", value)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      if (value ~ /^".*"$/) {
+        sub(/^"/, "", value)
+        sub(/"$/, "", value)
+      }
+      if (value != "") found = 1
+    }
+    END { exit(found ? 0 : 1) }
+  ' "$ENV_FILE"; then
+    return 0
+  fi
+  return 1
+}
+
+if ! require_env_value "APP_ENV"; then
+  echo "Production environment is missing a non-empty APP_ENV" >&2
+  exit 1
+fi
+if ! grep -Eq "^[[:space:]]*APP_ENV[[:space:]]*=[[:space:]]*(production|prod)[[:space:]]*$" "$ENV_FILE"; then
+  echo "Production deployment requires APP_ENV=production" >&2
+  exit 1
+fi
+require_env_value "SMTP_HOST"
+require_env_value "SMTP_USER"
+if ! (require_env_value "SMTP_PASSWORD" || require_env_value "SMTP_PASS"); then
+  echo "Production environment needs SMTP_PASSWORD or SMTP_PASS" >&2
+  exit 1
+fi
+if ! (require_env_value "SMTP_FROM" || require_env_value "MAIL_FROM"); then
+  echo "Production environment needs SMTP_FROM or MAIL_FROM" >&2
+  exit 1
+fi
+if awk -F= '$1 == "SMTP_USER" || $1 == "SMTP_FROM" || $1 == "MAIL_FROM" { if ($0 ~ /\\@/) found = 1 } END { exit(found ? 0 : 1) }' "$ENV_FILE"; then
+  echo "SMTP email values must use @ directly; remove a literal backslash before @" >&2
+  exit 1
+fi
+
 mkdir -p "$BACKUP_DIR"
 
 compose() {
@@ -81,4 +124,3 @@ chmod 600 "$STATE_FILE"
 echo "Deployment completed successfully. Backup: $backup_file"
 
 trap - EXIT
-

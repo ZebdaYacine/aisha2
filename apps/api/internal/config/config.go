@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/mail"
 	"os"
 	"strconv"
 	"strings"
@@ -93,15 +94,23 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	smtpPassword := env("SMTP_PASSWORD", env("SMTP_PASS", ""))
-	smtpFrom := env("SMTP_FROM", env("MAIL_FROM", ""))
-	smtpHost := env("SMTP_HOST", "")
-	smtpUser := env("SMTP_USER", "")
+	smtpFrom := strings.TrimSpace(env("SMTP_FROM", env("MAIL_FROM", "")))
+	smtpHost := strings.TrimSpace(env("SMTP_HOST", ""))
+	smtpUser := strings.TrimSpace(env("SMTP_USER", ""))
 	if (smtpHost != "" || smtpUser != "" || smtpPassword != "" || smtpFrom != "") &&
 		(smtpHost == "" || smtpUser == "" || smtpPassword == "" || smtpFrom == "") {
 		return Config{}, fmt.Errorf("SMTP_HOST, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM must be configured together")
 	}
 	if isProduction && (smtpHost == "" || smtpUser == "" || smtpPassword == "" || smtpFrom == "") {
 		return Config{}, fmt.Errorf("SMTP_HOST, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM are required in production")
+	}
+	if smtpFrom != "" {
+		if parsed, parseErr := mail.ParseAddress(smtpFrom); parseErr != nil || parsed.Address == "" {
+			if parseErr != nil {
+				return Config{}, fmt.Errorf("SMTP_FROM must be a valid email address: %w", parseErr)
+			}
+			return Config{}, fmt.Errorf("SMTP_FROM must be a valid email address")
+		}
 	}
 	cfg := Config{
 		AppName:                 env("APP_NAME", "AISHA"),
